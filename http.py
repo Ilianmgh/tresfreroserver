@@ -61,3 +61,17 @@ def http_response(text : str) -> str :
     body = str_of_path("./error404.html")
     header = f"HTTP/1.1 404\nDate : {get_http_time()}\nContent-Type:  text/html;charset=utf-8\nServer: Tresfreroserver\nContent-Language: fr-FR\nContent-Length: {len(body.encode('utf-8'))}"
   return header + "\n\n" + body + "\n\n\n\n"
+
+# TODO we must treat the request for favicon :
+# GET /favicon.ico undefined
+# Host: localhost:9997
+# User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0
+# Accept: image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5
+# Accept-Language: en-US,en;q=0.5
+# Accept-Encoding: gzip, deflate, br, zstd
+# Connection: keep-alive
+# Referer: http://localhost:9997/pourquoi.html
+# Sec-Fetch-Dest: image
+# Sec-Fetch-Mode: no-cors
+# Sec-Fetch-Site: same-origin
+# Priority: u=6
