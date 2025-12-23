@@ -1,5 +1,7 @@
 import time
 
+debug : bool = False
+
 def check_path_subfolder(path : str) -> bool :
   for folder in path.split('/') :
     if folder == ".." :
@@ -23,11 +25,11 @@ def get_http_time() -> str :
 def parse_http(text : str) -> str :
   """ Parse HTTP query, returns the path to the requested file, or raise an error if malformed or unanswerable query. """
   query = [x.strip('\r').split(' ') for x in text.split('\n')]
-  print(query)
+  if debug :
+    print(query)
   head = query[0]
   for line in query[1:] :
     if line[0] == "Accept:" :
-      print("list of accept :", line[1].split(','))
       if "text/html" in line[1].split(',') :
         break
   else :
@@ -48,11 +50,14 @@ def http_response(text : str) -> str :
   # Server: Tresfreroserver
   # Content-Language: fr-FR
   # 
-  # try :
-  path = parse_http(text)
-  body = str_of_path(path)
-  header = f"HTTP/1.1 200 OK\nDate : {get_http_time()}\nContent-Type:  text/html;charset=utf-8\nServer: Tresfreroserver\nContent-Language: fr-FR"
+  try :
+    path = parse_http(text)
+    body = str_of_path(path)
+    header = f"HTTP/1.1 200 OK\nDate : {get_http_time()}\nContent-Type:  text/html;charset=utf-8\nServer: Tresfreroserver\nContent-Language: fr-FR\nContent-Length: {len(body.encode('utf-8'))}"
+  except IsADirectoryError :
+    body = str_of_path("./error404.html")
+    header = f"HTTP/1.1 404\nDate : {get_http_time()}\nContent-Type:  text/html;charset=utf-8\nServer: Tresfreroserver\nContent-Language: fr-FR\nContent-Length: {len(body.encode('utf-8'))}"
+  except FileNotFoundError :
+    body = str_of_path("./error404.html")
+    header = f"HTTP/1.1 404\nDate : {get_http_time()}\nContent-Type:  text/html;charset=utf-8\nServer: Tresfreroserver\nContent-Language: fr-FR\nContent-Length: {len(body.encode('utf-8'))}"
   return header + "\n\n" + body + "\n\n\n\n"
-  # except ValueError :
-    # print("TODO")
-    # return ""
