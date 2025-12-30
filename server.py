@@ -11,17 +11,24 @@ serveur.listen()
 try :
   while True :
     (sclient, adclient) = serveur.accept()
-    donnee = sclient.recv(1000).decode()
+    query = sclient.recv(1000).decode()
     rep = ""
-    sclient.send(http_response(donnee))
+    connexion_ended = False
+    response = http_response(query)
+    connexion_ended = (response != "")
+    sclient.send(response)
     try :
-      while True :
-        donnee = sclient.recv(1000).decode()
-        sclient.send(http_response(donnee))
-        print(donnee)
+      while not(connexion_ended) :
+        query = sclient.recv(1000).decode()
+        response = http_response(query)
+        connexion_ended = (response != "")
+        if not(connexion_ended) :
+          sclient.send(response)
     except KeyboardInterrupt :
       pass
-    sclient.close()
+    finally :
+      sclient.close()
 except KeyboardInterrupt :
   pass
-serveur.close()
+finally :
+  serveur.close()
