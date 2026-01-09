@@ -14,7 +14,5 @@ def strip_quality_values(s : str) -> None | str :
     return None
 
 def strip_content_type(s : str) -> None | str :
-  print(s)
   t = s.split(";")
-  print(t)
   return t[0]

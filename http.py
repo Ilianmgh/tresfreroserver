@@ -3,7 +3,7 @@ import utils
 import config # TODO replace page per error by a single page and config giving status messages to be replaced in said page
 from typing import Any, Dict
 
-debug : bool = True
+debug : bool = False
 
 ## File manager
 
@@ -55,8 +55,6 @@ def get_content_type(path : str) -> tuple[int, str] :
     if extension in ["png", "svg", "webp", "avif"] :
       return (0, "image/" + extension)
     if extension == "html" :
-      if debug :
-        print("HEY")
       return (0, config.contenttypeofhtmlfiles)
   return (2, "")
 
@@ -154,7 +152,6 @@ def http_response(text : str) -> tuple[bool, bytes] :
       if "accept" in info :
         if utils.strip_content_type(contenttype) not in info["accept"] :
           if debug :
-            print("\nHEY1\n")
             print("DEBUG content type stripped :")
             print(contenttype)
             print(utils.strip_content_type(contenttype))
@@ -162,7 +159,6 @@ def http_response(text : str) -> tuple[bool, bytes] :
             print("END OF DEBUG")
           status = 400
     elif errcode_contenttype == 1 :
-      print("\nHEY2\n")
       status = 400
     elif errcode_contenttype == 2 :
       status = 500
@@ -174,7 +170,6 @@ def http_response(text : str) -> tuple[bool, bytes] :
       print(info)
       print("END OF DEBUG")
     path = ""
-    print("\nHEY4\n")
     status = 400
   status, body = make_body(status, path)
   if status in config.supported_errors :

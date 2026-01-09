@@ -1,27 +1,70 @@
 from socket import socket
 from http import http_response
 
-debug : bool = True
-
-file : str = "<!DOCTYPE html><html><head><title>Test</title><meta charset='utf-8' /></head><body><h1>Titre</h1><p>Ceci est un paragraphe.</p></body></html>"
-bidule = f"HTTP/1.1 200 OK\nServer: nginx/1.10.3 (ubuntu)\nDate: Tue, 23 December 2025 14:18:18 GMT\nContent-Type: text/html\nContent-Lenght: {len(file)}\nLast-Modified : Tue, 23 December 2025 14:18:18 GMT\n\n{file}\n\n"
+debug : bool = False
 
 serveur = socket()
 serveur.bind(('0.0.0.0', 9999))
 serveur.listen()
 
-# TODO add a buffer and split http header when encoutering a METHOD, otherwise request for page and favicon gets concatenated...
+# TODO ABSOLUTELY A PRIORITY add a buffer and split http header when encoutering a METHOD, otherwise request for page and favicon gets concatenated...
+# RMK connection is closed only when browser is closed, not when tab is closed
+
+http_methods : list[str] = ["get", "head", "options", "trace", "put", "delete", "post", "patch", "connect"]
+
+def is_first_line_of_http(line : str) -> bool :
+  data : list[str] = line.split(" ")
+  if len(data) == 3 :
+    if data[0].lower() in http_methods :
+      http_version = data[2].lower().split("/") # should be ["HTTP", "X.Y"] or simply "X".
+      if http_version[0] == "HTTP" :
+        return True
+  return False
+
+def buffered_readline(sock : socket) -> str :
+  """ Returns one line read from [sock].
+    Returns the empty string if the connection is terminated by sender. """
+  line : str = ""
+  one_char : str = sock.recv(1).decode()
+  while one_char != "\n" and one_char != "" :
+    # print("just read :", line)
+    line += one_char
+    one_char = sock.recv(1).decode()
+  return line
+
+def get_http_query(sock : socket) -> str :
+  """ Returns _one_ full HTTP query, as a string, received from [sock].
+    Will only read one HTTP query even if several were sent via [sock] before calling this function.
+    If the connection is closed from the client's side, returns the empty string.
+    This function is blocking, it will wait until a full HTTP query is received from [sock], or until the connection is terminated by the client. """
+  query : str = ""
+  # print("reading line")
+  line : str = buffered_readline(sock).strip("\n\t\r ")
+  # print("end reading line")
+  while line :
+    query += line + "\n"
+    line = buffered_readline(sock).strip("\n\t\r ")
+  return query
 
 try :
   while True :
     (sclient, adclient) = serveur.accept()
     keep_alive = True
     while keep_alive :
-      query = sclient.recv(1000).decode()
       if debug :
-        print(query)
-      keep_alive, response = http_response(query)
-      sclient.send(response)
+        print("Waiting for msg...")
+      query : str = get_http_query(sclient)
+      if debug :
+        print("Received sth...")
+      if query != "" :
+        if debug :
+          print("QUERY STARTS ON NEXT LINE")
+          print(query)
+          print("QUERY ENDS FROM PREV LINE")
+        keep_alive, response = http_response(query)
+        sclient.send(response)
+      else :
+        keep_alive = False
     if debug :
       print("Closing connection with current client...")
     sclient.close()
