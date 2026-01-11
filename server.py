@@ -1,14 +1,11 @@
 from socket import socket
 from http import http_response
 
-debug : bool = False
+debug : bool = True
 
 serveur = socket()
 serveur.bind(('0.0.0.0', 9999))
 serveur.listen()
-
-# TODO ABSOLUTELY A PRIORITY add a buffer and split http header when encoutering a METHOD, otherwise request for page and favicon gets concatenated...
-# RMK connection is closed only when browser is closed, not when tab is closed
 
 http_methods : list[str] = ["get", "head", "options", "trace", "put", "delete", "post", "patch", "connect"]
 
@@ -27,7 +24,6 @@ def buffered_readline(sock : socket) -> str :
   line : str = ""
   one_char : str = sock.recv(1).decode()
   while one_char != "\n" and one_char != "" :
-    # print("just read :", line)
     line += one_char
     one_char = sock.recv(1).decode()
   return line
@@ -38,9 +34,7 @@ def get_http_query(sock : socket) -> str :
     If the connection is closed from the client's side, returns the empty string.
     This function is blocking, it will wait until a full HTTP query is received from [sock], or until the connection is terminated by the client. """
   query : str = ""
-  # print("reading line")
   line : str = buffered_readline(sock).strip("\n\t\r ")
-  # print("end reading line")
   while line :
     query += line + "\n"
     line = buffered_readline(sock).strip("\n\t\r ")

@@ -111,7 +111,7 @@ def make_body(status : int, path : str = "", additional_message : str | None = N
       return (200, bytes_of_path(path))
     except (IsADirectoryError, FileNotFoundError) as e :
       status = 404
-  if status in config.supported_errors :
+  if status in config.displayable_errors :
     return (status, bytes_of_path(f"./error{status}.html"))
   return (500, bytes_of_path(f"./error500.html"))
 
@@ -172,7 +172,7 @@ def http_response(text : str) -> tuple[bool, bytes] :
     path = ""
     status = 400
   status, body = make_body(status, path)
-  if status in config.supported_errors :
+  if status in config.displayable_errors :
     contenttype = config.contenttypeofhtmlfiles
   header : bytes = make_header(status, contenttype, config.contentlanguage, len(body)).encode()
   if "keep-alive" in info :
@@ -180,17 +180,3 @@ def http_response(text : str) -> tuple[bool, bytes] :
   else :
     keep_alive = False
   return (keep_alive, header + "\n\n".encode() + body + "\n\n\n\n".encode())
-
-# TODO we must treat the request for favicon :
-# GET /favicon.ico undefined
-# Host: localhost:9997
-# User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0
-# Accept: image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5
-# Accept-Language: en-US,en;q=0.5
-# Accept-Encoding: gzip, deflate, br, zstd
-# Connection: keep-alive
-# Referer: http://localhost:9997/pourquoi.html
-# Sec-Fetch-Dest: image
-# Sec-Fetch-Mode: no-cors
-# Sec-Fetch-Site: same-origin
-# Priority: u=6
