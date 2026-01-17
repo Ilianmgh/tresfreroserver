@@ -122,7 +122,7 @@ def make_header(status : int, contenttype : str, language : str, contentlength :
   contenttype_line = "Content-Type: " + contenttype
   language_line = "Content-Language: " + language
   contentlength_line = "Content-Length: " + str(contentlength)
-  return first_line + "\n" + contenttype_line + "\n" + language_line + "\n" + contentlength_line
+  return first_line + "\r\n" + contenttype_line + "\r\n" + language_line + "\r\n" + contentlength_line
 
 def http_response(text : str) -> tuple[bool, bytes] :
   """ Returns a tuple [(keep_alive, response)] of :
@@ -179,4 +179,4 @@ def http_response(text : str) -> tuple[bool, bytes] :
     keep_alive = info["keep-alive"]
   else :
     keep_alive = False
-  return (keep_alive, header + "\n\n".encode() + body + "\n\n\n\n".encode())
+  return (keep_alive, header + "\r\n\r\n".encode() + body + "\r\n\r\n".encode())
