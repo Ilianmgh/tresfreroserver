@@ -1,7 +1,7 @@
 from socket import socket
 from http import http_response
 
-debug : bool = True
+debug : bool = False
 
 serveur = socket()
 serveur.bind(('0.0.0.0', 9999))
