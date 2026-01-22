@@ -1,7 +1,7 @@
 import time
 import utils
 import config # TODO replace page per error by a single page and config giving status messages to be replaced in said page
-from typing import Any, Dict
+from typing import Any, Dict, Iterable
 
 debug : bool = False
 
@@ -56,6 +56,8 @@ def get_content_type(path : str) -> tuple[int, str] :
       return (0, "image/" + extension)
     if extension == "html" :
       return (0, config.contenttypeofhtmlfiles)
+    if extension == "js" :
+      return (0, config.contenttypeofjsscripts)
   return (2, "")
 
 def parse_http(text : str) -> tuple[int, Dict[str, Any] | str] :
@@ -101,6 +103,26 @@ def get_http_time() -> str :
   weekday, month, day, hour, year = cur_time[0], cur_time[1], cur_time[2], cur_time[3], cur_time[4]
   return f"{weekday}, {day} {month} {year} {hour} GMT"
 
+def is_accepted(contenttype : str, contentaccepted : Iterable[str]) -> bool :
+  content_stripped = utils.strip_quality_values(contenttype)
+  content_data = content_stripped.split("/")
+  if len(content_data) != 2 :
+    if debug :
+      print("Content Type :", contenttype, "of different format than [something/somethingelse]")
+    return False
+  type, format = content_data[0].lower(), content_data[1].lower()
+  for content in contentaccepted :
+    accepted_stripped = utils.strip_quality_values(content)
+    accepted_data = accepted_stripped.split("/")
+    if len(accepted_data) != 2 :
+      if debug :
+        print("Content Type :", content, "of different format than [something/somethingelse]")
+    else :
+      accepted_type, accepted_format = accepted_data[0].lower(), accepted_data[1].lower()
+      if (accepted_type == "*" or type == accepted_type) and (accepted_format == "*" or accepted_format == format) :
+        return True
+  return False
+
 def make_body(status : int, path : str = "", additional_message : str | None = None) -> tuple[int, bytes] :
   """ If [status] is a supported error, fetches the appropriate error page.
       If [status] is 200, tries to fetch the page from the [config.to_send_content_folder] folder.
@@ -139,7 +161,7 @@ def http_response(text : str) -> tuple[bool, bytes] :
   if errcode == 0 :
     path = info["path"]
     if path == (config.to_send_content_folder + "/") :
-      path = config.to_send_content_folder + "/pourquoi.html"
+      path = config.to_send_content_folder + "/" + config.default_page
     elif path == (config.to_send_content_folder + "/favicon.ico") :
       path = config.to_send_content_folder + "/favicon.png"
     errcode_contenttype, contenttype = get_content_type(path)
@@ -150,12 +172,11 @@ def http_response(text : str) -> tuple[bool, bytes] :
     if errcode_contenttype == 0 :
       status = 200
       if "accept" in info :
-        if utils.strip_content_type(contenttype) not in info["accept"] :
+        if not(is_accepted(utils.strip_content_type(contenttype), info["accept"])) :
           if debug :
-            print("DEBUG content type stripped :")
-            print(contenttype)
+            print("DEBUG resource not accepted by client :")
+            print(contenttype, "stripped :", utils.strip_content_type(contenttype), "\nWhereas client only accepts", info["accept"])
             print(utils.strip_content_type(contenttype))
-            print(config.contenttypeofhtmlfiles)
             print("END OF DEBUG")
           status = 400
     elif errcode_contenttype == 1 :

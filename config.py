@@ -1,9 +1,11 @@
 ## Resources information
 
-to_send_content_folder = "/var/www/html"
+to_send_content_folder = "./html"
+default_page = "index.html"
 
 contentlanguage = "fr" # TODO For now is the only value. At some point, must fetch it from the html page we send or default to this one
 contenttypeofhtmlfiles = "text/html;charset=utf-8" # TODO Same as for contentlanguage : For now is the only value. At some point, must fetch it from the html page we send or default to this one
+contenttypeofjsscripts = "text/javascript" # TODO
 
 ## Status messages
 
