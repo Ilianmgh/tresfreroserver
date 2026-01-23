@@ -2,7 +2,7 @@ CC = ocamlc
 CFLAGS =
 LDFLAGS =
 
-all: lexer.x
+all: lexer.x prelexer.x
 
 .PHONY: clean
 
@@ -11,6 +11,12 @@ lexer.x: lexer.cmo trie.cmo utils.cmo
 
 lexer.cmo: lexer.ml trie.cmi utils.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o lexer.cmo lexer.ml
+
+prelexer.x: prelexer.cmo trie.cmo utils.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o prelexer.x utils.cmo trie.cmo prelexer.cmo
+
+prelexer.cmo: prelexer.ml trie.cmi utils.cmi
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o prelexer.cmo prelexer.ml
 
 trie.x: trie.cmo utils.cmo
 	$(CC) $(CFLAGS) $(LDFLAGS) -o trie.x utils.cmo trie.cmo
