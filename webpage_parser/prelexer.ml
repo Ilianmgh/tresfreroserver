@@ -1,14 +1,8 @@
+include Lexic
 open Utils
 open Trie
 
 exception LexingError of string
-let open_ml_bracket = "<{"
-
-let close_ml_bracket = "}>"
-
-let len_open_ml_bracket = String.length open_ml_bracket
-
-let symbols : string list = ["="; "->"; "&&"; "||"; "="; ">"; "<"; ">="; "<="; "<>"; "+"; "-"; "*"; "/"; "^"; open_ml_bracket; close_ml_bracket; "("; ")"; ";"]
 let symbols_trie = List.fold_left (fun tr keyword -> Trie.add_word tr keyword) Trie.empty symbols
 
 let whitespaces : char list = ['\r'; '\n'; ' '; '\t']
@@ -98,13 +92,20 @@ let prelexer (s : string) (i : int) (n : int) : pre_token list =
 
 (* Tests *)
 
-let () =
+(* TODO line numbering in HTML is faulty: it is the line number of the last character, instead of the first.
+  Example: the line number of
+  1 some
+  2 html code
+  is 2.
+*)
+
+(* let () =
+  let s_ex1 = "<{let x = 5 in  x}>" in
+  let s_ex1 = String.init (String.length s_ex1) (fun i -> if i = 14 then '\n' else s_ex1.[i]) in
+  let s_ex2 = "<{f\"coucou\"}>" in
   let s = if Array.length Sys.argv > 1 then
       Sys.argv.(1)
-    else begin
-      let s_aux = "<{let x = 5 in  x}>" in
-      String.init (String.length s_aux) (fun i -> if i = 14 then '\n' else s_aux.[i])
-    end
+    else s_ex2
   in
   Printf.printf "raw: %s\n" s;
-  Printf.printf "lexed: %s\n" (string_of_list string_of_pre_token (prelexer s 0 (String.length s)))
+  Printf.printf "lexed: %s\n" (string_of_list string_of_pre_token (prelexer s 0 (String.length s))) *)

@@ -14,4 +14,9 @@ let string_of_list (to_string : 'a -> string) (l : 'a list) : string =
   in
   Printf.sprintf "[%s" (string_of_list_aux to_string l)
 
+(** Takes [['a'; ' '; 's'; 't'; 'r'; 'i'; 'n'; 'g']] and returns ["a string"]. *)
+let rec string_of_char_list (l : char list) : string = match l with
+  | [] -> ""
+  | h :: t -> Printf.sprintf "%c%s" h (string_of_char_list t)
+
 let string_fold_lefti (f : 'a -> int * char -> 'a) (acc : 'a) (s : string) : 'a = List.fold_left f acc (List.mapi (fun i x -> (i, x)) (list_of_string s))
