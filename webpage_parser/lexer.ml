@@ -83,7 +83,7 @@ let lexer (s : string) : token list = pre_tokens_lexer (prelexer s 0 (String.len
 
 (* Tests *)
 
-let () =
+(* let () =
   let tests = [
       "<{}>"
       ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%"
@@ -97,4 +97,4 @@ let () =
     else List.nth tests 4
   in
   Printf.printf "raw: %s\n" s;
-  Printf.printf "lexed: %s\n" (string_of_list string_of_token (lexer s))
+  Printf.printf "lexed: %s\n" (string_of_list string_of_token (lexer s)) *)

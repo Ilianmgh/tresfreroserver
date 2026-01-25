@@ -5,7 +5,7 @@ type html_code = string
 type variable = string
 
 type expr = (* TODO add match ... with, user-defined types *)
-    Empty (* translation of <{}> *)
+    Empty (* TODO see if it's really necessary *)
   | Let of variable * expr * expr
   | Fun of variable * expr
   | Fix of variable * variable * expr

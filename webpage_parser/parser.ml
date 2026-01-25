@@ -200,7 +200,7 @@ let parser (lexed : token list) = match lexed with
   [] parse () as a unit
 *)
 
-let () =
+(* let () =
   let tests = [
       "<{}>"
       ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%"
@@ -209,14 +209,15 @@ let () =
       ;"<{f\"coucou\"}>"
       ;"<{let x = 5, 2 in fst x}>"
       ;"<h1>Exampel</h1>%<{% let x = 1 in% if x = 2 then%}>% 2%<{% else %}>% what?%<{}>"
+      ;"<{1-1}>" (* FIXME is parsed as the function 1 applied to (-1) *)
     ]
   in
   let tests = List.map (fun s -> String.map (fun c -> if c = '%' then '\n' else c) s) tests in
   let s = if Array.length Sys.argv > 1 then Sys.argv.(1)
-    else List.nth tests 6
+    else List.nth tests 7
   in
   if debug then Printf.printf "raw: %s\n%!" s;
   let lexed : token list = lexer s in
   if debug then Printf.printf "lexed: %s\n%!" (string_of_list string_of_token lexed);
   let _, parsed, _ = parser lexed in
-  if debug then Printf.printf "parsed: %s\n%!" (string_of_expr parsed);
+  if debug then Printf.printf "parsed: %s\n%!" (string_of_expr parsed); *)

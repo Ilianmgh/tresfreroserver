@@ -2,25 +2,34 @@ CC = ocamlc
 CFLAGS =
 LDFLAGS =
 
-all: parser.x
+all: parser.x typechecker.x
 
 .PHONY: clean
 
-interpreter.x: interpreter.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo parser.cmo typechecker.cmo utils.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o interpreter.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo interpreter.cmo
+interpreter.x: interpreter.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo parser.cmo typeSyntax.cmo typechecker.cmo utils.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o interpreter.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo
 
 interpreter.cmi: interpreter.cmo
 
-interpreter.cmo: interpreter.ml lexic.cmi trie.cmi prelexer.cmi lexer.cmi parser.cmi typechecker.cmi utils.cmi
+interpreter.cmo: interpreter.ml lexic.cmi trie.cmi prelexer.cmi lexer.cmi parser.cmi typechecker.cmi typeSyntax.cmi utils.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o interpreter.cmo interpreter.ml
 
-typechecker.x: typechecker.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo parser.cmo utils.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o typechecker.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo typechecker.cmo
+typechecker.x: typechecker.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo utils.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o typechecker.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo
 
 typechecker.cmi: typechecker.cmo
 
-typechecker.cmo: typechecker.ml lexic.cmi trie.cmi prelexer.cmi lexer.cmi parser.cmi utils.cmi
+typechecker.cmo: typechecker.ml lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typeSyntax.cmi utils.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o typechecker.cmo typechecker.ml
+
+typeSyntax.x: lexic.cmo typeSyntax.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o typeSyntax.x lexic.cmo typeSyntax.cmo
+
+typeSyntax.cmi: lexic.cmi typeSyntax.mli
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o typeSyntax.cmi typeSyntax.mli
+
+typeSyntax.cmo: lexic.cmi typeSyntax.ml
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o typeSyntax.cmo typeSyntax.ml
 
 parser.x: parser.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo utils.cmo syntax.cmo
 	$(CC) $(CFLAGS) $(LDFLAGS) -o parser.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo
