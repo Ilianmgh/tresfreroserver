@@ -4,7 +4,7 @@ type html_code = string
 
 type variable = string
 
-type expr =
+type expr = (* TODO add match ... with, user-defined types *)
     Empty (* translation of <{}> *)
   | Let of variable * expr * expr
   | Fun of variable * expr
@@ -16,6 +16,8 @@ type expr =
   | Var of variable
   (* tuples *)
   | Couple of expr * expr
+  | Fst
+  | Snd
   (* arithmetic connectors *)
   | Plus of expr * expr
   | Minus of expr * expr
@@ -47,12 +49,14 @@ let rec string_of_expr : expr -> string = function
   | Let (x, e, e') -> Printf.sprintf "let %s = %s in %s" x (string_of_expr e) (string_of_expr e')
   | Fun (x, e) -> Printf.sprintf "fun %s -> %s" x (string_of_expr e)
   | Fix (f, x, e) -> Printf.sprintf "fixfun %s %s -> %s" f x (string_of_expr e)
-  | App (e, e') -> Printf.sprintf "(%s) %s" (string_of_expr e) (string_of_expr e)
+  | App (e, e') -> Printf.sprintf "(%s) %s" (string_of_expr e) (string_of_expr e')
   | If (c, t, e) -> Printf.sprintf "if %s then %s else %s" (string_of_expr c) (string_of_expr t) (string_of_expr e)
   | Seq (e, e') -> Printf.sprintf "%s;%s" (string_of_expr e) (string_of_expr e')
   | Html h -> Printf.sprintf "Html(%s)" h
   | Var x -> x
   | Couple (e, e') -> Printf.sprintf "(%s, %s)" (string_of_expr e) (string_of_expr e')
+  | Fst -> Printf.sprintf "fst"
+  | Snd -> Printf.sprintf "snd"
   | Plus (e, e') -> Printf.sprintf "%s + %s" (string_of_expr e) (string_of_expr e')
   | Minus (e, e') -> Printf.sprintf "%s - %s" (string_of_expr e) (string_of_expr e')
   | Neg e -> Printf.sprintf "-%s" (string_of_expr e)

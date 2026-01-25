@@ -2,6 +2,8 @@ include Lexic
 open Utils
 open Trie
 
+let debug = false
+
 exception LexingError of string
 let symbols_trie = List.fold_left (fun tr keyword -> Trie.add_word tr keyword) Trie.empty symbols
 
@@ -78,9 +80,9 @@ let prelexer (s : string) (i : int) (n : int) : pre_token list =
       split_html s (s.[i] :: cur_html_acc) prelex_acc (i + 1) n next_line_number
     else if String.sub s i len_open_ml_bracket = open_ml_bracket then begin
       let html_pretok : pre_token = PretokHtml (line_number, string_of_char_list (List.rev cur_html_acc)) in
-      Printf.fprintf stderr "Now lexing ml\n%!";
+      if debug then Printf.fprintf stderr "Now lexing ml\n%!";
       let next_i, next_line_number, ml_lexed = split_ml s i n line_number in
-      Printf.fprintf stderr "End lexing ml\n%!";
+      if debug then Printf.fprintf stderr "End lexing ml\n%!";
       assert (next_i > i);
       let new_prelex_acc : pre_token list = (List.map (fun (i, w) -> PretokMl (i, w)) ml_lexed) @ (html_pretok :: prelex_acc) in
       split_html s [] new_prelex_acc next_i n next_line_number
@@ -91,13 +93,6 @@ let prelexer (s : string) (i : int) (n : int) : pre_token list =
   List.rev (split_html s [] [] i n 1)
 
 (* Tests *)
-
-(* TODO line numbering in HTML is faulty: it is the line number of the last character, instead of the first.
-  Example: the line number of
-  1 some
-  2 html code
-  is 2.
-*)
 
 (* let () =
   let s_ex1 = "<{let x = 5 in  x}>" in

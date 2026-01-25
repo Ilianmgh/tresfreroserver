@@ -13,7 +13,8 @@ type keyword =
   | TokGt | TokLt | TokGeq | TokLeq | TokNeq | TokEq
   | TokPlus | TokMinus | TokTimes | TokDiv | TokExp
   | TokStrConcat
-  | TokSeq | TokComma
+  | TokSeq
+  | TokComma | TokFst | TokSnd
   | TokLpar | TokRpar
   | TokOpenML | TokCloseML
 
@@ -60,6 +61,8 @@ let keywords_tokens : (string * raw_token) list = [
   ("begin", Keyword TokLpar);
   ("end", Keyword TokRpar);
   ("not", Keyword TokNot);
+  ("fst", Keyword TokFst); (* TODO change to literals *)
+  ("snd", Keyword TokSnd); (* TODO change to literals *)
   ("true", Lit TokTrue);
   ("false", Lit TokFalse)]
 
@@ -100,6 +103,8 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokStrConcat -> "++"
   | TokSeq -> ";"
   | TokComma -> ","
+  | TokFst -> "fst"
+  | TokSnd -> "snd"
   | TokLpar -> "("
   | TokRpar -> ")"
   | TokOpenML -> "<{"
