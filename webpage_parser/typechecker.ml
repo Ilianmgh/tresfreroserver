@@ -2,7 +2,6 @@ open Utils
 open Lexic
 open Lexer
 open Syntax
-open Parser
 open TypeSyntax
 
 let debug = true
@@ -62,11 +61,15 @@ let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environme
   | Let (x, e, e') ->
     let gamma', alpha = type_inferer gamma e in
     type_inferer (StringMap.add x alpha gamma') e'
-  | Fun (x, e) -> type_inferer (StringMap.add x (TypeVar (fresh ())) gamma) e
+  | Fun (x, e) -> let gamma', beta = type_inferer (StringMap.add x (TypeVar (fresh ())) gamma) e in
+    (gamma', Arr (StringMap.find x gamma', beta))
   | Fix (f, x, e) ->
-    let gamma_x = StringMap.add x (TypeVar (fresh ())) gamma in
-    let gamma_x_f =  StringMap.add f (Arr (TypeVar (fresh ()), TypeVar (fresh ()))) gamma_x in
-    type_inferer gamma_x_f e
+    let vartype_x = fresh () in
+    let vartype_ret = fresh () in
+    let gamma_x = StringMap.add x (TypeVar vartype_x) gamma in
+    let gamma_x_f =  StringMap.add f (Arr (TypeVar vartype_x, TypeVar vartype_ret)) gamma_x in
+    let final_gamma, beta = type_inferer gamma_x_f e in
+    (final_gamma, Arr (StringMap.find x final_gamma, beta))
   | App (e, e') ->
     let gamma', func_type = type_inferer gamma e in
     let gamma'', func_arg = type_inferer gamma e' in
@@ -162,27 +165,3 @@ let string_of_typing_env (gamma : typing_environment) =
       Printf.sprintf "%s : %s, %s" x (string_of_ml_type alpha) acc
   in
   StringMap.fold string_of_type_binding gamma ""
-
-let () =
-  let tests = [
-      "<{}>"
-      ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%"
-      ;"<{let x = 5 in x}>"
-      ;"<{let x = 5 in % x}>"
-      ;"<{f\"coucou\"}>"
-      ;"<{let x = 5, 2 in fst x}>"
-      ;"<h1>Exampel</h1>%<{% let x = 1 in% if x = 2 then%}>% 2%<{% else %}>% what?%<{}>"
-      ;"<{1-1}>" (* FIXME is parsed as the function 1 applied to (-1) *)
-    ]
-  in
-  let tests = List.map (fun s -> String.map (fun c -> if c = '%' then '\n' else c) s) tests in
-  let s = if Array.length Sys.argv > 1 then Sys.argv.(1)
-    else List.nth tests 5
-  in
-  if debug then Printf.printf "raw: %s\n%!" s;
-  let lexed : token list = lexer s in
-  if debug then Printf.printf "lexed: %s\n%!" (string_of_list string_of_token lexed);
-  let _, parsed, _ = parser lexed in
-  if debug then Printf.printf "parsed: %s\n%!" (string_of_expr parsed);
-  let gamma, tau = type_inferer StringMap.empty parsed in
-  if debug then Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_typing_env gamma);

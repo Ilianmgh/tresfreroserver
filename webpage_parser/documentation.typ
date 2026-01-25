@@ -326,12 +326,12 @@ We implement a big-step call-by-value semantics.
       prooftree(rule(
         evaluatesTo(`E`, `e`, [#sym.chevron.l `E'`, `fun x -> e_f` #sym.chevron.r]),
         evaluatesTo(`E`, `e'`, `v`),
-        evaluatesTo(`E'`, `e_f[v/x]`, `v'`),
+        evaluatesTo([`E', x`#sym.mapsto`v`], `e_f`, `v'`),
         evaluatesTo(`E`, [`e e'`], `v'`)
       )),
       prooftree(rule(
         evaluatesTo(`E`, `e'`, `v'`),
-        evaluatesTo(`E`, `e'[v'/x]`, `v`),
+        evaluatesTo([`E, x`#sym.mapsto`v'`], `e'`, `v`),
         evaluatesTo(`E`, [`let x = e in e'`], `v`)
       )),
     ),
@@ -339,7 +339,7 @@ We implement a big-step call-by-value semantics.
       prooftree(rule(
         evaluatesTo(`E`, `e`, [#sym.chevron `E', fixfun f x -> e_f` #sym.chevron.r]),
         evaluatesTo(`E`, `e'`, `v`),
-        evaluatesTo(`E'`, `e_f[fixfun f x -> e_f/f][v/x]`, `v'`),
+        evaluatesTo([`E, f`#sym.mapsto`fixfun f x -> e_f, x`#sym.mapsto`v`], `e_f`, `v'`),
         evaluatesTo(`E`, [`e e'`], `v'`)
       )),
     ),

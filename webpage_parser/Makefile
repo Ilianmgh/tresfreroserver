@@ -2,16 +2,24 @@ CC = ocamlc
 CFLAGS =
 LDFLAGS =
 
-all: parser.x typechecker.x
+all: test.x interpreter.x typechecker.x parser.x lexer.x
 
 .PHONY: clean
 
-interpreter.x: interpreter.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo parser.cmo typeSyntax.cmo typechecker.cmo utils.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o interpreter.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo
+test.x: test.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o test.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo
+
+test.cmi: test.cmo
+
+test.cmo: test.ml utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typechecker.cmi typeSyntax.cmi interpreter.cmi
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o test.cmo test.ml
+
+interpreter.x: interpreter.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo typeSyntax.cmo typechecker.cmo utils.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o interpreter.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo
 
 interpreter.cmi: interpreter.cmo
 
-interpreter.cmo: interpreter.ml lexic.cmi trie.cmi prelexer.cmi lexer.cmi parser.cmi typechecker.cmi typeSyntax.cmi utils.cmi
+interpreter.cmo: interpreter.ml lexic.cmi trie.cmi prelexer.cmi lexer.cmi parser.cmi typechecker.cmi syntax.cmi typeSyntax.cmi utils.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o interpreter.cmo interpreter.ml
 
 typechecker.x: typechecker.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo utils.cmo
