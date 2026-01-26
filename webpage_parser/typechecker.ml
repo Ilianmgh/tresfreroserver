@@ -4,7 +4,7 @@ open Lexer
 open Syntax
 open TypeSyntax
 
-let debug = true
+let debug = false
 
 type unification_error_type = Incompatible | Recursive
 
@@ -36,6 +36,7 @@ let rec occurs (var : type_variable) (tau : ml_type) : bool = match tau with
 
 (** Type unification. Returns a minimal substitution [theta] s.t. [alpha theta = beta theta] *)
 let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
+  if debug then Printf.fprintf stderr "Unifying %s --- %s\n%!" (string_of_ml_type alpha) (string_of_ml_type beta);
   let rec unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match alpha, beta with
   | Arr (alpha, beta), Arr (alpha', beta') ->
     let theta' = unify_aux alpha alpha' theta in
@@ -91,8 +92,11 @@ let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environme
   end
   | Seq (e, e') -> begin
     let gamma', tau = type_inferer gamma e in
-    let theta = unify TypeUnit tau in
-    type_inferer (update_typing_env gamma' theta) e'
+    try
+      let theta = unify TypeUnit tau in
+      type_inferer (update_typing_env gamma' theta) e'
+    with
+      UnificationError _ -> Printf.fprintf stderr "%s: is expected to have type unit." (string_of_expr (Seq (e, e'))); type_inferer gamma' e'
   end
   | Html h -> gamma, TypeHtml
   | Var x -> begin match StringMap.find_opt x gamma with
@@ -126,7 +130,7 @@ let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environme
     let gamma'', beta = type_inferer gamma' e' in
     let theta = unify alpha beta in
     assert ((apply_substitution alpha theta) = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
-    (update_typing_env gamma'' theta, apply_substitution alpha theta)
+    (update_typing_env gamma'' theta, TypeBool)
   | Not e -> begin
     let gamma', alpha = type_inferer gamma e in
     let theta = unify TypeBool alpha in

@@ -2,7 +2,7 @@ open Lexer
 open Utils
 open Syntax
 
-let debug = true
+let debug = false
 
 (** Eating functions. When expecting a certain token, use it to get: the new line number, the important data of the token read, and the remainder of the token list.
   Must be provided with an error message to display in case the next token is not the token expected *)
@@ -30,12 +30,14 @@ and parse_application (l : token list) : int * expr * token list =
   (* (if debug then Printf.fprintf stderr "PARSE APPLICATION\n%!"); *)
   (* TODO should be left associative *)
   let i_func, func, l_rem = parse_negation l in
-  Printf.fprintf stderr "Application %s, parsed function: %s\n%!" (string_of_list string_of_token l) (string_of_expr func);
+  (if debug then Printf.fprintf stderr "Application %s, parsed function: %s\n%!" (string_of_list string_of_token l) (string_of_expr func));
   try (* TODO see if it does the trick *)
     if debug then Printf.fprintf stderr "beforearg: %s\n%!" (string_of_list string_of_token l_rem);
     let i_arg, arg, l_rem = parse_application l_rem in
-    Printf.fprintf stderr "Application %s, parsed function and argument: %s --- %s\n%!" (string_of_list string_of_token l) (string_of_expr func) (string_of_expr arg);
-    Printf.fprintf stderr "Application %s, parsed whole: %s\n%!" (string_of_list string_of_token l) (string_of_expr (App (func, arg)));
+    if debug then (
+      Printf.fprintf stderr "Application %s, parsed function and argument: %s --- %s\n%!" (string_of_list string_of_token l) (string_of_expr func) (string_of_expr arg);
+      Printf.fprintf stderr "Application %s, parsed whole: %s\n%!" (string_of_list string_of_token l) (string_of_expr (App (func, arg)))
+    );
     (i_arg, App (func, arg), l_rem)
   with
     ParsingError _ -> (i_func, func, l_rem)
@@ -56,17 +58,23 @@ and parse_power (l : token list) : int * expr * token list =
 and parse_multiplication (l : token list) : int * expr * token list =
   (* (if debug then Printf.fprintf stderr "PARSE MULTIPLICATION\n%!"); *)
   let i_lhs, lhs, l_rem = parse_sum l in
-  match eat_token_opt [(Keyword TokTimes)] l_rem with
-    | Some (i_times, times, l_rem) ->
+  match eat_token_opt [Keyword TokTimes; Keyword TokDiv] l_rem with
+    | Some (i_times, Keyword TokTimes, l_rem) ->
       let i_rhs, rhs, l_rem = parse_multiplication l_rem in (i_rhs, Mult (lhs, rhs), l_rem)
+    | Some (i_times, Keyword TokDiv, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_multiplication l_rem in (i_rhs, Div (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
+    | _ -> assert false
 and parse_sum (l : token list) : int * expr * token list =
   (* (if debug then Printf.fprintf stderr "PARSE SUM\n%!"); *)
   let i_lhs, lhs, l_rem = parse_concatenation l in
-  match eat_token_opt [(Keyword TokPlus)] l_rem with
-    | Some (i_plus, plus, l_rem) ->
+  match eat_token_opt [Keyword TokPlus; Keyword TokMinus] l_rem with
+    | Some (i_plus, Keyword TokPlus, l_rem) ->
       let i_rhs, rhs, l_rem = parse_sum l_rem in (i_rhs, Plus (lhs, rhs), l_rem)
+    | Some (i_plus, Keyword TokMinus, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_sum l_rem in (i_rhs, Minus (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
+    | _ -> assert false
 and parse_concatenation (l : token list) : int * expr * token list =
   (* (if debug then Printf.fprintf stderr "PARSE CONCATENATION\n%!"); *)
   let i_lhs, lhs, l_rem = parse_comparison l in
@@ -128,20 +136,10 @@ and parse_atom (l : token list) : int * expr * token list =
   | (i, tok) :: l_rem -> begin match tok with
     (* Constructors for which we know how to parse by reading the first token *)
     | Keyword TokLet -> begin
-      Printf.fprintf stderr "BARRIER 1\n%!";
-      Printf.fprintf stderr "%s\n%!" (string_of_list string_of_token l_rem);
       let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: let-expression: variable expected after 'let'." i) in
-      Printf.fprintf stderr "BARRIER 2\n%!";
-      Printf.fprintf stderr "%s\n%!" (string_of_list string_of_token l_rem);
       let i_eq, eq, l_rem = eat_token (Keyword TokEq) l_rem (Printf.sprintf "line %d: let-expression: '=' expected after 'let'." i_var) in
-      Printf.fprintf stderr "BARRIER 3\n%!";
-      Printf.fprintf stderr "%s\n%!" (string_of_list string_of_token l_rem);
       let i_x_expr, x_expr, l_rem = parse_exp l_rem in
-      Printf.fprintf stderr "BARRIER 4\n%!";
-      Printf.fprintf stderr "%s\n%!" (string_of_list string_of_token l_rem);
       let i_in, in_, l_rem = eat_token (Keyword TokIn) l_rem (Printf.sprintf "line %d: let-expression: 'in' expected after 'let'." i_x_expr) in
-      Printf.fprintf stderr "BARRIER 5\n%!";
-      Printf.fprintf stderr "%s\n%!" (string_of_list string_of_token l_rem);
       let i, body_expr, l_rem = parse_exp l_rem in
       (i, Let (var, x_expr, body_expr), l_rem)
     end
@@ -173,7 +171,7 @@ and parse_atom (l : token list) : int * expr * token list =
     end
     | Lit TokTrue -> (i, Bool true, l_rem)
     | Lit TokFalse -> (i, Bool false, l_rem)
-    | Lit (TokInt n) -> (Printf.printf "Barrier\n%!"; (i, Int n, l_rem))
+    | Lit (TokInt n) -> (i, Int n, l_rem)
     | Lit (TokStr s) -> (i, String s, l_rem)
     | Lit (TokFstr s) -> (i, Fstring s, l_rem)
     | Keyword TokFst -> (i, Fst, l_rem)
@@ -195,29 +193,8 @@ let parser (lexed : token list) = match lexed with
 
 (*
   TODO:
+  [] check if precedence of if is not under-evaluated : test if true then 1; 2 === (if true then 1); 2 or if true then (1; 2)
   [] put everything together in [parser]
   [] manage left-associativity
   [] parse () as a unit
 *)
-
-(* let () =
-  let tests = [
-      "<{}>"
-      ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%"
-      ;"<{let x = 5 in x}>"
-      ;"<{let x = 5 in % x}>"
-      ;"<{f\"coucou\"}>"
-      ;"<{let x = 5, 2 in fst x}>"
-      ;"<h1>Exampel</h1>%<{% let x = 1 in% if x = 2 then%}>% 2%<{% else %}>% what?%<{}>"
-      ;"<{1-1}>" (* FIXME is parsed as the function 1 applied to (-1) *)
-    ]
-  in
-  let tests = List.map (fun s -> String.map (fun c -> if c = '%' then '\n' else c) s) tests in
-  let s = if Array.length Sys.argv > 1 then Sys.argv.(1)
-    else List.nth tests 7
-  in
-  if debug then Printf.printf "raw: %s\n%!" s;
-  let lexed : token list = lexer s in
-  if debug then Printf.printf "lexed: %s\n%!" (string_of_list string_of_token lexed);
-  let _, parsed, _ = parser lexed in
-  if debug then Printf.printf "parsed: %s\n%!" (string_of_expr parsed); *)
