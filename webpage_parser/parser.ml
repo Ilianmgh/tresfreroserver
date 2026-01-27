@@ -24,68 +24,71 @@ let eat_token_opt (toks : raw_token list) (l : token list) : (int * raw_token * 
   | (i_line, tok') :: l_rem -> if List.mem tok' toks then Some (i_line, tok', l_rem) else None
   | _ -> None
 
-(** Returns [(last_line, remaining, e)]: [last_line] the number of the last line from which we parsed something; [remaining] the list of tokens that remained to be parsed; [e] the parsed expression *)
-let rec parse_exp (l : token list) : int * expr * token list = parse_application l
-and parse_application (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE APPLICATION\n%!"); *)
-  (* TODO should be left associative *)
-  let i_func, func, l_rem = parse_negation l in
-  (if debug then Printf.fprintf stderr "Application %s, parsed function: %s\n%!" (string_of_list string_of_token l) (string_of_expr func));
-  try (* TODO see if it does the trick *)
-    if debug then Printf.fprintf stderr "beforearg: %s\n%!" (string_of_list string_of_token l_rem);
-    let i_arg, arg, l_rem = parse_application l_rem in
-    if debug then (
-      Printf.fprintf stderr "Application %s, parsed function and argument: %s --- %s\n%!" (string_of_list string_of_token l) (string_of_expr func) (string_of_expr arg);
-      Printf.fprintf stderr "Application %s, parsed whole: %s\n%!" (string_of_list string_of_token l) (string_of_expr (App (func, arg)))
-    );
-    (i_arg, App (func, arg), l_rem)
+(** LEFT ASSOCIATIVITY *)
+
+let merge_additive (op : raw_token) (e1 : expr) (e2 : expr) = match op with
+    | Keyword TokPlus -> Plus (e1, e2)
+    | Keyword TokMinus -> Minus (e1, e2)
+    | _ -> assert false
+
+let merge_multiplicative (op : raw_token) (e1 : expr) (e2 : expr) = match op with
+    | Keyword TokTimes -> Mult (e1, e2)
+    | Keyword TokDiv -> Div (e1, e2)
+    | _ -> assert false
+
+(** [parse_left_assoc parse_operand sep merge_operands last_line acc l] parses from [l] where the last line number from which we read was [last_line] given an accumulator of expressions already parsed [acc].
+  The goal is to parse a series of expressions parsed by [parse_operand] separated by separator in the list [sep].
+  They are combined in a left-associative manner using the function [merge_operands].
+  Example:
+  [parse_left_assoc parse_factors [KeyWord TokPlus; KeyWord TokMinus] merge_additive 156 (Int 0) [Keyword TokPlus; Lit TokInt 3; Keyword TokTimes; Lit TokInt 2; Keyword TokMinus; Lit TokInt 4]] parses [((0 + (3 * 2)) - 4)].
+*)
+let rec parse_left_assoc (parse_operand : token list -> (int * expr * token list)) (sep : raw_token list) (merge_operands : raw_token -> expr -> expr -> expr) (last_line : int) (acc : expr) (l : token list) : int * expr * token list =
+  match eat_token_opt sep l with
+  | Some (i_line, operator, l_rem) -> let i_line', operand, l_rem' = parse_operand l_rem in
+    parse_left_assoc parse_operand sep merge_operands i_line' (merge_operands operator acc operand) l_rem'
+  | _ -> (last_line, acc, l)
+
+let rec parse_application_accumulator (parse_argument : token list -> (int * expr * token list)) (last_line : int) (acc : expr) (l : token list) : int * expr * token list =
+  try
+    let i_line, arg, l_rem = parse_argument l in
+    parse_application_accumulator parse_argument i_line (App (acc, arg)) l_rem (* can't raise a ParsingError *)
   with
-    ParsingError _ -> (i_func, func, l_rem)
-and parse_negation (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE NEGATION\n%!"); *)
-match l with
-  | (i, Keyword TokMinus) :: l_rem ->
-    let i_number, number, l_rem = parse_power l_rem in
-    (i_number, Neg number, l_rem)
-  | _ -> parse_power l 
-and parse_power (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE POWER\n%!"); *)
-  let i_number, number, l_rem = parse_multiplication l in
-  match eat_token_opt [(Keyword TokExp)] l_rem with
-    | Some (i_pow_op, pow_op, l_rem) ->
-      let i_power, power, l_rem = parse_power l_rem in (i_power, Pow (number, power), l_rem)
-    | None -> (i_number, number, l_rem)
-and parse_multiplication (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE MULTIPLICATION\n%!"); *)
-  let i_lhs, lhs, l_rem = parse_sum l in
-  match eat_token_opt [Keyword TokTimes; Keyword TokDiv] l_rem with
-    | Some (i_times, Keyword TokTimes, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_multiplication l_rem in (i_rhs, Mult (lhs, rhs), l_rem)
-    | Some (i_times, Keyword TokDiv, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_multiplication l_rem in (i_rhs, Div (lhs, rhs), l_rem)
+    | ParsingError _ -> (last_line, acc, l)
+
+(** Returns [(last_line, remaining, e)]: [last_line] the number of the last line from which we parsed something; [remaining] the list of tokens that remained to be parsed; [e] the parsed expression *)
+let rec parse_exp (l : token list) : int * expr * token list = if debug then Printf.printf "PARSING: %s\n" (string_of_list string_of_token l); parse_sequence l
+and parse_sequence (l : token list) : int * expr * token list =
+  (if debug then Printf.fprintf stderr "PARSE SEQ\n%!");
+  let i_lhs, lhs, l_rem = parse_tuple l in
+  (if debug then Printf.fprintf stderr "PARSE SEQ OK\n%!");
+  match eat_token_opt [(Keyword TokSeq)] l_rem with
+    | Some (i_seq, seq, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_sequence l_rem in (i_rhs, Seq (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
-    | _ -> assert false
-and parse_sum (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE SUM\n%!"); *)
-  let i_lhs, lhs, l_rem = parse_concatenation l in
-  match eat_token_opt [Keyword TokPlus; Keyword TokMinus] l_rem with
-    | Some (i_plus, Keyword TokPlus, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_sum l_rem in (i_rhs, Plus (lhs, rhs), l_rem)
-    | Some (i_plus, Keyword TokMinus, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_sum l_rem in (i_rhs, Minus (lhs, rhs), l_rem)
+and parse_tuple (l : token list) : int * expr * token list = (* for now, only couples are allowed *)
+(if debug then Printf.fprintf stderr "PARSE TUPLE\n%!");
+  let i_lhs, lhs, l_rem = parse_disjunction l in
+  match eat_token_opt [(Keyword TokComma)] l_rem with
+    | Some (i_comma, op_comma, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_tuple l_rem in (i_rhs, Couple (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
-    | _ -> assert false
-and parse_concatenation (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE CONCATENATION\n%!"); *)
+and parse_disjunction (l : token list) : int * expr * token list =
+  (if debug then Printf.fprintf stderr "PARSE DISJUNCTION\n%!");
+  let i_lhs, lhs, l_rem = parse_conjunction l in
+  match eat_token_opt [(Keyword TokOr)] l_rem with
+    | Some (i_or, op_or, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_disjunction l_rem in (i_rhs, Or (lhs, rhs), l_rem)
+    | None -> (i_lhs, lhs, l_rem)
+and parse_conjunction (l : token list) : int * expr * token list =
+  (if debug then Printf.fprintf stderr "PARSE CONJUNCTION\n%!");
   let i_lhs, lhs, l_rem = parse_comparison l in
-  match eat_token_opt [(Keyword TokStrConcat)] l_rem with
-    | Some (i_concat, concat, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_concatenation l_rem in (i_rhs, Concat (lhs, rhs), l_rem)
+  match eat_token_opt [(Keyword TokAnd)] l_rem with
+    | Some (i_and, op_and, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_conjunction l_rem in (i_rhs, And (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
 and parse_comparison (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE COMPARISON\n%!"); *)
-  (* TODO should be left associative *)
-  let i_lhs, lhs, l_rem = parse_conjunction l in
+  (if debug then Printf.fprintf stderr "PARSE COMPARISON\n%!");
+  let i_lhs, lhs, l_rem = parse_concatenation l in
   match eat_token_opt [Keyword TokEq; Keyword TokNeq; Keyword TokGt; Keyword TokLt; Keyword TokGeq; Keyword TokLeq] l_rem with
     | Some (i_op, Keyword TokEq, l_rem) ->
       let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Eq (lhs, rhs), l_rem)
@@ -101,36 +104,39 @@ and parse_comparison (l : token list) : int * expr * token list =
       let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Geq (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
     | _ -> assert false
-and parse_conjunction (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE CONJUNCTION\n%!"); *)
-  let i_lhs, lhs, l_rem = parse_disjunction l in
-  match eat_token_opt [(Keyword TokAnd)] l_rem with
-    | Some (i_and, op_and, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_conjunction l_rem in (i_rhs, And (lhs, rhs), l_rem)
+and parse_concatenation (l : token list) : int * expr * token list =
+  (if debug then Printf.fprintf stderr "PARSE CONCATENATION\n%!");
+  let i_lhs, lhs, l_rem = parse_sum l in
+  match eat_token_opt [(Keyword TokStrConcat)] l_rem with
+    | Some (i_concat, concat, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_concatenation l_rem in (i_rhs, Concat (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
-and parse_disjunction (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE DISJUNCTION\n%!"); *)
-  let i_lhs, lhs, l_rem = parse_tuple l in
-  match eat_token_opt [(Keyword TokOr)] l_rem with
-    | Some (i_or, op_or, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_disjunction l_rem in (i_rhs, Or (lhs, rhs), l_rem)
-    | None -> (i_lhs, lhs, l_rem)
-and parse_tuple (l : token list) : int * expr * token list = (* for now, only couples are allowed *)
-(* (if debug then Printf.fprintf stderr "PARSE TUPLE\n%!"); *)
-  let i_lhs, lhs, l_rem = parse_sequence l in
-  match eat_token_opt [(Keyword TokComma)] l_rem with
-    | Some (i_comma, op_comma, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_tuple l_rem in (i_rhs, Couple (lhs, rhs), l_rem)
-    | None -> (i_lhs, lhs, l_rem)
-and parse_sequence (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE SEQ\n%!"); *)
-  let i_lhs, lhs, l_rem = parse_atom l in
-  match eat_token_opt [(Keyword TokSeq)] l_rem with
-    | Some (i_seq, seq, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_sequence l_rem in (i_rhs, Seq (lhs, rhs), l_rem)
-    | None -> (i_lhs, lhs, l_rem)
+and parse_sum (l : token list) : int * expr * token list =
+  let i, first_operand, l_rem = parse_multiplication l in
+  parse_left_assoc parse_multiplication [Keyword TokPlus; Keyword TokMinus] merge_additive i first_operand l_rem
+and parse_multiplication (l : token list) : int * expr * token list =
+  let i, first_operand, l_rem = parse_power l in
+  parse_left_assoc parse_power [Keyword TokTimes; Keyword TokDiv] merge_multiplicative i first_operand l_rem
+and parse_power (l : token list) : int * expr * token list =
+  (if debug then Printf.fprintf stderr "PARSE POWER\n%!");
+  let i_number, number, l_rem = parse_negation l in
+  match eat_token_opt [(Keyword TokExp)] l_rem with
+    | Some (i_pow_op, pow_op, l_rem) ->
+      let i_power, power, l_rem = parse_power l_rem in (i_power, Pow (number, power), l_rem)
+    | None -> (i_number, number, l_rem)
+and parse_negation (l : token list) : int * expr * token list =
+  (if debug then Printf.fprintf stderr "PARSE NEGATION\n%!");
+match l with
+  | (i, Keyword TokMinus) :: l_rem ->
+    let i_number, number, l_rem = parse_application l_rem in
+    (i_number, Neg number, l_rem)
+  | _ -> parse_application l 
+and parse_application (l : token list) : int * expr * token list =
+  (if debug then Printf.fprintf stderr "PARSE APPLICATION\n%!");
+  let i_func, func, l_rem = parse_atom l in
+  parse_application_accumulator parse_atom i_func func l_rem
 and parse_atom (l : token list) : int * expr * token list =
-  (* (if debug then Printf.fprintf stderr "PARSE ATOM\n%!"); *)
+  (if debug then Printf.fprintf stderr "PARSE ATOM\n%!");
   match l with
   | [] -> raise (ParsingError "Unexpected end of document")
   | (i, tok) :: l_rem -> begin match tok with
@@ -164,11 +170,7 @@ and parse_atom (l : token list) : int * expr * token list =
       let i_else_body, else_body, l_rem = parse_exp l_rem in
       (i_else_body, If (condition, then_body, else_body), l_rem)
     end
-    | Keyword TokCloseML -> begin (* TODO not sure it has the expected behaviour *)
-      let i_html, html, l_rem = eat_html l_rem (Printf.sprintf "line %d: HTML code expected after ML closing bracket." i) in
-      let i_open_ml, open_ml, l_rem' = eat_token (Keyword TokOpenML) l_rem (Printf.sprintf "line %d: Open ML code bracket expected." i_html) in (* if there is ml code again afterwards *)
-      (i_open_ml, Html html, l_rem')
-    end
+    | Keyword TokCloseML -> raise (ParsingError (Printf.sprintf "line %d: Unexpected end of ml code." i))
     | Lit TokTrue -> (i, Bool true, l_rem)
     | Lit TokFalse -> (i, Bool false, l_rem)
     | Lit (TokInt n) -> (i, Int n, l_rem)

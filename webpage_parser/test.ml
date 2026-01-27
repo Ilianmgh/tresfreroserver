@@ -7,7 +7,7 @@ open TypeSyntax
 open Typechecker
 open Interpreter
 
-let displayed = ["raw"; "parsed"; "typed"; "eval'd"]
+let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 
 let test (i, code : int * string) : unit =
   begin if i < 0 then
@@ -42,11 +42,11 @@ let () =
       ;"<{let x = 5 in % x}>"
       ;"<{f\"coucou\"}>"
       ;"<{let x = 5, 2 in fst x}>"
-      ;"<h1>Exampel</h1>%<{% let x = 1 in% if x + 1 = 2 then%}>% 2%<{% else %}>% DEADCODE%<{}>" (* FIXME parsed [if x + (1 = 2) ...] instead of [if (x + 1) = 2 ...]*)
-      ;"<{2 + 1 = 3}>" (* FIXME parsed [if x + (1 = 2) ...] instead of [if (x + 1) = 2 ...]*)
-      ;"<{1-1}>" (* FIXME is parsed as the function 1 applied to (-1) *)
+      ;"<h1>Exampel</h1>%<{% let x = 1 in% if x + 1 = 2 then%<[% 2%]>% else %<[% DEADCODE%]>}>" (* TODO add these delimiters *)
+      ;"<{2 + 1 = 3}>"
+      ;"<{1-1}>"
       ;"<{let y = 3 in let x = 4 in (fun x -> y) 5}>"
-      ;"<{f x y}>"
+      ;"<{let f = fun x -> fun y -> x in let x = 1 in let x = 2 in f x y}>"
       ;"<{if true then 1 else 2; 3}>" (* FIXME is parsed [if true then 1 else (2; 3)] and not as it should [(if true then 1 else 2); 3] *)
       (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
       (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)
