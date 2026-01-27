@@ -1,10 +1,15 @@
 (** Lexic definition *)
 
 let open_ml_bracket = "<{"
-
 let close_ml_bracket = "}>"
 
+let open_html_bracket = "<["
+let close_html_bracket = "]>"
+
 let len_open_ml_bracket = String.length open_ml_bracket
+
+let len_open_html_bracket = String.length open_html_bracket
+let len_close_html_bracket = String.length close_html_bracket
 
 type keyword =
   | TokLet | TokFun | TokArr | TokFix | TokIn
@@ -17,6 +22,7 @@ type keyword =
   | TokComma | TokFst | TokSnd
   | TokLpar | TokRpar
   | TokOpenML | TokCloseML
+  | TokOpenHTML | TokCloseHTML
 
 type literal = TokTrue | TokFalse | TokInt of int | TokStr of string | TokFstr of string
 
@@ -44,6 +50,8 @@ let symbols_tokens : (string * raw_token) list = [
   ("^", Keyword TokExp);
   (open_ml_bracket, Keyword TokOpenML);
   (close_ml_bracket, Keyword TokCloseML);
+  (open_html_bracket, Keyword TokOpenHTML);
+  (close_html_bracket, Keyword TokCloseHTML);
   ("(", Keyword TokLpar);
   (")", Keyword TokRpar);
   (";", Keyword TokSeq);
@@ -109,6 +117,8 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokRpar -> ")"
   | TokOpenML -> "<{"
   | TokCloseML -> "}>"
+  | TokOpenHTML -> "<["
+  | TokCloseHTML -> "]>"
 
 let string_of_raw_token (tok : raw_token) : string = match tok with
   | Id s -> Printf.sprintf "Id:%s" s
