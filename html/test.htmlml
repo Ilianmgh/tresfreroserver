@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coucou</title>
+</head>
+<body>
+  <h1>Test factorielle même si les exemples de maths sont à bannir</h1>
+  <p>
+    La factorielle de 6, c'est:
+    <{
+      let fact = fixfun f x -> if x = 0 then 1 else x * (f (x - 1)) in
+      fact 6
+    }>
+  <p>
+  </p>
+    La factorielle tout court, c'est:
+    <{
+      let y = 12 in let z = "bonjour" in
+      let fact = fixfun f x -> if x = 0 then 1 else x * (f (x - 1)) in
+      fact
+    }>
+    coucoucocuocucoucococuc
+  </p>
+  <p>
+    <{
+      "co<i>ucou"
+    }>
+  </p>
+  <!--
+    <{"-->"}> hmm...
+  -->
+</body>
+</html>
