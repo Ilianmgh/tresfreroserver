@@ -1,4 +1,5 @@
 import time
+import os
 import utils
 import config # TODO replace page per error by a single page and config giving status messages to be replaced in said page
 from typing import Any, Dict, Iterable
@@ -24,6 +25,18 @@ def str_of_path(path : str) -> str :
 def bytes_of_path(path : str) -> bytes :
   """ Returns as bytes the content of the file given by [path] """
   res : bytes
+  with open(path, mode = "rb") as f :
+    res = f.read()
+  return res
+
+def get_webpage(path : str) -> bytes :
+  """ Returns as bytes the content of the file given by [path] """
+  path_split = path.split(".")
+  extension : str = path_split[-1]
+  name : str = path[:len(path) - len(extension) - 1]
+  if extension == "htmlml" :
+    os.system(f"./webpage_parser/produce_page.x {path} {name}.html")
+    path = f"{name}.html"
   with open(path, mode = "rb") as f :
     res = f.read()
   return res
@@ -54,7 +67,7 @@ def get_content_type(path : str) -> tuple[int, str] :
       extension = "png"
     if extension in ["png", "svg", "webp", "avif"] :
       return (0, "image/" + extension)
-    if extension == "html" :
+    if extension == "html" or extension == "htmlml":
       return (0, config.contenttypeofhtmlfiles)
     if extension == "js" :
       return (0, config.contenttypeofjsscripts)
@@ -130,12 +143,12 @@ def make_body(status : int, path : str = "", additional_message : str | None = N
   assert(additional_message is None) # TODO at some point, should be added to the error page.
   if status == 200 :
     try :
-      return (200, bytes_of_path(path))
+      return (200, get_webpage(path))
     except (IsADirectoryError, FileNotFoundError) as e :
       status = 404
   if status in config.displayable_errors :
-    return (status, bytes_of_path(f"./error{status}.html"))
-  return (500, bytes_of_path(f"./error500.html"))
+    return (status, get_webpage(f"./error{status}.html"))
+  return (500, get_webpage(f"./error500.html"))
 
 def make_header(status : int, contenttype : str, language : str, contentlength : int) -> str :
   first_line = f"HTTP/1.1 {status}"
@@ -148,7 +161,7 @@ def make_header(status : int, contenttype : str, language : str, contentlength :
 
 def http_response(text : str) -> tuple[bool, bytes] :
   """ Returns a tuple [(keep_alive, response)] of :
-      - a boolean saying whether to keep the TCP connection alive after answering.
+      - a boolean indicating whether to keep the TCP connection alive after answering.
       - the http response to the request [text]. """
   if text.strip() == "" : # Not sure if that's useful
     return (False, "".encode())
