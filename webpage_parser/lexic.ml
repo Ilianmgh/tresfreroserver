@@ -130,4 +130,4 @@ let string_of_raw_token (tok : raw_token) : string = match tok with
   | Lit (TokFstr s) -> Printf.sprintf "Lit(f):%s" s
   | TokHtml s -> Printf.sprintf "Html:%s" s
 
-let string_of_token ((i, tok) : token) : string = Printf.sprintf "%d|%s" i (string_of_raw_token tok)
+let string_of_token ((i, tok) : token) : string = Printf.sprintf "l. %d %s" i (string_of_raw_token tok)

@@ -15,9 +15,9 @@ let eat_html (l : token list) (error_msg : string) : int * string * token list =
   | (i_line, TokHtml code) :: l_rem -> (i_line, code, l_rem)
   | _ -> raise (ParsingError error_msg)
 
-let eat_token (tok : raw_token) (l : token list) (error_msg : string) : int * raw_token * token list = match l with
-  | (i_line, tok') :: l_rem -> if tok = tok' then (i_line, tok, l_rem) else raise (ParsingError error_msg)
-  | _ -> raise (ParsingError error_msg)
+let eat_token (tok : raw_token) (l : token list) (error_msg : raw_token option -> string) : int * raw_token * token list = match l with
+  | (i_line, tok') :: l_rem -> if tok = tok' then (i_line, tok, l_rem) else raise (ParsingError (error_msg (Some tok')))
+  | _ -> raise (ParsingError (error_msg None))
 
 (** Eats a token among [toks] if it is the next to be read; [None] otherwise *)
 let eat_token_opt (toks : raw_token list) (l : token list) : (int * raw_token * token list) option = match l with
@@ -143,30 +143,30 @@ and parse_atom (l : token list) : int * expr * token list =
     (* Constructors for which we know how to parse by reading the first token *)
     | Keyword TokLet -> begin
       let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: let-expression: variable expected after 'let'." i) in
-      let i_eq, eq, l_rem = eat_token (Keyword TokEq) l_rem (Printf.sprintf "line %d: let-expression: '=' expected after 'let'." i_var) in
+      let i_eq, eq, l_rem = eat_token (Keyword TokEq) l_rem (fun _ -> Printf.sprintf "line %d: let-expression: '=' expected after 'let'." i_var) in
       let i_x_expr, x_expr, l_rem = parse_exp l_rem in
-      let i_in, in_, l_rem = eat_token (Keyword TokIn) l_rem (Printf.sprintf "line %d: let-expression: 'in' expected after 'let'." i_x_expr) in
+      let i_in, in_, l_rem = eat_token (Keyword TokIn) l_rem (fun _ -> Printf.sprintf "line %d: let-expression: 'in' expected after 'let'." i_x_expr) in
       let i, body_expr, l_rem = parse_exp l_rem in
       (i, Let (var, x_expr, body_expr), l_rem)
     end
     | Keyword TokFun -> begin
       let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: fun-expression: variable expected after 'fun'." i) in
-      let i_arrow, arrow, l_rem = eat_token (Keyword TokArr) l_rem (Printf.sprintf "line %d: fun-expression: '->' expected after 'fun <var>'." i_var) in
+      let i_arrow, arrow, l_rem = eat_token (Keyword TokArr) l_rem (fun _ -> Printf.sprintf "line %d: fun-expression: '->' expected after 'fun <var>'." i_var) in
       let i_body, body, l_rem = parse_exp l_rem in
       (i_body, Fun (var, body), l_rem)
     end
     | Keyword TokFix -> begin
       let i_f_var, f_var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: fixfun-expression: function variable expected after 'fixfun'." i) in
       let i_x_var, x_var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: fixfun-expression: variable expected after 'fixfun'." i) in
-      let i_arrow, arrow, l_rem = eat_token (Keyword TokArr) l_rem (Printf.sprintf "line %d: fun-expression: '->' expected after 'fun <var>'." i_x_var) in
+      let i_arrow, arrow, l_rem = eat_token (Keyword TokArr) l_rem (fun _ -> Printf.sprintf "line %d: fun-expression: '->' expected after 'fun <var>'." i_x_var) in
       let i_body, body, l_rem = parse_exp l_rem in
       (i_body, Fix (f_var, x_var, body), l_rem)
     end
     | Keyword TokIf -> begin
       let i_condition, condition, l_rem = parse_exp l_rem in
-      let i_then, tok_then, l_rem = eat_token (Keyword TokThen) l_rem (Printf.sprintf "line %d: if-expression: `then` expected after 'if <condition>'." i_condition) in
+      let i_then, tok_then, l_rem = eat_token (Keyword TokThen) l_rem (fun _ -> Printf.sprintf "line %d: if-expression: `then` expected after 'if <condition>'." i_condition) in
       let i_then_body, then_body, l_rem = parse_exp l_rem in
-      let i_else, tok_else, l_rem = eat_token (Keyword TokElse) l_rem (Printf.sprintf "line %d: if-expression: `else` expected after 'if <condition> then <body>'." i_then_body) in
+      let i_else, tok_else, l_rem = eat_token (Keyword TokElse) l_rem (fun _ -> Printf.sprintf "line %d: if-expression: `else` expected after 'if <condition> then <body>'." i_then_body) in
       let i_else_body, else_body, l_rem = parse_exp l_rem in
       (i_else_body, If (condition, then_body, else_body), l_rem)
     end
@@ -180,18 +180,27 @@ and parse_atom (l : token list) : int * expr * token list =
     | Keyword TokSnd -> (i, Snd, l_rem)
     | Id s -> (i, Var s, l_rem)
     | Keyword TokLpar ->
-      let i_expr, expr, l_rem = parse_application l_rem in
-      let i_rpar, rpar, l_rem = eat_token (Keyword TokRpar) l_rem (Printf.sprintf "line %d: closing parenthesis expected." i_expr) in
+      let i_expr, expr, l_rem = parse_exp l_rem in
+      let i_rpar, rpar, l_rem = eat_token (Keyword TokRpar) l_rem (fun x -> Printf.sprintf "line %d: %s closing parenthesis expected." i_expr (match x with | Some tok -> string_of_raw_token tok | None -> "")) in
       (i_rpar, expr, l_rem)
+    | Keyword TokOpenHTML ->
+      let i_html, html, l_rem = eat_html l_rem (Printf.sprintf "line %d: No HTML code between HTML brackets??" i) in
+      let i_close_html, close_html, l_rem = eat_token (Keyword TokCloseHTML) l_rem (fun _ -> Printf.sprintf "line %d: HTML-closing bracket expected." i_html) in
+      (i_close_html, Html html, l_rem)
     | TokHtml s -> raise (ParsingError (Printf.sprintf "line %d: Unexpected html code within ML delimiters." i)) (* assert false ? *)
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Malformed expression." i))
   end
 
-(** Parsing ml, considering `}> html code <{` as a literal of type content *)
-let parser (lexed : token list) = match lexed with
-  | [] -> raise (ParsingError "Unexpected end of document")
-  | (i, TokHtml s) :: (j, Keyword TokOpenML) :: lexed' -> parse_exp lexed'
-  | _ -> assert false
+(** Parsing ml *)
+let rec parser (lexed : token list) : dynml_webpage  = match lexed with
+  | [] -> []
+  | [(i, TokHtml s)] -> [Pure s]
+  | (i, TokHtml s) :: (j, Keyword TokOpenML) :: lexed' -> begin match parse_exp lexed' with
+    | i_line, parsed, (_, Keyword TokCloseML) :: l_rem' -> (Pure s) :: (Script parsed) :: (parser l_rem')
+    | i_line, _, tok :: _ -> raise (ParsingError (Printf.sprintf "line %d: %s, HTML-closing bracket %s expected" i_line (string_of_token tok) (string_of_raw_token (Keyword TokCloseML))))
+    | i_line, _, [] -> raise (ParsingError (Printf.sprintf "line %d: HTML-closing bracket %s expected" i_line (string_of_raw_token (Keyword TokCloseML))))
+  end
+  | _ -> Printf.fprintf stderr "%s\n" (string_of_list string_of_token lexed); raise (ParsingError "I don't know what happened")
 
 (*
   TODO:

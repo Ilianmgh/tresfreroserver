@@ -41,10 +41,22 @@ type expr = (* TODO add match ... with, user-defined types *)
   | Concat of expr * expr
   | String of string
   | Fstring of string
+(* 
+type type_name = string
+
+type type_expr = string
+
+type global_declaration =
+  | TypeDecl of type_name * type_expr
+  | ExprDecl of variable * expr *)
+
+type dynml_element = Pure of string | Script of expr
+
+type dynml_webpage = dynml_element list
 
 (** Pretty-printing *)
 
-let rec string_of_expr : expr -> string = function
+let rec string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasize the emph-th argument of the constructor by underlining it with \x1b[04mstufftobeunderlined\x1b[0m *)
   | Empty -> "<{}>"
   | Let (x, e, e') -> Printf.sprintf "let %s = %s in %s" x (string_of_expr e) (string_of_expr e')
   | Fun (x, e) -> Printf.sprintf "fun %s -> %s" x (string_of_expr e)
@@ -77,3 +89,9 @@ let rec string_of_expr : expr -> string = function
   | Concat (e, e') -> Printf.sprintf "%s ++ %s" (string_of_expr e) (string_of_expr e')
   | String s -> s
   | Fstring s -> s
+
+let string_of_dynelement (elt : dynml_element) : string = match elt with
+  | Pure s -> s
+  | Script e -> string_of_expr e
+
+let string_of_dynpage (page : dynml_webpage) = List.fold_left (fun acc elt -> Printf.sprintf "%s%s" acc (string_of_dynelement elt)) "" page

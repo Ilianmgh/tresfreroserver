@@ -2,9 +2,17 @@ CC = ocamlc
 CFLAGS =
 LDFLAGS =
 
-all: test.x interpreter.x typechecker.x parser.x lexer.x
+all: produce_page.x test.x
 
 .PHONY: clean
+
+produce_page.x: produce_page.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo produce_page.cmo
+
+produce_page.cmi: produce_page.cmo
+
+produce_page.cmo: produce_page.ml utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typechecker.cmi typeSyntax.cmi interpreter.cmi test.cmi
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o produce_page.cmo produce_page.ml
 
 test.x: test.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo
 	$(CC) $(CFLAGS) $(LDFLAGS) -o test.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo

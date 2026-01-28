@@ -45,6 +45,7 @@ let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
     let theta' = unify_aux alpha alpha' theta in
     unify_aux beta beta' theta'
   | TypeInt, TypeInt | TypeBool, TypeBool | TypeString, TypeString | TypeUnit, TypeUnit | TypeHtml, TypeHtml -> theta
+  | TypeVar s1, TypeVar s2 -> theta
   | TypeVar s, tau | tau, TypeVar s -> if occurs s tau then raise (UnificationError (alpha, beta, Recursive)) else StringMap.add s tau theta
   | _, _ -> raise (UnificationError (alpha, beta, Incompatible)) (* TODO replace by hoisting the error to display "thingy should have type stuff but is of type otherstuff"*)
   in unify_aux alpha beta StringMap.empty
@@ -56,24 +57,24 @@ let update_typing_env (gamma : typing_environment) (theta : type_substitution) :
 (** [update_typing_env_equalizing gamma alpha beta] updates [gamma] to a minimal typing environment compatible with [alpha = beta] *)
 let update_typing_env_equalizing (gamma : typing_environment) (alpha : ml_type) (beta : ml_type) : typing_environment = update_typing_env gamma (unify alpha beta)
 
-(** [type_inferer Γ e = α] iff types variables in Γ can be refined to obtain a Γ' such that Γ' ⊢ e : α *)
-let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environment * ml_type = match e1 with
+(** [type_inferer_one_expr Γ e = α] iff types variables in Γ can be refined to obtain a Γ' such that Γ' ⊢ e : α *)
+let rec type_inferer_one_expr (gamma : typing_environment) (e1 : expr) : typing_environment * ml_type = match e1 with
   | Empty -> assert false
   | Let (x, e, e') ->
-    let gamma', alpha = type_inferer gamma e in
-    type_inferer (StringMap.add x alpha gamma') e'
-  | Fun (x, e) -> let gamma', beta = type_inferer (StringMap.add x (TypeVar (fresh ())) gamma) e in
+    let gamma', alpha = type_inferer_one_expr gamma e in
+    type_inferer_one_expr (StringMap.add x alpha gamma') e'
+  | Fun (x, e) -> let gamma', beta = type_inferer_one_expr (StringMap.add x (TypeVar (fresh ())) gamma) e in
     (gamma', Arr (StringMap.find x gamma', beta))
   | Fix (f, x, e) ->
     let vartype_x = fresh () in
     let vartype_ret = fresh () in
     let gamma_x = StringMap.add x (TypeVar vartype_x) gamma in
     let gamma_x_f =  StringMap.add f (Arr (TypeVar vartype_x, TypeVar vartype_ret)) gamma_x in
-    let final_gamma, beta = type_inferer gamma_x_f e in
+    let final_gamma, beta = type_inferer_one_expr gamma_x_f e in
     (final_gamma, Arr (StringMap.find x final_gamma, beta))
   | App (e, e') ->
-    let gamma', func_type = type_inferer gamma e in
-    let gamma'', func_arg = type_inferer gamma e' in
+    let gamma', func_type = type_inferer_one_expr gamma e in
+    let gamma'', func_arg = type_inferer_one_expr gamma e' in
     begin match func_type, func_arg with
       | Arr (alpha, beta), alpha' ->
         let theta = unify alpha alpha' in
@@ -82,21 +83,21 @@ let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environme
       | _, _ -> raise (TypingError (Printf.sprintf "%s: this is not a function, it cannot be applied." (string_of_expr (App (e, e'))))) (* TODO underline the function *)
     end
   | If (c, t, e) -> begin
-      let gamma', tau = type_inferer gamma c in
+      let gamma', tau = type_inferer_one_expr gamma c in
       let theta = unify TypeBool tau in
-      let gamma'', t_type = type_inferer (update_typing_env gamma' theta) t in
-      let gamma''', e_type = type_inferer gamma'' e in
+      let gamma'', t_type = type_inferer_one_expr (update_typing_env gamma' theta) t in
+      let gamma''', e_type = type_inferer_one_expr gamma'' e in
       let theta' = unify t_type e_type in
       assert ((apply_substitution t_type theta') = (apply_substitution e_type theta')); (* TODO: erase this line once convinced it's working *)
       (update_typing_env gamma''' theta', apply_substitution t_type theta')
   end
   | Seq (e, e') -> begin
-    let gamma', tau = type_inferer gamma e in
+    let gamma', tau = type_inferer_one_expr gamma e in
     try
       let theta = unify TypeUnit tau in
-      type_inferer (update_typing_env gamma' theta) e'
+      type_inferer_one_expr (update_typing_env gamma' theta) e'
     with
-      UnificationError _ -> Printf.fprintf stderr "%s: is expected to have type unit." (string_of_expr (Seq (e, e'))); type_inferer gamma' e'
+      UnificationError _ -> Printf.fprintf stderr "%s: is expected to have type unit." (string_of_expr (Seq (e, e'))); type_inferer_one_expr gamma' e'
   end
   | Html h -> gamma, TypeHtml
   | Var x -> begin match StringMap.find_opt x gamma with
@@ -104,19 +105,19 @@ let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environme
     | None -> raise (TypingError (Printf.sprintf "%s: undefined variable." (string_of_expr (Var x)))) (* TODO actually, shouldn't be a _typing_ error per se *)
   end 
   | Couple (e, e') ->
-    let gamma', alpha = type_inferer gamma e in
-    let gamma'', beta = type_inferer gamma' e' in
+    let gamma', alpha = type_inferer_one_expr gamma e in
+    let gamma'', beta = type_inferer_one_expr gamma' e' in
     (gamma'', Prod (alpha, beta))
   | Fst -> let alpha, beta = fresh (), fresh () in (gamma, Arr (Prod (TypeVar alpha, TypeVar beta), TypeVar alpha))
   | Snd -> let alpha, beta = fresh (), fresh () in (gamma, Arr (Prod (TypeVar alpha, TypeVar beta), TypeVar beta))
   | Neg e -> begin
-    let gamma', alpha = type_inferer gamma e in
+    let gamma', alpha = type_inferer_one_expr gamma e in
     let theta = unify TypeInt alpha in
     (update_typing_env gamma' theta, TypeInt)
   end
   | Plus (e, e') | Minus (e, e') | Mult (e, e') | Div (e, e') | Pow (e, e') -> begin
-    let gamma', alpha = type_inferer gamma e in
-    let gamma'', beta = type_inferer gamma' e' in
+    let gamma', alpha = type_inferer_one_expr gamma e in
+    let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
     let t_int = apply_substitution alpha theta in 
     assert (t_int = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
@@ -126,19 +127,19 @@ let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environme
   end
   | Int n -> (gamma, TypeInt)
   | Gt (e, e') | Lt (e, e') | Geq (e, e') | Leq (e, e') | Eq (e, e') | Neq (e, e') ->
-    let gamma', alpha = type_inferer gamma e in
-    let gamma'', beta = type_inferer gamma' e' in
+    let gamma', alpha = type_inferer_one_expr gamma e in
+    let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
     assert ((apply_substitution alpha theta) = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
     (update_typing_env gamma'' theta, TypeBool)
   | Not e -> begin
-    let gamma', alpha = type_inferer gamma e in
+    let gamma', alpha = type_inferer_one_expr gamma e in
     let theta = unify TypeBool alpha in
     (update_typing_env gamma' theta, TypeBool)
   end
   | And (e, e') | Or (e, e') -> begin
-    let gamma', alpha = type_inferer gamma e in
-    let gamma'', beta = type_inferer gamma' e' in
+    let gamma', alpha = type_inferer_one_expr gamma e in
+    let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
     let t_bool = apply_substitution alpha theta in 
     assert (t_bool = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
@@ -148,8 +149,8 @@ let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environme
   end
   | Bool b -> gamma, TypeBool
   | Concat (e, e') -> begin
-    let gamma', alpha = type_inferer gamma e in
-    let gamma'', beta = type_inferer gamma' e' in
+    let gamma', alpha = type_inferer_one_expr gamma e in
+    let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
     let t_str = apply_substitution alpha theta in 
     assert (t_str = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
@@ -158,6 +159,12 @@ let rec type_inferer (gamma : typing_environment) (e1 : expr) : typing_environme
       | _ -> raise (TypingError (Printf.sprintf "%s: This expression has type %s but is expected to have type %s." (string_of_expr e) (string_of_ml_type t_str) (string_of_ml_type TypeString))) (* TODO keep replacing those tests by unification *)
   end
   | String s | Fstring s -> gamma, TypeString
+
+let type_inferer (gamma : typing_environment) (page : dynml_webpage) : (typing_environment * ml_type) list = List.map begin
+    function
+      | Script e -> type_inferer_one_expr gamma e
+      | Pure s -> (StringMap.empty, TypeHtml)
+  end page
 
 (** Pretty-printing *)
 

@@ -49,34 +49,34 @@ let rec ( ^^ ) (n : int) (p : int) = match p with
 
 let drop = fun x -> ()
 
-let rec eval (env : environment) (e1 : expr) : value = match e1 with
+let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   | Empty -> assert false
-  | Let (x, e, e') -> let v = eval env e in eval (StringMap.add x v env) e'
+  | Let (x, e, e') -> let v = eval_expr env e in eval_expr (StringMap.add x v env) e'
   | Fun (x, e) -> Clos (env, VFun (x, e))
   | Fix (f, x, e) -> Clos (env, VFix (f, x, e))
-  | App (e, e') -> begin match eval env e with
-    | Clos (_, VFst) -> begin match eval env e' with
+  | App (e, e') -> begin match eval_expr env e with
+    | Clos (_, VFst) -> begin match eval_expr env e' with
       | VCouple (v, v') -> v
       | _ -> raise (InterpreterError (Printf.sprintf "%s: pair expected." (string_of_expr e)))
     end
-    | Clos (_, VSnd) -> begin match eval env e' with
+    | Clos (_, VSnd) -> begin match eval_expr env e' with
       | VCouple (v, v') -> v'
       | _ -> raise (InterpreterError (Printf.sprintf "%s: pair expected." (string_of_expr e)))
     end
-    | Clos (env', VFun (x, e_f)) -> let v = eval env e' in eval (StringMap.add x v env') e_f
-    | Clos (env', VFix (f, x, e_f)) -> let v = eval env e' in
+    | Clos (env', VFun (x, e_f)) -> let v = eval_expr env e' in eval_expr (StringMap.add x v env') e_f
+    | Clos (env', VFix (f, x, e_f)) -> let v = eval_expr env e' in
       let env'_x = StringMap.add x v env' in
       let env'_f_x = StringMap.add f (Clos (env', VFix (f, x, e_f))) env'_x in
-      eval env'_f_x e_f
+      eval_expr env'_f_x e_f
     | _ -> raise (InterpreterError (Printf.sprintf "%s: it is not a function, it cannot be applied." (string_of_expr e)))
   end
-  | If (c, t, e) -> begin match eval env c with
-    | VBool b -> if b then eval env t else eval env e
+  | If (c, t, e) -> begin match eval_expr env c with
+    | VBool b -> if b then eval_expr env t else eval_expr env e
     | _ -> raise (InterpreterError (Printf.sprintf "%s: boolean expected" (string_of_expr c)))
   end
   | Seq (e, e') ->
-    let v = eval env e in
-    let v' = eval env e' in
+    let v = eval_expr env e in
+    let v' = eval_expr env e' in
     drop v;
     v'
   | Html h -> VContent h
@@ -85,96 +85,101 @@ let rec eval (env : environment) (e1 : expr) : value = match e1 with
     | None -> raise (InterpreterError (Printf.sprintf "%s: Undefined variable" x))
   end
   | Couple (e, e') ->
-    let v = eval env e in
-    let v' = eval env e' in
+    let v = eval_expr env e in
+    let v' = eval_expr env e' in
     VCouple (v, v')
   | Fst -> Clos (StringMap.empty, VFst)
   | Snd -> Clos (StringMap.empty, VSnd)
-  | Plus (e, e') -> begin match eval env e, eval env e' with
+  | Plus (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n + m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Plus (e, e')))))
   end
-  | Minus (e, e') -> begin match eval env e, eval env e' with
+  | Minus (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n - m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Minus (e, e')))))
   end
-  | Neg e -> begin match eval env e with
+  | Neg e -> begin match eval_expr env e with
     | VInt n -> VInt (-n)
     | _ -> raise (InterpreterError (Printf.sprintf "%s: Integer expected." (string_of_expr (Neg e))))
   end
-  | Mult (e, e') -> begin match eval env e, eval env e' with
+  | Mult (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n * m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Mult (e, e')))))
   end
-  | Div (e, e') -> begin match eval env e, eval env e' with
+  | Div (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n / m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Div (e, e')))))
   end
-  | Pow (e, e') -> begin match eval env e, eval env e' with
+  | Pow (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n ^^ m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Pow (e, e')))))
   end
   | Int n -> VInt n
-  | Gt (e, e') -> begin match eval env e, eval env e' with
+  | Gt (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt v, VInt v' -> VBool (v > v')
     | VContent v, VContent v' -> VBool (v > v')
     | VString v, VString v' -> VBool (v > v')
     | VBool v, VBool v' -> VBool (v > v')
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Cannot compare functions." (string_of_expr (Gt (e, e')))))
   end
-  | Lt (e, e') -> begin match eval env e, eval env e' with
+  | Lt (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt v, VInt v' -> VBool (v < v')
     | VContent v, VContent v' -> VBool (v < v')
     | VString v, VString v' -> VBool (v < v')
     | VBool v, VBool v' -> VBool (v < v')
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Cannot compare functions." (string_of_expr (Lt (e, e')))))
   end
-  | Geq (e, e') -> begin match eval env e, eval env e' with
+  | Geq (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt v, VInt v' -> VBool (v >= v')
     | VContent v, VContent v' -> VBool (v >= v')
     | VString v, VString v' -> VBool (v >= v')
     | VBool v, VBool v' -> VBool (v >= v')
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Cannot compare functions." (string_of_expr (Geq (e, e')))))
   end
-  | Leq (e, e') -> begin match eval env e, eval env e' with
+  | Leq (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt v, VInt v' -> VBool (v <= v')
     | VContent v, VContent v' -> VBool (v <= v')
     | VString v, VString v' -> VBool (v <= v')
     | VBool v, VBool v' -> VBool (v <= v')
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Cannot compare functions." (string_of_expr (Leq (e, e')))))
   end
-  | Eq (e, e') -> begin match eval env e, eval env e' with
+  | Eq (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt v, VInt v' -> VBool (v = v')
     | VContent v, VContent v' -> VBool (v = v')
     | VString v, VString v' -> VBool (v = v')
     | VBool v, VBool v' -> VBool (v = v')
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Cannot compare functions." (string_of_expr (Eq (e, e')))))
   end
-  | Neq (e, e') -> begin match eval env e, eval env e' with
+  | Neq (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt v, VInt v' -> VBool (v <> v')
     | VContent v, VContent v' -> VBool (v <> v')
     | VString v, VString v' -> VBool (v <> v')
     | VBool v, VBool v' -> VBool (v <> v')
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Cannot compare functions." (string_of_expr (Neq (e, e')))))
   end
-  | And (e, e') -> begin match eval env e, eval env e' with
+  | And (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VBool b, VBool b' -> VBool (b && b')
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Booleans expected." (string_of_expr (And (e, e')))))
   end
-  | Or (e, e') -> begin match eval env e, eval env e' with
+  | Or (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VBool b, VBool b' -> VBool (b || b')
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Booleans expected." (string_of_expr (And (e, e')))))
   end
-  | Not e -> begin match eval env e with
+  | Not e -> begin match eval_expr env e with
     | VBool b -> VBool (not b)
     | _ -> raise (InterpreterError (Printf.sprintf "%s: Integer expected." (string_of_expr (Neg e))))
   end
   | Bool b -> VBool b
-  | Concat (e, e') -> begin match eval env e, eval env e' with
+  | Concat (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n ^^ m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Strings expected." (string_of_expr (Concat (e, e')))))
   end
   | String s -> VString s
   | Fstring s -> failwith "TODO"
+
+let eval (env : environment) (page : dynml_webpage) : value list = List.map begin function (* TODO when globals added, modify the environment each time and pass it to the next element to be evaluated *)
+    | Script e -> eval_expr env e
+    | Pure s -> VContent s
+  end page 
 
 (* TODO add "garbage-collection" *)
