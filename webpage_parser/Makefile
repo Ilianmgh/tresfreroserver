@@ -2,17 +2,25 @@ CC = ocamlc
 CFLAGS =
 LDFLAGS =
 
-all: produce_page.x test.x
+all: produce_page.x parse_url_dictionary.x test.x
 
 .PHONY: clean
 
-produce_page.x: produce_page.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo produce_page.cmo
+produce_page.x: produce_page.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo parse_url_dictionary.cmo test.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo parse_url_dictionary.cmo produce_page.cmo
 
 produce_page.cmi: produce_page.cmo
 
-produce_page.cmo: produce_page.ml utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typechecker.cmi typeSyntax.cmi interpreter.cmi test.cmi
+produce_page.cmo: produce_page.ml utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typechecker.cmi typeSyntax.cmi interpreter.cmi parse_url_dictionary.cmi test.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o produce_page.cmo produce_page.ml
+
+parse_url_dictionary.x: utils.cmo parse_url_dictionary.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o parse_url_dictionary.x utils.cmo parse_url_dictionary.cmo
+
+parse_url_dictionary.cmi: parse_url_dictionary.cmo
+
+parse_url_dictionary.cmo: utils.cmi parse_url_dictionary.ml
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o parse_url_dictionary.cmo parse_url_dictionary.ml
 
 test.x: test.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo
 	$(CC) $(CFLAGS) $(LDFLAGS) -o test.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo

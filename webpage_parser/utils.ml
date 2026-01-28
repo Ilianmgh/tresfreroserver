@@ -1,3 +1,5 @@
+module StringMap = Map.Make(String)
+
 let unpack_some (x : 'a option) (default : 'a) : 'a = match x with
   | Some x -> x
   | None -> default

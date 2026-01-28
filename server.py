@@ -4,7 +4,7 @@ from http import http_response
 debug : bool = True
 
 serveur = socket()
-serveur.bind(('0.0.0.0', 9999))
+serveur.bind(('0.0.0.0', 9998))
 serveur.listen()
 
 http_methods : list[str] = ["get", "head", "options", "trace", "put", "delete", "post", "patch", "connect"]

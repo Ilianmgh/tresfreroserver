@@ -1,3 +1,5 @@
+include Utils
+
 (** Lexic definition *)
 
 let open_ml_bracket = "<{"
@@ -75,8 +77,6 @@ let keywords_tokens : (string * raw_token) list = [
   ("false", Lit TokFalse)]
 
 let symbols : string list = List.map fst symbols_tokens
-
-module StringMap = Map.Make(String)
 
 let keywords_map : raw_token StringMap.t =
   let symbols_only_map = List.fold_left (fun acc_keywords_map (s, tok) -> StringMap.add s tok acc_keywords_map) StringMap.empty symbols_tokens in

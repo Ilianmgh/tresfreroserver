@@ -46,14 +46,15 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | Clos (_, VSnd) -> "⟨∅, snd⟩"
   | Clos (env, VFun (x, e)) -> Printf.sprintf "⟨%s, fun %s -> %s⟩" (string_of_env env) x (string_of_expr e)
   | Clos (env, VFix (f, x, e)) -> Printf.sprintf "⟨%s, fixfun %s %s -> %s⟩" (string_of_env env) f x (string_of_expr e)
-  and string_of_env (env : environment) : string =
-  let string_of_one_env_binding (x : variable) (v : value) (acc : string) : string =
-    if acc = "" then
-      Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)
-    else
-      Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
-  in
-  StringMap.fold string_of_one_env_binding env ""
+  and string_of_env (env : environment) : string = if StringMap.is_empty env then "∅" else begin
+    let string_of_one_env_binding (x : variable) (v : value) (acc : string) : string =
+      if acc = "" then
+        Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)
+      else
+        Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
+    in
+    StringMap.fold string_of_one_env_binding env ""
+  end
 
 let rec ( ^^ ) (n : int) (p : int) = match p with
   | 0 -> 1

@@ -83,7 +83,7 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
       let next_i, next_line_number, str_lit = split_string s fstring_acc line_number i n in
       let lexed_acc_with_string = update_word_list_pretok ((0, ""), (line_number, str_lit)) lexed_acc in
       split_ml_symbols_whitespace s [] [] lexed_acc_with_string next_i n orig_lex orig_lex next_line_number split_html_rec
-    and split_ml_symbols_whitespace
+    and split_ml_symbols_whitespace (* FIXME should not skip whitespaces _after_ a ml closing bracket *)
       (s : string)
       (cur_word_acc : char list) (cur_symbol_acc : char list)
       (lexed_acc : pre_token list)

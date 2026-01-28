@@ -29,13 +29,16 @@ def bytes_of_path(path : str) -> bytes :
     res = f.read()
   return res
 
-def get_webpage(path : str) -> bytes :
+def get_webpage(path : str, arguments: None | str = None) -> bytes :
   """ Returns as bytes the content of the file given by [path] """
   path_split = path.split(".")
   extension : str = path_split[-1]
   name : str = path[:len(path) - len(extension) - 1]
   if extension == "htmlml" :
-    os.system(f"./webpage_parser/produce_page.x {path} {name}.html")
+    str_args : str = ""
+    if arguments is not None :
+      str_args = arguments
+    os.system(f"./webpage_parser/produce_page.x {path} {name}.html \"{str_args}\"")
     path = f"{name}.html"
   with open(path, mode = "rb") as f :
     res = f.read()
@@ -88,7 +91,11 @@ def parse_http(text : str) -> tuple[int, Dict[str, Any] | str] :
   if len(head) != 3 or head[0] != "get" or head[2] != "http/1.1" :
     return (1, f"First line of HTTP request of wrong format : {head}")
   else :
-    path = head[1]
+    url = head[1].split("?")
+    assert(len(url) <= 2)
+    if len(url) == 2 :
+      data["url_data"] = url[1]
+    path = url[0]
     if not(check_path_subfolder(path)) :
       return (1, "Trying to access parent folder.")
     # All checks on path done, adding path to dictionary
@@ -136,14 +143,17 @@ def is_accepted(contenttype : str, contentaccepted : Iterable[str]) -> bool :
         return True
   return False
 
-def make_body(status : int, path : str = "", additional_message : str | None = None) -> tuple[int, bytes] :
+def make_body(status : int, path : str = "", additional_data : str | None = None, additional_message : str | None = None) -> tuple[int, bytes] :
   """ If [status] is a supported error, fetches the appropriate error page.
       If [status] is 200, tries to fetch the page from the [config.to_send_content_folder] folder.
       Returns the updated status and the body e.g. 404 instead of 200 if the page is not in the folder. """
   assert(additional_message is None) # TODO at some point, should be added to the error page.
   if status == 200 :
     try :
-      return (200, get_webpage(path))
+      if additional_data is not None :
+        return (200, get_webpage(path, additional_data))
+      else :
+        return (200, get_webpage(path))
     except (IsADirectoryError, FileNotFoundError) as e :
       status = 404
   if status in config.displayable_errors :
@@ -205,7 +215,11 @@ def http_response(text : str) -> tuple[bool, bytes] :
       print("END OF DEBUG")
     path = ""
     status = 400
-  status, body = make_body(status, path)
+  body : bytes
+  if "url_data" in info :
+    status, body = make_body(status, path, info["url_data"])
+  else :
+    status, body = make_body(status, path)
   if status in config.displayable_errors :
     contenttype = config.contenttypeofhtmlfiles
   header : bytes = make_header(status, contenttype, config.contentlanguage, len(body)).encode()
