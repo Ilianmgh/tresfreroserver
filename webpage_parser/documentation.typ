@@ -7,25 +7,7 @@
 We first have the syntax of the body of the webpage ```<body>...</body>```, 
 
 ```
-bodyexp: <any html code> | <any html code> <{exp}> <bodyexp>
-```
-
-Example:
-
-```html
-<body>
-  <h1>Exampel</h1>
-  <{
-    let x = 1 in
-    if x = 1 then
-  }>
-    2
-  <{
-    else
-  }>
-    what?
-  <{}>
-</body> 
+bodyexp: anyHtmlCode> (<{exp}> anyHtmlCode)*
 ```
 
 == Expressions
@@ -100,7 +82,7 @@ uexp: ()
 HTML:
 
 ```
-html: }> any html code <{
+html: <[ anyHtmlCode ]>
 ```
 
 For now, only couples are allowed, and `(x1, x2, x3, x4)` is parsed as `(x1, (x2, (x3, x4)))`.
@@ -227,7 +209,7 @@ $alpha, beta, ...$` ::= `$alpha -> beta$` | `$alpha times beta$
         $Gamma tack #[`<(f)string literal>`] : #[`string`]$
       )),
       prooftree(rule(
-        $Gamma tack #[`}> html code <{`] : #[`html`]$
+        $Gamma tack #[`<[ html code ]>`] : #[`html`]$
       ))
     ),
     stack(dir:ltr, spacing: 1em,
@@ -379,9 +361,7 @@ We implement a big-step call-by-value semantics.
 
 = TODO
 
-#sym.ballot c.f. example at the beginning of the document, we want to be able to consider `if b then }> ... <{ else }> ...` as a valid if-then-else, although `<{f}> ...` shouldn't be understood as the application of f to something... Or should it ? Investigate.
-
-#sym.ballot Add -e in types and stuff
+#sym.ballot Don't lex ml located in html comment
 
 #sym.ballot Add syntactic sugar for multiple variables functions.
 
