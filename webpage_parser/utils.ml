@@ -2,6 +2,10 @@ let unpack_some (x : 'a option) (default : 'a) : 'a = match x with
   | Some x -> x
   | None -> default
 
+let unpack_some_func (x : 'a option) (default : unit -> 'a) : 'a = match x with
+  | Some x -> x
+  | None -> default ()
+
 let list_of_string (s : string) : char list = String.fold_right (fun x acc -> x :: acc) s []
 
 let string_of_char (c : char) : string = String.init 1 (fun _ -> c)

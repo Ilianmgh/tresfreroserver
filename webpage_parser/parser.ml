@@ -95,13 +95,13 @@ and parse_comparison (l : token list) : int * expr * token list =
     | Some (i_op, Keyword TokNeq, l_rem) ->
       let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Neq (lhs, rhs), l_rem)
     | Some (i_op, Keyword TokGt, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Lt (lhs, rhs), l_rem)
-    | Some (i_op, Keyword TokLt, l_rem) ->
       let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Gt (lhs, rhs), l_rem)
+    | Some (i_op, Keyword TokLt, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Lt (lhs, rhs), l_rem)
     | Some (i_op, Keyword TokGeq, l_rem) ->
-      let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Leq (lhs, rhs), l_rem)
-    | Some (i_op, Keyword TokLeq, l_rem) ->
       let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Geq (lhs, rhs), l_rem)
+    | Some (i_op, Keyword TokLeq, l_rem) ->
+      let i_rhs, rhs, l_rem = parse_comparison l_rem in (i_rhs, Leq (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
     | _ -> assert false
 and parse_concatenation (l : token list) : int * expr * token list =
@@ -191,12 +191,52 @@ and parse_atom (l : token list) : int * expr * token list =
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Malformed expression." i))
   end
 
+(** Parsing globals *)
+
+type parsed_let_expression =
+  | LetToBe of int * global_declaration * token list
+  | LetInToBe of int * (variable * expr) * token list
+  | Nothing
+
+(** [parse_global l] tries to parse a global from the token list [l], otherwise, raises [NotAGlobal].
+  If the beginning of [l] contains a let-in expression, the exception contains the variable name and the expression.
+*)
+let parse_global (l : token list) : parsed_let_expression =
+  match eat_token_opt [(Keyword TokLet)] l with
+    | Some (i_let, let_, l_rem) -> begin
+      let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: let-expression: variable expected after 'let'." i_let) in
+      let i_eq, eq, l_rem = eat_token (Keyword TokEq) l_rem (fun _ -> Printf.sprintf "line %d: let-expression: '=' expected after 'let'." i_var) in
+      let i_x_expr, x_expr, l_rem = parse_exp l_rem in
+      begin match eat_token_opt [(Keyword TokIn)] l_rem with
+        | Some (_, tok_in, l_rem') -> LetInToBe (i_x_expr, (var, x_expr), l_rem')
+        | None -> LetToBe (i_x_expr, ExprDecl (var, x_expr), l_rem)
+      end 
+    end
+    | None -> Nothing
+
+type ml_code = Global of global_declaration list | Expr of expr
+
+let rec parse_globals (l : token list) (acc : global_declaration list) : int * global_declaration list * token list = match l with
+  | [] -> raise (ParsingError "Unexpected end of document")
+  | (i, Keyword TokCloseML) :: l_rem -> (i, acc, (i, Keyword TokCloseML) :: l_rem) (* TODO not exactly (for the line number) should be the line number of previous token *)
+  | (i, h_tok) :: l_rem -> begin match parse_global ((i, h_tok) :: l_rem) with
+    | LetToBe (i, g, l_rem) -> parse_globals l_rem (g :: acc)
+    | _ -> raise (ParsingError (Printf.sprintf "line %d: Unexpected expression after global declaration" i))
+  end
+
+let parse_ml_code (l : token list) : int * ml_code * token list =
+  match parse_global l with
+  | LetToBe (i, g, l_rem) -> let i, parsed_globals, l_rem = parse_globals l_rem [g] in (i, Global (List.rev parsed_globals), l_rem)
+  | Nothing -> let i, e, l_rem' = parse_exp l in (i, Expr e, l_rem')
+  | LetInToBe (i_line, (x, e), l_rem) -> let i, body, l_rem = parse_exp l in (i, Expr (Let (x, e, body)), l_rem)
+
 (** Parsing ml *)
 let rec parser (lexed : token list) : dynml_webpage  = match lexed with
   | [] -> []
   | [(i, TokHtml s)] -> [Pure s]
-  | (i, TokHtml s) :: (j, Keyword TokOpenML) :: lexed' -> begin match parse_exp lexed' with
-    | i_line, parsed, (_, Keyword TokCloseML) :: l_rem' -> (Pure s) :: (Script parsed) :: (parser l_rem')
+  | (i, TokHtml s) :: (j, Keyword TokOpenML) :: lexed' -> begin match parse_ml_code lexed' with
+    | i_line, Expr parsed, (_, Keyword TokCloseML) :: l_rem' -> (Pure s) :: (Script parsed) :: (parser l_rem')
+    | i_line, Global globals, (_, Keyword TokCloseML) :: l_rem' -> (Pure s) :: (List.map (fun x -> Decl x) globals) @ (parser l_rem')
     | i_line, _, tok :: _ -> raise (ParsingError (Printf.sprintf "line %d: %s, HTML-closing bracket %s expected" i_line (string_of_token tok) (string_of_raw_token (Keyword TokCloseML))))
     | i_line, _, [] -> raise (ParsingError (Printf.sprintf "line %d: HTML-closing bracket %s expected" i_line (string_of_raw_token (Keyword TokCloseML))))
   end
@@ -208,4 +248,12 @@ let rec parser (lexed : token list) : dynml_webpage  = match lexed with
   [] put everything together in [parser]
   [] manage left-associativity
   [] parse () as a unit
+*)
+
+(**
+
+  let x = 5 in x
+  LEXER 
+  [let,x,=,5,in,x]
+  Let (x, 5, x)
 *)

@@ -67,7 +67,9 @@ let test_input () =
       ;"<{let f = fun x -> x in (f (1))}>" (* FIXME is parsed [if true then 1 else (2; 3)] and not as it should [(if true then 1 else 2); 3] *)
       ;"<{f\"cou#\"cou\"}>"
       ;"<{\"cou<cou\"}>"
-      ;"<{\"co<i>uc</i>ou\"}>"
+      ;"<{\"co<i>\\\"uc</i>ou\"}>"
+
+      (* TODO let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12*)
       (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
       (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)
     ]

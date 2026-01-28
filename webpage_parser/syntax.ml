@@ -41,16 +41,16 @@ type expr = (* TODO add match ... with, user-defined types *)
   | Concat of expr * expr
   | String of string
   | Fstring of string
-(* 
+
 type type_name = string
 
-type type_expr = string
+type type_expr = int * int * int array * float list * float (* TODO put some junk because my linter is driving me crazy *)
 
 type global_declaration =
   | TypeDecl of type_name * type_expr
-  | ExprDecl of variable * expr *)
+  | ExprDecl of variable * expr
 
-type dynml_element = Pure of string | Script of expr
+type dynml_element = Pure of string | Script of expr | Decl of global_declaration
 
 type dynml_webpage = dynml_element list
 
@@ -90,8 +90,13 @@ let rec string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emp
   | String s -> s
   | Fstring s -> s
 
+let string_of_global_declaration (global : global_declaration) : string = match global with
+  | TypeDecl (_, _) -> failwith "TODO"
+  | ExprDecl (x, e) -> Printf.sprintf "let %s = %s" x (string_of_expr e)
+
 let string_of_dynelement (elt : dynml_element) : string = match elt with
   | Pure s -> s
   | Script e -> string_of_expr e
+  | Decl g -> string_of_global_declaration g
 
 let string_of_dynpage (page : dynml_webpage) = List.fold_left (fun acc elt -> Printf.sprintf "%s%s" acc (string_of_dynelement elt)) "" page

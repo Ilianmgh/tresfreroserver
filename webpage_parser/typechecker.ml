@@ -45,7 +45,7 @@ let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
     let theta' = unify_aux alpha alpha' theta in
     unify_aux beta beta' theta'
   | TypeInt, TypeInt | TypeBool, TypeBool | TypeString, TypeString | TypeUnit, TypeUnit | TypeHtml, TypeHtml -> theta
-  | TypeVar s1, TypeVar s2 -> theta
+  | TypeVar s1, TypeVar s2 -> if s1 = s2 then theta else begin StringMap.add s1 (TypeVar s2) theta end
   | TypeVar s, tau | tau, TypeVar s -> if occurs s tau then raise (UnificationError (alpha, beta, Recursive)) else StringMap.add s tau theta
   | _, _ -> raise (UnificationError (alpha, beta, Incompatible)) (* TODO replace by hoisting the error to display "thingy should have type stuff but is of type otherstuff"*)
   in unify_aux alpha beta StringMap.empty
@@ -160,11 +160,19 @@ let rec type_inferer_one_expr (gamma : typing_environment) (e1 : expr) : typing_
   end
   | String s | Fstring s -> gamma, TypeString
 
-let type_inferer (gamma : typing_environment) (page : dynml_webpage) : (typing_environment * ml_type) list = List.map begin
-    function
-      | Script e -> type_inferer_one_expr gamma e
-      | Pure s -> (StringMap.empty, TypeHtml)
-  end page
+let type_inferer (gamma : typing_environment) (page : dynml_webpage) : (typing_environment * ml_type) list =
+  let types_and_env = List.fold_left begin fun already_typed element -> begin match already_typed with
+      | [] -> assert false
+      | (cur_gamma, last_gamma, tau) :: already_typed' -> begin match element with
+        | Script e -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in (cur_gamma, gamma_e, tau_e) :: (cur_gamma, last_gamma, tau) :: already_typed'
+        | Pure s -> (cur_gamma, StringMap.empty, TypeHtml) :: (cur_gamma, last_gamma, tau) :: already_typed'
+        | Decl (ExprDecl (x, e)) -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in (StringMap.add x tau_e cur_gamma, gamma_e, tau_e) :: (cur_gamma, last_gamma, tau) :: already_typed'
+        | Decl (TypeDecl (x, e)) -> failwith "TODO"
+      end
+    end
+  end [(gamma, gamma, TypeBool)] page (* TODO remove this first one *)
+  in
+  List.map (fun (x, y, z) -> (y, z)) types_and_env
 
 (** Pretty-printing *)
 

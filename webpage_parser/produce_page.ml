@@ -29,7 +29,10 @@ let produce_page (path : string) (dest : string) : unit =
   let _ = type_inferer StringMap.empty parsed in
   let values = eval StringMap.empty parsed in
   let f_out = open_out dest in
-  List.iter (fun v -> Printf.fprintf f_out "%s" (string_of_value v)) values;
+  List.iter (fun v -> match v with
+    | VContent h -> Printf.fprintf f_out "%s" h
+    | _ -> Printf.fprintf f_out "%s" (web_of_string (string_of_value ~escape_html:true v))
+  ) values;
   close_out f_out
   
 let test_file (source : string) : unit =
