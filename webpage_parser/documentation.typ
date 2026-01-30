@@ -363,6 +363,10 @@ We implement a big-step call-by-value semantics.
 
 #sym.ballot Don't lex ml located in html comment
 
+#sym.ballot Add comments within ML
+
+#sym.ballot Allow HTML brackets to contain any dynpage e.g. <[somehtml <{"coucou"}> somemorehtml]>
+
 #sym.ballot Add syntactic sugar for multiple variables functions.
 
 #sym.ballot Add t-uples
