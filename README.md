@@ -10,4 +10,8 @@ You can parametrize the server via [config.py].
 
 # Methods supported
 
-For now, only supports GET requests.
+Supports POST and GET requests.
+
+# Dynamic webpage with ML-like language
+
+This server has support for a ML-like language within html webpages. See `webpage_parser/documentation.pdf` for more information.

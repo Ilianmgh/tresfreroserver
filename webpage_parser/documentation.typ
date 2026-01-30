@@ -85,6 +85,8 @@ HTML:
 html: <[ anyHtmlCode ]>
 ```
 
+Should at some point allow nested `<{}>` and `<[]>` brackets.
+
 For now, only couples are allowed, and `(x1, x2, x3, x4)` is parsed as `(x1, (x2, (x3, x4)))`.
 
 == Identifiers (variable and function names)
