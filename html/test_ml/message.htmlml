@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messagerie</title>
+</head>
+<body>
+  <h1>Test Messagerie</h1>
+  <p>
+    <{
+      post_contenue
+    }>
+
+
+    <{
+      let db = sqlite3_opendb "messagerie.db"
+    }>
+    <{
+      sqlite3_exec db (fun x -> fun y -> x ++ y) ("INSERT INTO Message(data) VALUES ('" ++ post_contenue ++ "')")
+    }>
+    <{
+      let x = sqlite3_closedb db
+    }>
+    <a href = "messagerie.htmlml">retour</a>
+  </p>
+</body>
+</html>

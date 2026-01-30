@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <p>
+    <{
+      let db = sqlite3_opendb "messagerie.db"
+    }>
+    <h1>Message Test</h1>
+    <{
+      sqlite3_exec db (fun x -> fun y -> x ++ y) "SELECT * FROM Message"
+    }>
+    <{
+      let x = sqlite3_closedb db
+    }>
+  </p>
+  <form method="POST" action="./message.htmlml">
+    <input type="text" name="contenue">
+    <input type="submit" name="Envoyer" value="Envoyer">
+  </form>
+</body>
+</html>
