@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coucou</title>
+</head>
+<body>
+  <h1>Test factorielle même si les exemples de maths sont à bannir</h1>
+  <p>
+    <form method="GET", action="test.htmlml">
+      <input type="text" id="1" name="n"></input>
+      <input type="submit" value="Envoyer">
+    </form>
+  </p>
+</body>
+</html>

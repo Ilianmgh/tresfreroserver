@@ -9,8 +9,8 @@
   <h1>Test formulaire</h1>
   <p>
     <form method="GET" action="form_target.htmlml">
-    <label>Langage : </label><input id="1" type="text" name="langage"></input>
-    <label>Version : </label><input id="2" type="text" name="version"></input>
+    <label>Langage : </label><input id="1" type="text" name="langage"></input><br/>
+    <label>Version : </label><input id="2" type="text" name="version"></input><br/>
     <input type="submit" value="Envoyer">
     </form>
   </p>

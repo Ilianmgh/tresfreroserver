@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accueil</title>
+</head>
+<body>
+  <h1>Polymorphic identity function</h1>
+  <p>
+    <{
+      let f = fun x -> x
+    }>
+    <h2>The identity function</h2>
+    <{
+      f
+    }>
+    <h2>The identity function applied to the integer 3</h2>
+    <{
+      f 3
+    }>
+    <h2>The identity function applied to the string "hey"</h2>
+    <{
+      f "hey"
+    }>
+    <h2>The identity function applied to a function</h2>
+    <{
+      f (fixfun g x -> g x)
+    }>
+  </p>
+</body>
+</html>

@@ -8,16 +8,15 @@
 <body>
   <h1>Test formulaire</h1>
   <p>
-    <{langage}> même en version
-    
-    
-    
-    <{version}>
-    
-    
-    
-    
-      n'a toujours pas d'arguments defer !
+    Mais
+    <{
+      post_langage
+    }>
+    même en version
+    <{
+      post_version
+    }>
+    n'a pas de borrow checker.
   </p>
 </body>
 </html>

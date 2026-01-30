@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interpretation error</title>
+</head>
+<body>
+  <h1>Interpretation error</h1>
+  <p>
+    TODO: fix unification.
+    <{
+      (fun x -> x) = (fun x -> 1)
+    }>
+  </p>
+</body>
+</html>
