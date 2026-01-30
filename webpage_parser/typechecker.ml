@@ -28,29 +28,31 @@ let rec apply_substitution (alpha : ml_type) (theta : type_substitution) : ml_ty
     | None -> TypeVar s
   end
 
-(** [occurs x tau = true] iff [x] occurs in [tau] *)
-let rec occurs (var : type_variable) (tau : ml_type) : bool = match tau with
-  | Arr (alpha, beta) | Prod (alpha, beta) -> occurs var alpha || occurs var beta
-  | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml -> false
-  | TypeVar s -> (s = var)
+(** [occurs x tau = true] iff [x] occurs in [tau theta] *)
+let rec occurs (var : type_variable) (tau : ml_type) (theta : type_substitution) : bool =
+  let rec occurs_no_substitution (var : type_variable) (tau : ml_type) : bool = match tau with
+    | Arr (alpha, beta) | Prod (alpha, beta) -> occurs_no_substitution var alpha || occurs_no_substitution var beta
+    | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml -> false
+    | TypeVar s -> (s = var)
+  in occurs_no_substitution var (apply_substitution tau theta)
 
 (** Type unification. Returns a minimal substitution [theta] s.t. [alpha theta = beta theta] *)
 let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
-  if debug then Printf.fprintf stderr "Unifying %s --- %s\n%!" (string_of_ml_type alpha) (string_of_ml_type beta); (* TODO replace by breadth-first exploration of the types to unify *) (* FIXME fix the unification... *)
+  if debug then Printf.fprintf stderr "Unifying %s --- %s\n%!" (string_of_ml_type alpha) (string_of_ml_type beta); (* TODO replace by breadth-first exploration of the types to unify *)
   let rec update_substitution (x : variable) (tau : ml_type) (theta : type_substitution) = match StringMap.find_opt x theta with
     | None -> StringMap.add x tau theta
-    | Some tau' -> let theta_taus = unify_aux tau tau' theta in StringMap.add x (apply_substitution tau theta_taus) theta
+    | Some tau' -> let theta_taus = unify_aux tau tau' theta in StringMap.add x (apply_substitution tau theta_taus) theta_taus
   and unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match alpha, beta with
-  | Arr (alpha, beta), Arr (alpha', beta') ->
-    let theta' = unify_aux alpha alpha' theta in
-    unify_aux beta beta' theta'
-  | Prod (alpha, beta), Prod (alpha', beta') ->
-    let theta' = unify_aux alpha alpha' theta in
-    unify_aux beta beta' theta'
-  | TypeInt, TypeInt | TypeBool, TypeBool | TypeString, TypeString | TypeUnit, TypeUnit | TypeHtml, TypeHtml -> theta
-  | TypeVar s1, TypeVar s2 -> if s1 = s2 then theta else begin update_substitution s1 (TypeVar s2) theta end
-  | TypeVar s, tau | tau, TypeVar s -> if occurs s tau then raise (UnificationError (alpha, beta, Recursive)) else update_substitution s tau theta
-  | _, _ -> raise (UnificationError (alpha, beta, Incompatible)) (* TODO replace by hoisting the error to display "thingy should have type stuff but is of type otherstuff"*)
+    | Arr (alpha, beta), Arr (alpha', beta') ->
+      let theta' = unify_aux alpha alpha' theta in
+      unify_aux beta beta' theta'
+    | Prod (alpha, beta), Prod (alpha', beta') ->
+      let theta' = unify_aux alpha alpha' theta in
+      unify_aux beta beta' theta'
+    | TypeInt, TypeInt | TypeBool, TypeBool | TypeString, TypeString | TypeUnit, TypeUnit | TypeHtml, TypeHtml -> theta
+    | TypeVar s1, TypeVar s2 -> if s1 = s2 then theta else begin update_substitution s1 (TypeVar s2) theta end
+    | TypeVar s, tau | tau, TypeVar s -> if occurs s tau theta then raise (UnificationError (alpha, beta, Recursive)) else update_substitution s tau theta
+    | _, _ -> raise (UnificationError (alpha, beta, Incompatible)) (* TODO replace by hoisting the error to display "thingy should have type stuff but is of type otherstuff"*)
   in unify_aux alpha beta StringMap.empty
 
 (** [update_typing_env gamma theta] returns [gamma'] updating [gamma] s.t. [gamma'(x) = gamma(x) theta]
