@@ -4,7 +4,7 @@ from http import http_response
 debug : bool = True
 
 serveur = socket()
-serveur.bind(('0.0.0.0', 9998))
+serveur.bind(('0.0.0.0', 9999))
 serveur.listen()
 
 http_methods : list[str] = ["get", "head", "options", "trace", "put", "delete", "post", "patch", "connect"]
@@ -40,6 +40,16 @@ def get_http_query(sock : socket) -> str :
     line = buffered_readline(sock).strip("\n\t\r ")
   return query
 
+def get_n_bytes(sock : socket, n : int) -> str :
+  """ Reads [n] bytes from [sock]. Blocking call, will loop until [n] bytes where read """
+  query : str = ""
+  n_bytes_read = 0
+  while n_bytes_read < n :
+    bytes = sock.recv(n)
+    n_bytes_read += len(bytes)
+    query += bytes.decode()
+  return query
+
 try :
   while True :
     (sclient, adclient) = serveur.accept()
@@ -55,7 +65,7 @@ try :
           print("QUERY STARTS ON NEXT LINE")
           print(query)
           print("QUERY ENDS FROM PREV LINE")
-        keep_alive, response = http_response(query)
+        keep_alive, response = http_response(query, lambda n : get_n_bytes(sclient, n))
         sclient.send(response)
       else :
         keep_alive = False

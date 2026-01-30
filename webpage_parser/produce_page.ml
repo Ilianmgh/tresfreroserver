@@ -20,23 +20,32 @@ let str_of_file (f : in_channel) =
   s
 
 (** [produce_page path dest] reads the HTML/ML webpage pointed to by [path], computes the resulting html webpage and writes it in the file [dest] *)
-let produce_page (path : string) (dest : string) : unit =
+let produce_page (arguments : string StringMap.t) (path : string) (dest : string) : unit =
   let f_in = open_in path in
   let code : string = str_of_file f_in in
   close_in f_in;
-  let lexed = lexer code in
-  let parsed = parser lexed in
-  let _ = type_inferer StringMap.empty parsed in
-  let values = eval StringMap.empty parsed in
-  let f_out = open_out dest in
-  List.iter (fun v -> match v with
-    | VContent h -> Printf.fprintf f_out "%s" h
-    | _ -> Printf.fprintf f_out "%s" (web_of_string (string_of_value ~escape_html:true v))
-  ) values;
-  close_out f_out
+  try
+    let lexed = lexer code in
+    let parsed = parser lexed in
+    let _ = type_inferer (StringMap.map (fun s -> TypeString) arguments) parsed in
+    let values = eval (StringMap.map (fun s -> VString s) arguments) parsed in
+    let f_out = open_out dest in
+    List.iter (fun v -> match v with
+      | VContent h -> Printf.fprintf f_out "%s" h
+      | _ -> Printf.fprintf f_out "%s" (web_of_string (string_of_value ~escape_html:true v))
+    ) values;
+    close_out f_out
+  with
+    | PrelexingError s -> let f_out = open_out dest in Printf.fprintf f_out "PrelexingError: %s\n" s; close_out f_out
+    | LexingError s -> let f_out = open_out dest in Printf.fprintf f_out "LexingError: %s\n" s; close_out f_out
+    | ParsingError s -> let f_out = open_out dest in Printf.fprintf f_out "ParsingError: %s\n" s; close_out f_out
+    | TypingError s -> let f_out = open_out dest in Printf.fprintf f_out "TypingError: %s\n" s; close_out f_out
+    | UnificationError (alpha, beta, Recursive) -> let f_out = open_out dest in Printf.fprintf f_out "UnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
+    | UnificationError (alpha, beta, Incompatible) -> let f_out = open_out dest in Printf.fprintf f_out "UnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
+    | InterpreterError s -> let f_out = open_out dest in Printf.fprintf f_out "InterpreterError: %s\n" s; close_out f_out
   
 let test_file (source : string) : unit =
-  let f_in = open_in source in
+  let f_in = open_in source in (* TODO add actual namespacing, especially for GET and POST variables *)
   let code : string = str_of_file f_in in
   close_in f_in;
   Test.test (-1, code)
@@ -46,7 +55,12 @@ let () =
   if Array.length Sys.argv > 2 then begin
     let source_path = Sys.argv.(1) in
     let dest_path = Sys.argv.(2) in
-    produce_page source_path dest_path
+    let arguments = if Array.length Sys.argv > 3 then
+        Parse_url_dictionary.parse_url_dictionary Sys.argv.(3)
+      else
+        StringMap.empty
+    in
+    produce_page arguments source_path dest_path (* TODO display error messages in a webpage and send it *)
     (* test_file source_path *)
   end else
     Printf.fprintf stderr "Usage: <program> <source path> <dest path>"

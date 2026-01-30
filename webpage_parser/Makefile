@@ -5,7 +5,7 @@ LDFLAGS =
 all: produce_page.x parse_url_dictionary.x test.x
 
 .PHONY: clean
-
+# Voir ocaml-deps
 produce_page.x: produce_page.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo parse_url_dictionary.cmo test.cmo
 	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo parse_url_dictionary.cmo produce_page.cmo
 

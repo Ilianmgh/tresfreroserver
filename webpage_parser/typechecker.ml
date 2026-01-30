@@ -30,14 +30,17 @@ let rec apply_substitution (alpha : ml_type) (theta : type_substitution) : ml_ty
 
 (** [occurs x tau = true] iff [x] occurs in [tau] *)
 let rec occurs (var : type_variable) (tau : ml_type) : bool = match tau with
-  | Arr (alpha, beta) | Prod (alpha, beta) -> occurs var alpha && occurs var beta
+  | Arr (alpha, beta) | Prod (alpha, beta) -> occurs var alpha || occurs var beta
   | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml -> false
   | TypeVar s -> (s = var)
 
 (** Type unification. Returns a minimal substitution [theta] s.t. [alpha theta = beta theta] *)
 let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
-  if debug then Printf.fprintf stderr "Unifying %s --- %s\n%!" (string_of_ml_type alpha) (string_of_ml_type beta);
-  let rec unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match alpha, beta with
+  if debug then Printf.fprintf stderr "Unifying %s --- %s\n%!" (string_of_ml_type alpha) (string_of_ml_type beta); (* TODO replace by breadth-first exploration of the types to unify *) (* FIXME fix the unification... *)
+  let rec update_substitution (x : variable) (tau : ml_type) (theta : type_substitution) = match StringMap.find_opt x theta with
+    | None -> StringMap.add x tau theta
+    | Some tau' -> let theta_taus = unify_aux tau tau' theta in StringMap.add x (apply_substitution tau theta_taus) theta
+  and unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match alpha, beta with
   | Arr (alpha, beta), Arr (alpha', beta') ->
     let theta' = unify_aux alpha alpha' theta in
     unify_aux beta beta' theta'
@@ -45,8 +48,8 @@ let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
     let theta' = unify_aux alpha alpha' theta in
     unify_aux beta beta' theta'
   | TypeInt, TypeInt | TypeBool, TypeBool | TypeString, TypeString | TypeUnit, TypeUnit | TypeHtml, TypeHtml -> theta
-  | TypeVar s1, TypeVar s2 -> if s1 = s2 then theta else begin StringMap.add s1 (TypeVar s2) theta end
-  | TypeVar s, tau | tau, TypeVar s -> if occurs s tau then raise (UnificationError (alpha, beta, Recursive)) else StringMap.add s tau theta
+  | TypeVar s1, TypeVar s2 -> if s1 = s2 then theta else begin update_substitution s1 (TypeVar s2) theta end
+  | TypeVar s, tau | tau, TypeVar s -> if occurs s tau then raise (UnificationError (alpha, beta, Recursive)) else update_substitution s tau theta
   | _, _ -> raise (UnificationError (alpha, beta, Incompatible)) (* TODO replace by hoisting the error to display "thingy should have type stuff but is of type otherstuff"*)
   in unify_aux alpha beta StringMap.empty
 
@@ -126,12 +129,14 @@ let rec type_inferer_one_expr (gamma : typing_environment) (e1 : expr) : typing_
       | _ -> raise (TypingError (Printf.sprintf "%s: This expression has type %s but is expected to have type %s." (string_of_expr e) (string_of_ml_type t_int) (string_of_ml_type TypeInt))) (* TODO keep replacing those tests by unification *)
   end
   | Int n -> (gamma, TypeInt)
-  | Gt (e, e') | Lt (e, e') | Geq (e, e') | Leq (e, e') | Eq (e, e') | Neq (e, e') ->
+  | Gt (e, e') | Lt (e, e') | Geq (e, e') | Leq (e, e') | Eq (e, e') | Neq (e, e') -> begin
     let gamma', alpha = type_inferer_one_expr gamma e in
     let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
+    Printf.printf "\n%s | %s --- %s / %s --- %s\n%!" (string_of_type_substitution theta) (string_of_ml_type alpha) (string_of_ml_type beta) (string_of_ml_type (apply_substitution alpha theta)) (string_of_ml_type (apply_substitution beta theta));
     assert ((apply_substitution alpha theta) = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
     (update_typing_env gamma'' theta, TypeBool)
+  end
   | Not e -> begin
     let gamma', alpha = type_inferer_one_expr gamma e in
     let theta = unify TypeBool alpha in

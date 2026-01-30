@@ -68,7 +68,20 @@ let test_input () =
       ;"<{f\"cou#\"cou\"}>"
       ;"<{\"cou<cou\"}>"
       ;"<{\"co<i>\\\"uc</i>ou\"}>"
-
+      ;
+"<{let post_language = \"rust\"
+let post_version = \"1\" }>
+<{ if post_language = \"rust\" then
+  <[
+    <{ post_language }>
+    <{ post_version }>
+    est super!
+  ]>
+  else
+  <[
+    couocu
+  ]>
+}>"
       (* TODO let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12*)
       (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
       (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)

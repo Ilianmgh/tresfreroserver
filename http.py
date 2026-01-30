@@ -39,6 +39,7 @@ def get_webpage(path : str, arguments: None | str = None) -> bytes :
     if arguments is not None :
       str_args = arguments
     os.system(f"./webpage_parser/produce_page.x {path} {name}.html \"{str_args}\"")
+    print("") # For a newline after subprocess call
     path = f"{name}.html"
   with open(path, mode = "rb") as f :
     res = f.read()
@@ -87,14 +88,17 @@ def parse_http(text : str) -> tuple[int, Dict[str, Any] | str] :
     print(query)
     print("END OF DEBUG")
   head = query[0]
-  # We except a message of the form [GET path HTTP/1.1\n...]
-  if len(head) != 3 or head[0] != "get" or head[2] != "http/1.1" :
+  # We except a message of the form [(GET|POST) path HTTP/1.1\n...]
+  if len(head) != 3 or (head[0] != "get" and head[0] != "post") or head[2] != "http/1.1" :
     return (1, f"First line of HTTP request of wrong format : {head}")
   else :
+    # Setting the method
+    data["method"] = head[0]
+    # Registering the parameters in the url
     url = head[1].split("?")
     assert(len(url) <= 2)
     if len(url) == 2 :
-      data["url_data"] = url[1]
+      data["get_url_data"] = url[1]
     path = url[0]
     if not(check_path_subfolder(path)) :
       return (1, "Trying to access parent folder.")
@@ -113,6 +117,8 @@ def parse_http(text : str) -> tuple[int, Dict[str, Any] | str] :
           data["keep-alive"] = False
         elif line[1] == "keep-alive" :
           data["keep-alive"] = True
+      if line[0] == "content-length:" :
+        data["content-length"] = line[1] # TODO make it so it does not crash when the request doesn't provide a proper integer
     return (0, data)
 
 ## HTTP response manager
@@ -169,7 +175,7 @@ def make_header(status : int, contenttype : str, language : str, contentlength :
   contentlength_line = "Content-Length: " + str(contentlength)
   return first_line + "\r\n" + contenttype_line + "\r\n" + language_line + "\r\n" + contentlength_line
 
-def http_response(text : str) -> tuple[bool, bytes] :
+def http_response(text : str, fetch_n_bytes) -> tuple[bool, bytes] :
   """ Returns a tuple [(keep_alive, response)] of :
       - a boolean indicating whether to keep the TCP connection alive after answering.
       - the http response to the request [text]. """
@@ -215,9 +221,16 @@ def http_response(text : str) -> tuple[bool, bytes] :
       print("END OF DEBUG")
     path = ""
     status = 400
+  if info["method"] == "post" : # TODO check "accept" field before computing with ML
+    try :
+      info["post_data"] = fetch_n_bytes(int(info["content-length"]))
+    except ValueError :
+      pass 
   body : bytes
-  if "url_data" in info :
-    status, body = make_body(status, path, info["url_data"])
+  if "get_url_data" in info :
+    status, body = make_body(status, path, f"GET&{info["get_url_data"]}")
+  elif "post_data" in info :
+    status, body = make_body(status, path, f"POST&{info["post_data"]}")
   else :
     status, body = make_body(status, path)
   if status in config.displayable_errors :

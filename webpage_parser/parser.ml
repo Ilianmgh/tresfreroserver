@@ -238,7 +238,7 @@ let rec parser (lexed : token list) : dynml_webpage  = match lexed with
     | i_line, Expr parsed, (_, Keyword TokCloseML) :: l_rem' -> (Pure s) :: (Script parsed) :: (parser l_rem')
     | i_line, Global globals, (_, Keyword TokCloseML) :: l_rem' -> (Pure s) :: (List.map (fun x -> Decl x) globals) @ (parser l_rem')
     | i_line, _, tok :: _ -> raise (ParsingError (Printf.sprintf "line %d: %s, HTML-closing bracket %s expected" i_line (string_of_token tok) (string_of_raw_token (Keyword TokCloseML))))
-    | i_line, _, [] -> raise (ParsingError (Printf.sprintf "line %d: HTML-closing bracket %s expected" i_line (string_of_raw_token (Keyword TokCloseML))))
+    | i_line, _, [] -> raise (ParsingError (Printf.sprintf "line %d: ML-closing bracket %s expected" i_line (string_of_raw_token (Keyword TokCloseML))))
   end
   | _ -> Printf.fprintf stderr "%s\n" (string_of_list string_of_token lexed); raise (ParsingError "I don't know what happened")
 

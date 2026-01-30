@@ -112,9 +112,9 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
           let sym_lexed, word_lexed = lex_now cur_word_acc cur_symbol_acc lex_state line_number in
           let new_lexed_acc : pre_token list = update_word_list_pretok (sym_lexed, word_lexed) lexed_acc in
           if (snd sym_lexed) = close_ml_bracket then
-            split_html_rec s [] new_lexed_acc i_nonwhitespace n line_number
+            split_html_rec s [] new_lexed_acc i n line_number
           else if (snd sym_lexed) = open_html_bracket then
-            split_html_rec s [] new_lexed_acc i_nonwhitespace n line_number
+            split_html_rec s [] new_lexed_acc i n line_number
           else
             if i_nonwhitespace = n then
               (n, line_number, new_lexed_acc)
