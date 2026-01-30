@@ -363,11 +363,13 @@ We implement a big-step call-by-value semantics.
 
 = TODO
 
+#sym.ballot See why special characters passed as argument of GET/POST requests is displayed weirdly.
+
 #sym.ballot Don't lex ml located in html comment
 
 #sym.ballot Add comments within ML
 
-#sym.ballot Allow HTML brackets to contain any dynpage e.g. <[somehtml <{"coucou"}> somemorehtml]>
+#sym.ballot.check Allow HTML brackets to contain any dynpage e.g. <[somehtml <{"coucou"}> somemorehtml]>
 
 #sym.ballot Add syntactic sugar for multiple variables functions.
 
@@ -375,15 +377,13 @@ We implement a big-step call-by-value semantics.
 
 #sym.ballot Add pattern-matching
 
-#sym.ballot Add superglobal variables (e.g. given in argument of the interpreter in a yaml format)
+#sym.ballot.check Add superglobal variables (e.g. given in argument of the interpreter in a yaml format)
 
-#sym.ballot Add user-defined global variables
+#sym.ballot.check Add user-defined global variables
 
 #sym.ballot Add user-defined types
 
 #sym.ballot Once it's done, implement basic types such as list directly within the language.
-
-#sym.ballot Maybe revisit sequence's semantics. We may want <{"\<tag>";"hey</tag>"}> to produce the html code ```html <tag>hey</tag> ```.
 
 #sym.ballot Allow type annotations from the user
 

@@ -82,6 +82,20 @@ let post_version = \"1\" }>
     couocu
   ]>
 }>"
+      ; "<{ (fun x -> x) = (fun x -> 1) }>"
+      ;
+"<{
+let db = sqlite3_opendb \"test.db\"
+}>
+<{
+sqlite3_exec db
+(fun x -> fun y -> x ++ y)
+\"SELECT * FROM Test\"
+}>
+<{
+sqlite3_closedb db
+}>"
+      ; "<{let f = fun x -> fun y -> x}> <{f (fun x -> x) 2}>"
       (* TODO let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12*)
       (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
       (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)

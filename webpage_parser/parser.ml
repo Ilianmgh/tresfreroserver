@@ -4,6 +4,15 @@ open Syntax
 
 let debug = false
 
+(** Result of attempt to parse a global declaration *)
+type parsed_let_expression =
+  | LetToBe of int * global_declaration * token list
+  | LetInToBe of int * (variable * expr) * token list
+  | Nothing
+
+(** The content of what can be parsed between ML brackets *)
+type ml_code = Global of global_declaration list | Expr of expr
+
 (** Eating functions. When expecting a certain token, use it to get: the new line number, the important data of the token read, and the remainder of the token list.
   Must be provided with an error message to display in case the next token is not the token expected *)
 
@@ -178,30 +187,29 @@ and parse_atom (l : token list) : int * expr * token list =
     | Lit (TokFstr s) -> (i, Fstring s, l_rem)
     | Keyword TokFst -> (i, Fst, l_rem)
     | Keyword TokSnd -> (i, Snd, l_rem)
+    | Keyword TokSqliteOpenDb -> (i, SqliteOpenDb, l_rem)
+    | Keyword TokSqliteCloseDb -> (i, SqliteCloseDb, l_rem)
+    | Keyword TokSqliteExec -> (i, SqliteExec, l_rem)
     | Id s -> (i, Var s, l_rem)
     | Keyword TokLpar ->
       let i_expr, expr, l_rem = parse_exp l_rem in
       let i_rpar, rpar, l_rem = eat_token (Keyword TokRpar) l_rem (fun x -> Printf.sprintf "line %d: %s closing parenthesis expected." i_expr (match x with | Some tok -> string_of_raw_token tok | None -> "")) in
       (i_rpar, expr, l_rem)
     | Keyword TokOpenHTML ->
-      let i_html, html, l_rem = eat_html l_rem (Printf.sprintf "line %d: No HTML code between HTML brackets??" i) in
+      let line_after_close_html, html_sub, l_rem' = parse_html_unit l_rem false in (line_after_close_html, Html html_sub, l_rem')
+      (* let i_html, html, l_rem = eat_html l_rem (Printf.sprintf "line %d: No HTML code between HTML brackets??" i) in
       let i_close_html, close_html, l_rem = eat_token (Keyword TokCloseHTML) l_rem (fun _ -> Printf.sprintf "line %d: HTML-closing bracket expected." i_html) in
-      (i_close_html, Html html, l_rem)
+      (i_close_html, Html html, l_rem) *)
     | TokHtml s -> raise (ParsingError (Printf.sprintf "line %d: Unexpected html code within ML delimiters." i)) (* assert false ? *)
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Malformed expression." i))
   end
 
-(** Parsing globals *)
-
-type parsed_let_expression =
-  | LetToBe of int * global_declaration * token list
-  | LetInToBe of int * (variable * expr) * token list
-  | Nothing
+(** PARSING GLOBALS *)
 
 (** [parse_global l] tries to parse a global from the token list [l], otherwise, raises [NotAGlobal].
   If the beginning of [l] contains a let-in expression, the exception contains the variable name and the expression.
 *)
-let parse_global (l : token list) : parsed_let_expression =
+and parse_global (l : token list) : parsed_let_expression =
   match eat_token_opt [(Keyword TokLet)] l with
     | Some (i_let, let_, l_rem) -> begin
       let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: let-expression: variable expected after 'let'." i_let) in
@@ -214,9 +222,8 @@ let parse_global (l : token list) : parsed_let_expression =
     end
     | None -> Nothing
 
-type ml_code = Global of global_declaration list | Expr of expr
-
-let rec parse_globals (l : token list) (acc : global_declaration list) : int * global_declaration list * token list = match l with
+(** [parse_globals l acc] parses a sequence of global declaration from [l], appended to [acc] *)
+and parse_globals (l : token list) (acc : global_declaration list) : int * global_declaration list * token list = match l with
   | [] -> raise (ParsingError "Unexpected end of document")
   | (i, Keyword TokCloseML) :: l_rem -> (i, acc, (i, Keyword TokCloseML) :: l_rem) (* TODO not exactly (for the line number) should be the line number of previous token *)
   | (i, h_tok) :: l_rem -> begin match parse_global ((i, h_tok) :: l_rem) with
@@ -224,36 +231,33 @@ let rec parse_globals (l : token list) (acc : global_declaration list) : int * g
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Unexpected expression after global declaration" i))
   end
 
-let parse_ml_code (l : token list) : int * ml_code * token list =
+and parse_ml_code (l : token list) : int * ml_code * token list =
   match parse_global l with
   | LetToBe (i, g, l_rem) -> let i, parsed_globals, l_rem = parse_globals l_rem [g] in (i, Global (List.rev parsed_globals), l_rem)
   | Nothing -> let i, e, l_rem' = parse_exp l in (i, Expr e, l_rem')
   | LetInToBe (i_line, (x, e), l_rem) -> let i, body, l_rem = parse_exp l in (i, Expr (Let (x, e, body)), l_rem)
 
-(** Parsing ml *)
-let rec parser (lexed : token list) : dynml_webpage  = match lexed with
-  | [] -> []
-  | [(i, TokHtml s)] -> [Pure s]
+(** [parse_html_unit lexed is_root] parses an HTML unit i.e. either the whole [lexed] list or html content delimited by html-opening/closing brackets, depending on [is_root].
+  If [is_root] is false, then a CloseHtml token stops the parsing. Otherwise, stops parsing only at the end of the [lexed] list. *)
+and parse_html_unit (lexed : token list) (is_root : bool) : int * dynml_webpage * token list = match lexed with
+  | [] -> (-1, [], [])
+  | [(i, TokHtml s)] -> (i, [Pure s], [])
+  | (i, TokHtml s) :: (j, Keyword TokCloseHTML) :: l_rem -> (j, [Pure s], l_rem)
   | (i, TokHtml s) :: (j, Keyword TokOpenML) :: lexed' -> begin match parse_ml_code lexed' with
-    | i_line, Expr parsed, (_, Keyword TokCloseML) :: l_rem' -> (Pure s) :: (Script parsed) :: (parser l_rem')
-    | i_line, Global globals, (_, Keyword TokCloseML) :: l_rem' -> (Pure s) :: (List.map (fun x -> Decl x) globals) @ (parser l_rem')
+    | i_line, Expr parsed, (_, Keyword TokCloseML) :: l_rem' -> let final_line, final_parsed, final_l_rem = parse_html_unit l_rem' is_root in (final_line, (Pure s) :: (Script parsed) :: final_parsed, final_l_rem)
+    | i_line, Global globals, (_, Keyword TokCloseML) :: l_rem' ->
+      let final_line, final_parsed, final_lrem = parse_html_unit l_rem' is_root in
+      (final_line, (Pure s) :: (List.map (fun x -> Decl x) globals) @ final_parsed, final_lrem)
     | i_line, _, tok :: _ -> raise (ParsingError (Printf.sprintf "line %d: %s, HTML-closing bracket %s expected" i_line (string_of_token tok) (string_of_raw_token (Keyword TokCloseML))))
     | i_line, _, [] -> raise (ParsingError (Printf.sprintf "line %d: ML-closing bracket %s expected" i_line (string_of_raw_token (Keyword TokCloseML))))
   end
   | _ -> Printf.fprintf stderr "%s\n" (string_of_list string_of_token lexed); raise (ParsingError "I don't know what happened")
 
+(** Parsing ml *)
+let rec parser (lexed : token list) : dynml_webpage = let _, parsed, _ = parse_html_unit lexed true in parsed
+
 (*
   TODO:
   [] check if precedence of if is not under-evaluated : test if true then 1; 2 === (if true then 1); 2 or if true then (1; 2)
-  [] put everything together in [parser]
-  [] manage left-associativity
   [] parse () as a unit
-*)
-
-(**
-
-  let x = 5 in x
-  LEXER 
-  [let,x,=,5,in,x]
-  Let (x, 5, x)
 *)

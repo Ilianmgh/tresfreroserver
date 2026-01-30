@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coucou</title>
+</head>
+<body>
+  <p>
+    <{
+      "co<i>ucou"
+    }>
+  </p>
+  <p>
+    <{<[<i>yoyoyo</i>]>}>
+
+    <{"coucou" ++ "coucou"}>
+  </p>
+  <!--
+    <{"-->"}> hmm...
+  -->
+  <{ <[<strong>coucou</strong> <{"<strong>actuallyastring</strong>"}>]> }>
+</body>
+</html>

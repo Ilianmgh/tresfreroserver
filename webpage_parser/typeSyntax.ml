@@ -2,7 +2,13 @@ open Lexic (* TODO put StringMap in utils *)
 
 type type_variable = string
 
-type ml_type = Arr of ml_type * ml_type | Prod of ml_type * ml_type | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml | TypeVar of type_variable
+type ml_type =
+  | Arr of ml_type * ml_type
+  | Prod of ml_type * ml_type
+  | TypeInt | TypeBool | TypeString | TypeUnit
+  | TypeDb
+  | TypeHtml
+  | TypeVar of type_variable
 
 type typing_environment = ml_type StringMap.t
 
@@ -34,6 +40,7 @@ let rec string_of_ml_type (t : ml_type) : string = match t with
   | TypeString -> "string"
   | TypeUnit -> "unit"
   | TypeHtml -> "html"
+  | TypeDb -> "db"
   | TypeVar s -> s
 
 let string_of_type_substitution (gamma : typing_environment) : string =

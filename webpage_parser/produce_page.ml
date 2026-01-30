@@ -30,10 +30,7 @@ let produce_page (arguments : string StringMap.t) (path : string) (dest : string
     let _ = type_inferer (StringMap.map (fun s -> TypeString) arguments) parsed in
     let values = eval (StringMap.map (fun s -> VString s) arguments) parsed in
     let f_out = open_out dest in
-    List.iter (fun v -> match v with
-      | VContent h -> Printf.fprintf f_out "%s" h
-      | _ -> Printf.fprintf f_out "%s" (web_of_string (string_of_value ~escape_html:true v))
-    ) values;
+    List.iter (fun v -> fprintf_value f_out v) values;
     close_out f_out
   with
     | PrelexingError s -> let f_out = open_out dest in Printf.fprintf f_out "PrelexingError: %s\n" s; close_out f_out

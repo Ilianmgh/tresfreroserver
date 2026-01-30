@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coucou</title>
+</head>
+<body>
+  <{let x = 3 let f = fun x -> x > 2}>
+  <h1>Real globals</h1>
+  <p>
+    x: <{x}><br/>
+    f: <{f}>
+  </p>
+  <h1>Globals within HTML within ML</h1>
+  <h2>Scoped:</h2>
+  <p>
+    <{
+      <[
+        <{
+          let x = 41
+          let f = fixfun g x -> g (x + 1)
+        }>
+        x: <{x}><br/>
+        f: <{f}>
+        <{
+          let x = 32 in
+          <[coucouc <{x}> coucou]>
+        }>
+      ]>
+    }>
+  </p>
+  <h2>But outside the outer ML brackets, it remains</h2>
+  <p>
+    x: <{x}><br/>
+    f: <{f}>
+  </p>
+</body>
+</html>

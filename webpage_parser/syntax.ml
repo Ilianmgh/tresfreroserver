@@ -4,7 +4,19 @@ type html_code = string
 
 type variable = string
 
-type expr = (* TODO add match ... with, user-defined types *)
+type type_name = string
+
+type type_expr = int * int * int array * float list * float (* TODO put some junk because my linter is driving me crazy *)
+
+type global_declaration =
+  | TypeDecl of type_name * type_expr
+  | ExprDecl of variable * expr
+
+and dynml_element = Pure of string | Script of expr | Decl of global_declaration
+
+and dynml_webpage = dynml_element list
+
+and expr = (* TODO add match ... with, user-defined types *)
     Empty (* TODO see if it's really necessary *)
   | Let of variable * expr * expr
   | Fun of variable * expr
@@ -12,12 +24,16 @@ type expr = (* TODO add match ... with, user-defined types *)
   | App of expr * expr
   | If of expr * expr * expr
   | Seq of expr * expr
-  | Html of html_code
+  | Html of dynml_webpage
   | Var of variable
   (* tuples *)
   | Couple of expr * expr
   | Fst
   | Snd
+  (* sqlite *)
+  | SqliteOpenDb
+  | SqliteCloseDb
+  | SqliteExec
   (* arithmetic connectors *)
   | Plus of expr * expr
   | Minus of expr * expr
@@ -42,21 +58,13 @@ type expr = (* TODO add match ... with, user-defined types *)
   | String of string
   | Fstring of string
 
-type type_name = string
-
-type type_expr = int * int * int array * float list * float (* TODO put some junk because my linter is driving me crazy *)
-
-type global_declaration =
-  | TypeDecl of type_name * type_expr
-  | ExprDecl of variable * expr
-
-type dynml_element = Pure of string | Script of expr | Decl of global_declaration
-
-type dynml_webpage = dynml_element list
-
 (** Pretty-printing *)
 
-let rec string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasize the emph-th argument of the constructor by underlining it with \x1b[04mstufftobeunderlined\x1b[0m *)
+let rec string_of_global_declaration (global : global_declaration) : string = match global with
+  | TypeDecl (_, _) -> failwith "TODO"
+  | ExprDecl (x, e) -> Printf.sprintf "let %s = %s" x (string_of_expr e)
+
+and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasize the emph-th argument of the constructor by underlining it with \x1b[04mstufftobeunderlined\x1b[0m *)
   | Empty -> "<{}>"
   | Let (x, e, e') -> Printf.sprintf "let %s = %s in %s" x (string_of_expr e) (string_of_expr e')
   | Fun (x, e) -> Printf.sprintf "fun %s -> %s" x (string_of_expr e)
@@ -64,11 +72,14 @@ let rec string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emp
   | App (e, e') -> Printf.sprintf "(%s) %s" (string_of_expr e) (string_of_expr e')
   | If (c, t, e) -> Printf.sprintf "if %s then %s else %s" (string_of_expr c) (string_of_expr t) (string_of_expr e)
   | Seq (e, e') -> Printf.sprintf "%s;%s" (string_of_expr e) (string_of_expr e')
-  | Html h -> Printf.sprintf "Html(%s)" h
+  | Html h -> string_of_dynpage h
   | Var x -> x
   | Couple (e, e') -> Printf.sprintf "(%s, %s)" (string_of_expr e) (string_of_expr e')
   | Fst -> Printf.sprintf "fst"
   | Snd -> Printf.sprintf "snd"
+  | SqliteOpenDb -> Printf.sprintf "sqlite3_opendb"
+  | SqliteCloseDb -> Printf.sprintf "sqlite3_closedb"
+  | SqliteExec -> Printf.sprintf "sqlite3_exec"
   | Plus (e, e') -> Printf.sprintf "%s + %s" (string_of_expr e) (string_of_expr e')
   | Minus (e, e') -> Printf.sprintf "%s - %s" (string_of_expr e) (string_of_expr e')
   | Neg e -> Printf.sprintf "-%s" (string_of_expr e)
@@ -90,13 +101,8 @@ let rec string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emp
   | String s -> s
   | Fstring s -> s
 
-let string_of_global_declaration (global : global_declaration) : string = match global with
-  | TypeDecl (_, _) -> failwith "TODO"
-  | ExprDecl (x, e) -> Printf.sprintf "let %s = %s" x (string_of_expr e)
-
-let string_of_dynelement (elt : dynml_element) : string = match elt with
+and string_of_dynelement (elt : dynml_element) : string = match elt with
   | Pure s -> s
   | Script e -> string_of_expr e
   | Decl g -> string_of_global_declaration g
-
-let string_of_dynpage (page : dynml_webpage) = List.fold_left (fun acc elt -> Printf.sprintf "%s%s" acc (string_of_dynelement elt)) "" page
+and string_of_dynpage (page : dynml_webpage) = List.fold_left (fun acc elt -> Printf.sprintf "%s%s" acc (string_of_dynelement elt)) "" page

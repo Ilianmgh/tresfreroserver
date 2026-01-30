@@ -1,6 +1,6 @@
-CC = ocamlc
+CC = ocamlfind ocamlc
 CFLAGS =
-LDFLAGS =
+LDFLAGS = -package sqlite3 -linkpkg
 
 all: produce_page.x parse_url_dictionary.x test.x
 

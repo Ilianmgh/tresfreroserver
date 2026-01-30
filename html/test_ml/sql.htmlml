@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coucou</title>
+</head>
+<body>
+  
+  <h1>SQLite</h1>
+  <p>
+    <{
+      let db = sqlite3_opendb "test.db"
+    }>
+    <h1>Table Test</h1>
+    <{
+      sqlite3_exec db (fun x -> fun y -> x ++ y) "SELECT * FROM Test"
+    }>
+    <h1>Table Livre</h1>
+    <{
+      sqlite3_exec db (fun x -> fun y -> x ++ y) "SELECT * FROM Livre"
+    }>
+    <{
+      sqlite3_closedb db
+    }>
+  </p>
+</body>
+</html>

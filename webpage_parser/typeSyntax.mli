@@ -2,7 +2,13 @@ open Lexic
 
 type type_variable = string (* TODO hide this type, but then must provide module StringMap for substitution in this here interface *)
 
-type ml_type = Arr of ml_type * ml_type | Prod of ml_type * ml_type | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml | TypeVar of type_variable
+type ml_type =
+  | Arr of ml_type * ml_type
+  | Prod of ml_type * ml_type
+  | TypeInt | TypeBool | TypeString | TypeUnit
+  | TypeDb
+  | TypeHtml
+  | TypeVar of type_variable
 
 type typing_environment = ml_type StringMap.t
 
