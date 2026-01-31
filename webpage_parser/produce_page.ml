@@ -40,6 +40,7 @@ let produce_page (arguments : string StringMap.t) (path : string) (dest : string
     | UnificationError (alpha, beta, Recursive) -> let f_out = open_out dest in Printf.fprintf f_out "UnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
     | UnificationError (alpha, beta, Incompatible) -> let f_out = open_out dest in Printf.fprintf f_out "UnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
     | InterpreterError s -> let f_out = open_out dest in Printf.fprintf f_out "InterpreterError: %s\n" s; close_out f_out
+    | UnsupportedError s -> let f_out = open_out dest in Printf.fprintf f_out "UnsupportedError: %s\n" s; close_out f_out
   
 let test_file (source : string) : unit =
   let f_in = open_in source in (* TODO add actual namespacing, especially for GET and POST variables *)

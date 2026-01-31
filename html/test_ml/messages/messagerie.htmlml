@@ -12,7 +12,7 @@
     }>
     <h1>Message Test</h1>
     <{
-      sqlite3_exec db (fun x -> fun y -> x ++ y) "SELECT * FROM Message"
+      sqlite3_exec db (fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{ if hd <> "id" then begin <[ <{hd}>: <{content}> <br/> ]> end else <[]> }> ]>) "SELECT * FROM Message"
     }>
     <{
       let x = sqlite3_closedb db
@@ -22,5 +22,6 @@
     <input type="text" name="contenue">
     <input type="submit" name="Envoyer" value="Envoyer">
   </form>
+  <a href="reset_messages.htmlml">Réinitialiser</a>
 </body>
 </html>

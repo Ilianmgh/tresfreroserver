@@ -10,7 +10,7 @@ type raw_function_value =
   | VSnd
   | VSqliteOpenDb
   | VSqliteCloseDb
-  | VSqliteExec | VSqliteExecOne of value | VSqliteExecTwo of value * value (* FIXME this is supposed to take into account partial application. It's lame but FIXME *)
+  | VSqliteExecPartialApp of value list
   | VFun of variable * expr
   | VFix of variable * variable * expr
 
@@ -21,7 +21,7 @@ and value =
   | VBool of bool
   | VString of string
   | VPure of string
-  | VContent of value list (* set VContent at a value list add VPure of string ....*)
+  | VContent of value list
   | VCouple of value * value
 and environment = value StringMap.t
 
@@ -59,28 +59,20 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
   | Clos (_, VSnd) -> Printf.fprintf out "⟨∅, snd⟩"
   | Clos (_, VSqliteOpenDb) -> Printf.fprintf out "⟨∅, sqlite3_opendb⟩"
   | Clos (_, VSqliteCloseDb) -> Printf.fprintf out "⟨∅, sqlite3_closedb⟩"
-  | Clos (_, VSqliteExec) -> Printf.fprintf out "⟨∅, sqlite3_exec⟩"
-  | Clos (_, VSqliteExecOne v) -> begin
-    Printf.fprintf out "⟨∅, sqlite3_exec ";
-    fprintf_value out ~escape_html:escape_html v;
-    Printf.fprintf out "⟩"
-  end
-  | Clos (_, VSqliteExecTwo (v1, v2)) -> begin
-    Printf.fprintf out "⟨∅, sqlite3_exec ";
-    fprintf_value out ~escape_html:escape_html v1;
-    Printf.fprintf out " ";
-    fprintf_value out ~escape_html:escape_html v2;
+  | Clos (_, VSqliteExecPartialApp vals) -> begin
+    Printf.fprintf out "⟨∅, sqlite3_exec";
+    List.iter (fun v -> Printf.fprintf out " "; fprintf_value out ~escape_html:escape_html v) vals;
     Printf.fprintf out "⟩"
   end
   | Clos (env, VFun (x, e)) -> begin
     Printf.fprintf out "⟨";
     fprintf_env out ~escape_html:escape_html env;
-    Printf.fprintf out ", fun %s -> %s⟩" x (string_of_expr e); (* FIXME maybe write fpritnf_expr *)
+    Printf.fprintf out ", fun %s -&gt; %s⟩" x (string_of_expr e); (* FIXME maybe write fpritnf_expr *)
   end
   | Clos (env, VFix (f, x, e)) -> begin
     Printf.fprintf out "⟨";
     fprintf_env out ~escape_html:escape_html env;
-    Printf.fprintf out ", fixfun %s %s -> %s⟩" f x (string_of_expr e); (* FIXME maybe write fpritnf_expr *)
+    Printf.fprintf out ", fixfun %s %s -&gt; %s⟩" f x (string_of_expr e); (* FIXME maybe write fpritnf_expr *)
   end
 and fprintf_env (out : out_channel) ?(escape_html : bool = false) (env : environment) : unit =
   if StringMap.is_empty env then Printf.fprintf out "∅" else begin
@@ -103,9 +95,9 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | Clos (_, VSnd) -> "⟨∅, snd⟩"
   | Clos (_, VSqliteOpenDb) -> "⟨∅, sqlite3_opendb⟩"
   | Clos (_, VSqliteCloseDb) -> "⟨∅, sqlite3_closedb⟩"
-  | Clos (_, VSqliteExec) -> "⟨∅, sqlite3_exec⟩"
-  | Clos (_, VSqliteExecOne v) -> Printf.sprintf "⟨∅, sqlite3_exec %s⟩" (string_of_value ~escape_html:escape_html v)
-  | Clos (_, VSqliteExecTwo (v1, v2)) -> Printf.sprintf "⟨∅, sqlite3_exec %s %s⟩" (string_of_value ~escape_html:escape_html v1) (string_of_value ~escape_html:escape_html v2)
+  | Clos (_, VSqliteExecPartialApp vals) -> begin
+    Printf.sprintf "⟨∅, sqlite3_exec %s⟩" (String.concat " " (List.map (fun v -> string_of_value ~escape_html:escape_html v) vals))
+  end
   | Clos (env, VFun (x, e)) -> Printf.sprintf "⟨%s, fun %s -> %s⟩" (string_of_env ~escape_html:escape_html env) x (string_of_expr e)
   | Clos (env, VFix (f, x, e)) -> Printf.sprintf "⟨%s, fixfun %s %s -> %s⟩" (string_of_env ~escape_html:escape_html env) f x (string_of_expr e)
 and string_of_env ?(escape_html : bool = false) (env : environment) : string = if StringMap.is_empty env then "∅" else begin
@@ -127,16 +119,45 @@ let rec ( ^^ ) (n : int) (p : int) = match p with
 
 let drop = fun x -> ()
 
-let string_of_query (db : Sqlite3.db) (query : string) : string =
-  let res_str = ref [] in
-  let string_of_query_res (res_storage : string list ref) (line : Sqlite3.row) (hdrs : Sqlite3.headers) =
-    Array.iter2 begin fun hdr -> function
-      | None -> res_storage := (Printf.sprintf "%s: NULL" hdr) :: (!res_storage)
-      | Some x -> res_storage := (Printf.sprintf "%s: %s" hdr x) :: (!res_storage)
-    end hdrs line
+(** [eval_expr anyEnv (expr_of_value v) = v].
+  [expr_of_value v] tries to be as simple as possible for a lightweight re-evaluation. *)
+let rec expr_of_value (v1 : value) : expr = match v1 with
+  | VDb db -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for string_of_query)")
+  | VInt n -> Int n
+  | VBool b -> Bool b
+  | VString s -> String s
+  | VPure h -> Html [Pure h]
+  | VContent l -> Html (List.map (fun v -> Script (expr_of_value v)) l)
+  | VCouple (v, v') -> Couple (expr_of_value v, expr_of_value v')
+  | Clos (_, VFst) -> Fst
+  | Clos (_, VSnd) -> Snd
+  (* I'm not sure we really want the following cases to work. At least for [string_of_query], I can't think of a useful use case *)
+  | Clos (_, VSqliteOpenDb) -> SqliteOpenDb
+  | Clos (_, VSqliteCloseDb) -> SqliteCloseDb
+  | Clos (_, VSqliteExecPartialApp []) -> SqliteExec
+  | Clos (_, VSqliteExecPartialApp [db]) -> App (SqliteExec, expr_of_value db) (* remark: won't actually work since db is not implemented *)
+  | Clos (_, VSqliteExecPartialApp [db; func]) -> App (App (SqliteExec, expr_of_value db), expr_of_value func)
+  | Clos (_, VSqliteExecPartialApp _) -> raise (InterpreterError "Trying to get expr of value sqlite_exec applied to too many arguments")
+  | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for string_of_query)")
+  | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for string_of_query)")
+
+let combine_array (a : 'a array) (b : 'b array) : ('a * 'b) array =
+  if Array.length a <> Array.length b then
+    raise (Invalid_argument "Cannot combine arrays of different lengths")
+  else
+    Array.init (Array.length a) (fun i -> (a.(i), b.(i)))
+
+let string_of_query (db : Sqlite3.db) (combine_lines_into_table : value -> value -> value) (combine_cells_into_line : value -> string -> string -> value) (query : string) : value =
+  let value_acc = ref (VPure "") in
+  let string_of_query_res (value_acc : value ref) (combine_cells_into_line : value -> string -> string -> value) (line : Sqlite3.row) (hdrs : Sqlite3.headers) : unit =
+    let fold_line_to_value (value_acc : value) ((hdr, content) : Sqlite3.header * string option) : value = match content with
+      | None -> combine_cells_into_line value_acc hdr "NULL"
+      | Some data ->  combine_cells_into_line value_acc hdr data
+    in
+    value_acc := combine_lines_into_table !value_acc (Array.fold_left fold_line_to_value (VPure "") (combine_array hdrs line))
   in
-  Sqlite3.exec db ~cb:(string_of_query_res res_str) query;
-  String.concat ", " (List.rev !res_str)
+  Sqlite3.exec db ~cb:(string_of_query_res value_acc combine_cells_into_line) query;
+  !value_acc
 
 let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   | Empty -> assert false
@@ -160,16 +181,27 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
       | VDb db -> VBool (Sqlite3.db_close db)
       | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_expr e)))
     end
-    | Clos (_, VSqliteExec) -> begin match eval_expr env e' with
-      | VDb db -> Clos (StringMap.empty, VSqliteExecOne (VDb db))
+    | Clos (_, VSqliteExecPartialApp []) -> begin match eval_expr env e' with
+      | VDb db -> Clos (StringMap.empty, VSqliteExecPartialApp [VDb db])
       | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_expr e)))
     end
-    | Clos (_, VSqliteExecOne db) -> begin match eval_expr env e' with
-      | Clos (captured, func) -> Clos (StringMap.empty, VSqliteExecTwo (db, Clos (captured, func)))
+    | Clos (_, VSqliteExecPartialApp [db]) -> begin match eval_expr env e' with
+      | Clos (captured, func) -> Clos (StringMap.empty, VSqliteExecPartialApp [db; Clos (captured, func)])
       | _ -> raise (InterpreterError (Printf.sprintf "%s: function expected." (string_of_expr e)))
     end
-    | Clos (_, VSqliteExecTwo (VDb db, func)) -> begin match eval_expr env e' with
-      | VString query -> VString (string_of_query db query) (* TODO FOR NOW IT'S A STRING BUT IS NOT EVEN OF THE RIGHT TYPE, PLUS IT IGNORES THE FUNCTION, SIMPLY TO SEE IF IT WORKS *)
+    | Clos (_, VSqliteExecPartialApp [db; combine_lines]) -> begin match eval_expr env e' with
+      | Clos (captured, func) -> Clos (StringMap.empty, VSqliteExecPartialApp [db; combine_lines; Clos (captured, func)])
+      | _ -> raise (InterpreterError (Printf.sprintf "%s: function expected." (string_of_expr e)))
+    end
+    | Clos (_, VSqliteExecPartialApp
+        [VDb db;
+         Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline));
+         Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content))]) -> begin match eval_expr env e' with (* for now, only non-recursive functions *)
+      | VString query ->
+          (string_of_query db
+            (fun v1 v2 -> eval_expr captured_combine_lines (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2)))
+            (fun line_acc hd content -> eval_expr captured_combine_cells (App (App ((App ((Fun (acc, body_function_of_hs_and_content)), expr_of_value line_acc)), String hd), String content)))
+            query)
       | _ -> raise (InterpreterError (Printf.sprintf "%s: string expected." (string_of_expr e)))
     end
     | Clos (env', VFun (x, e_f)) -> let v = eval_expr env e' in eval_expr (StringMap.add x v env') e_f
@@ -201,7 +233,7 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   | Snd -> Clos (StringMap.empty, VSnd)
   | SqliteOpenDb -> Clos (StringMap.empty, VSqliteOpenDb)
   | SqliteCloseDb -> Clos (StringMap.empty, VSqliteCloseDb)
-  | SqliteExec -> Clos (StringMap.empty, VSqliteExec)
+  | SqliteExec -> Clos (StringMap.empty, VSqliteExecPartialApp [])
   | Plus (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n + m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Plus (e, e')))))
@@ -301,6 +333,6 @@ and eval (env : environment) (page : dynml_webpage) : value list =
     end
   end [(env, VBool true)] page
   in
-  List.map (fun (x, y) -> y) (List.tl (List.rev values_and_env)) (* FIXME DANS LE MAUVAIS SENS WTF ????FIXMEFIXMEFIXME *)
+  List.map (fun (x, y) -> y) (List.tl (List.rev values_and_env))
 
 (* TODO add "garbage-collection" *)

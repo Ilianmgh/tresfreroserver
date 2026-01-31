@@ -3,21 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Messagerie</title>
+  <title>Document</title>
 </head>
 <body>
-  <h1>Test Messagerie</h1>
   <p>
-    <{
-      post_contenue
-    }>
-
-
     <{
       let db = sqlite3_opendb "messagerie.db"
     }>
     <{
-      sqlite3_exec db (fun x -> fun y -> x ++ y) ("INSERT INTO Message(data) VALUES ('" ++ post_contenue ++ "')")
+      sqlite3_exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) "DELETE FROM Message"
     }>
     <{
       let x = sqlite3_closedb db

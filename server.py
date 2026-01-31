@@ -68,7 +68,7 @@ try :
         keep_alive, response = http_response(query, lambda n : get_n_bytes(sclient, n))
         sclient.send(response)
       else :
-        keep_alive = False
+        keep_alive = False # TODO investigate if this have the right semantic. Firefox seems to send empty queries after some minutes of inactivity. We may want to keep the session open in these cases.
     if debug :
       print("Closing connection with current client...")
     sclient.close()

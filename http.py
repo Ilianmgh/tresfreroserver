@@ -239,5 +239,5 @@ def http_response(text : str, fetch_n_bytes) -> tuple[bool, bytes] :
   if "keep-alive" in info :
     keep_alive = info["keep-alive"]
   else :
-    keep_alive = False
+    keep_alive = True # HTTP/>=1.1 : Connection:keep-alive is the default value 
   return (keep_alive, header + "\r\n\r\n".encode() + body + "\r\n\r\n".encode())

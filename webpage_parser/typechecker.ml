@@ -118,7 +118,21 @@ let rec type_inferer_one_expr (gamma : typing_environment) (e1 : expr) : typing_
   | Snd -> let alpha, beta = fresh (), fresh () in (gamma, Arr (Prod (TypeVar alpha, TypeVar beta), TypeVar beta))
   | SqliteOpenDb -> (gamma, Arr (TypeString, TypeDb))
   | SqliteCloseDb -> (gamma, Arr (TypeDb, TypeBool))
-  | SqliteExec -> (gamma, Arr (TypeDb, Arr (Arr (TypeString, Arr (TypeString, TypeString(*TODO should actually be unit, but since we don't consider this function anyway, ok for now*))), Arr (TypeString, TypeString)))) (* FOR NOW, RETURN VALUE IS A STRING, BUT IS ACTUALLY A DEDICATED TYPE FOR ERRORS *)
+  (* Type of sqlite_exec: db -> (html -> html -> html) -> (html -> string -> string -> html) -> string -> html *)
+  | SqliteExec -> (gamma,
+    Arr (
+      TypeDb,
+      Arr (
+        Arr (TypeHtml, Arr (TypeHtml, TypeHtml)),
+        Arr (
+          Arr (TypeHtml, Arr (TypeString, Arr (TypeString, TypeHtml))),
+          Arr (TypeString,
+            TypeHtml
+          )
+        )
+      )
+    )
+  ) (* FIXME FOR NOW, RETURN VALUE IS A STRING, BUT IS ACTUALLY A DEDICATED TYPE FOR ERRORS *)
   | Neg e -> begin
     let gamma', alpha = type_inferer_one_expr gamma e in
     let theta = unify TypeInt alpha in
