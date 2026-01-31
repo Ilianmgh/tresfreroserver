@@ -1,5 +1,12 @@
 #import "@preview/curryst:0.6.0" : *
 
+#let todo = highlight[TODO]
+
+#set text(font:"Libertinus Sans")
+#set page(margin:2em)
+#let embed_page(body) = box.with(baseline:30%,stroke:stroke(thickness:.1em), inset:.3em)(body)
+#let embed_page_math(body) = box.with(baseline:25%,stroke:stroke(thickness:.1em), inset:.7em)(align(center + horizon, body))
+
 = Language Syntax
 
 == Webpage
@@ -12,28 +19,31 @@ bodyexp: anyHtmlCode> (<{exp}> anyHtmlCode)*
 
 == Expressions
 
-General expressions:
+
+
+#columns(3)[
+=== General expressions:
 
 ```
 exp: e, e', e'', ... ::=
-    let <identifier> = e in e'
-  | fun <identifier> -> e
-  | fixfun <identifier> <identifier> -> e
+    let <id> = e in e'
+  | fun <id> -> e
+  | fixfun <id> <id> -> e
   | e e'
   | if e then e' else e''
   | e;e'
-  | <identifier>
-  | <aexp>
-  | <bexp>
-  | <sexp>
+  | <id>
+  | <aexp> | <bexp> | <sexp>
   | <texp>
   | <uexp>
-  | <html>
+  | <html> | <dbexp>
   | (e)
   | begin e end
 ```
 
-Arithmetic expressions:
+#colbreak()
+
+=== Arithmetic expressions:
 
 ```
 aexp:
@@ -45,7 +55,9 @@ aexp:
   | <int literal>
 ```
 
-Boolean expressions:
+#colbreak()
+
+=== Boolean expressions:
 
 ```
 bexp:
@@ -60,6 +72,7 @@ bexp:
   | not <exp>
   | <boolean literal>
 ```
+]
 
 String expressions:
 
@@ -77,7 +90,7 @@ Unit expression:
 
 ```
 uexp: ()
-```
+``` #todo
 
 HTML:
 
@@ -85,9 +98,13 @@ HTML:
 html: <[ anyHtmlCode ]>
 ```
 
-Should at some point allow nested `<{}>` and `<[]>` brackets.
+Database expression:
 
-For now, only couples are allowed, and `(x1, x2, x3, x4)` is parsed as `(x1, (x2, (x3, x4)))`.
+```
+dbexp: sqlite_opendb | sqlite_closedb | sqlite_exec
+```
+
+For the time being, only couples are allowed, and `(x1, x2, x3, x4)` is parsed as `(x1, (x2, (x3, x4)))`.
 
 == Identifiers (variable and function names)
 
@@ -97,9 +114,9 @@ For now, only couples are allowed, and `(x1, x2, x3, x4)` is parsed as `(x1, (x2
 
 Examples:
 - variable
-- my\_function
+- my\_function_n_362
 - \_MyFunction
-- myVariable
+- myVariable067
 
 But not:
 - MyFunction
@@ -109,7 +126,7 @@ But not:
 
 === Integers
 
-For readability for the programmer, we allow underscores in numbers.
+For better readability for the programmer, we allow underscores in numbers.
 
 `[0-9]([0-9]|_)*`
 
@@ -130,11 +147,13 @@ Format strings are delimited by: `f"..."`. A formatter can be inserted in a form
 
 `true`, `false`
 
+#pagebreak()
+
 = Type system
 
 == Types
 
-`<tlit> : int | bool | string | unit | html`
+`<tlit> : int | bool | string | unit | html | db`
 
 $alpha, beta, ...$` ::= `$alpha -> beta$` | `$alpha times beta$
 
@@ -221,15 +240,26 @@ $alpha, beta, ...$` ::= `$alpha -> beta$` | `$alpha times beta$
         $Gamma tack #[`(e, e')`] : alpha times beta$
       )),
       prooftree(rule(
-        $Gamma tack #[`e`] : alpha times beta$,
-        $Gamma tack #[`fst e`] : alpha$
+        $Gamma tack #[`fst`] : alpha times beta -> alpha$
       )),
       prooftree(rule(
-        $Gamma tack #[`e`] : alpha times beta$,
-        $Gamma tack #[`snd e`] : beta$
+        $Gamma tack #[`snd e`] : alpha times beta -> beta$
       )),
       prooftree(rule(
         $Gamma tack #[`()`] : #[`unit`]$
+      )),
+    ),
+    stack(dir:ltr, spacing: 1em,
+      prooftree(rule(
+        $Gamma tack #[`sqlite_opendb`] : #[`string`] -> #[`db`]$
+      )),
+      prooftree(rule(
+        $Gamma tack #[`sqlite_closedb`] : #[`db`] -> #[`bool`]$
+      )),
+    ),
+    stack(dir:ltr, spacing: 1em,
+      prooftree(rule(
+        $Gamma tack #[`sqlite_exec`] : #[`db`] -> (#[`html`] -> #[`html`] -> #[`html`]) -> (#[`html`] -> #[`string`] -> #[`string`] -> #[`html`]) -> #[`bool`]$
       )),
     ),
   )
@@ -240,16 +270,33 @@ $alpha, beta, ...$` ::= `$alpha -> beta$` | `$alpha times beta$
 == Values
 
 `
-values: v, v', ... ::= `#sym.chevron.l`E, <function>`#sym.chevron.r` | n | true | false | <string literal> | (v, v')
+values: v, v', ... ::= `#sym.chevron.l`E, <function>`#sym.chevron.r` | n | true | false | <string literal> | (v, v') | <vdb> | pure_html_code |` #embed_page[`evald_page`]
 
-function: fun x -> e | fixfun x -> e
-`
+`function: fun x -> e | fixfun x -> e`
+
+`evald_page: [v1; v2; ...; vn]` #emoji.warning it's a list in the meta-language.
+
+`vdb: a value representing a database in the language`
+
+An evaluated webpage can be injected in a value (via the frame). This happens when we evaluate, e.g.
+
+`<{ <[htmlcode <{let x = 1 in x}> somemorehtmlcode]> }>`
 
 == Evaluation rules
 
-We implement a big-step call-by-value semantics.
+A dynamic webpage to evaluate is seen as a list of either:
+- Pure html code ;
+- An expression ;
+- A global declaration.
 
-#let evaluatesTo(env, expr, val) = [#env #sym.tack #expr #sym.arrow.double.b #val]
+The top-level interpreted page is a dynamic webpage, as well as the content between HTML opening/closing bracket.
+
+The interpreter evaluates following a big-step call-by-value semantics. We define two mutually recursive relations to evaluate expressions and dynamic webpages.
+
+#let pageEvaluatesTo(env, expr, val) = $#env tack #expr arrow.triple.b #val$
+#let evaluatesTo(env, expr, val) = $#env tack #expr arrow.double.b #val$
+
+=== Expression
 
 #align(center, stack(spacing: 1em,
     stack(dir:ltr, spacing: 1em,
@@ -281,9 +328,9 @@ We implement a big-step call-by-value semantics.
         evaluatesTo(`E`, `(e, e')`, `(v, v')`)
       )),
       prooftree(rule(
-        evaluatesTo(`E`, `e`, `n`),
-        evaluatesTo(`E`, `e'`, `m`),
-        evaluatesTo(`E`, [`e` #sym.ast.op.o `e'`], [$n$ #overline[#sym.ast.op.o] $n'$])
+        evaluatesTo(`E`, `e`, $n$),
+        evaluatesTo(`E`, `e'`, $m$),
+        evaluatesTo(`E`, [`e` #sym.ast.op.o `e'`], [$n overline(ast.op.o) n'$])
       )),
       prooftree(rule(
         evaluatesTo(`E`, `e`, `n`),
@@ -292,7 +339,7 @@ We implement a big-step call-by-value semantics.
       prooftree(rule(
         evaluatesTo(`E`, `e`, `b`),
         evaluatesTo(`E`, `e'`, `b'`),
-        evaluatesTo(`E`, [`e` #sym.ast.op.o `e'`], [$b$ #overline[#sym.ast.op.o] $b'$])
+        evaluatesTo(`E`, [`e` #sym.ast.op.o `e'`], $b overline(ast.op.o) b'$)
       )),
     ),
     stack(dir:ltr, spacing: 1em,
@@ -357,11 +404,85 @@ We implement a big-step call-by-value semantics.
         evaluatesTo(`E`, `e`, `x`),
         evaluatesTo(`E`, [`e`], `v`)
       )),
+      prooftree(rule(
+        pageEvaluatesTo(`E`, `dynamic_webpage`, `evald_page`),
+        evaluatesTo(`E`, `<[ dynamic_webpage ]>`, embed_page_math[`evald_page`])
+      )),
+    ),
+    stack(dir:ltr, spacing: 1em,
+      prooftree(rule(label: [`vdb` is a projection within the langhage of the db at path `s`],
+        evaluatesTo(`E`, `e`, `s`),
+        evaluatesTo(`E`, [`sqlite_opendb e`], `vdb`)
+      )),
+    ),
+    stack(dir:ltr, spacing: 1em,
+      prooftree(rule(label: [If the corresponding db could be closed],
+        evaluatesTo(`E`, `e`, `vdb`),
+        evaluatesTo(`E`, [`sqlite_closedb e`], `true`)
+      )),
+    ),
+    stack(dir:ltr, spacing: 1em,
+      prooftree(rule(label: [If the corresponding db couldn't be closed (it remains oen)],
+        evaluatesTo(`E`, `e`, `vdb`),
+        evaluatesTo(`E`, [`sqlite_closedb e`], `true`)
+      )),
+    ),
+    stack(dir:ltr, spacing: 1em,
+      prooftree(rule(
+        evaluatesTo(`E`, `e`, `vdb`),
+        evaluatesTo(`E`, [a closure for function `fl`], `vdb`),
+        evaluatesTo(`E`, [a closure for function `fc`], `vdb`),
+        evaluatesTo(`E`, `e'`, `s`),
+        evaluatesTo(`E`, [`sqlite_exec e f1 f2 e'`], `processed s*`)
+      )),
     ),
   )
 )
 
+\*The semantic of exec is as follows: `s` is a string corresponding to a SQL command, which is executed on the database `vdb`.
+If it has query statements, then `sqlite_exec` allow to process the result with a double fold left function applied on the resulting table i.e. let:
+#table(columns:3,
+  [header_1], [...], [header_n],
+  [data_1], [...], [data_n],  
+)
+be a line of the resulting table of the query.
+We first allow to process one line in the following manner: the value `line_i` corresponding to the table above is: `fc (... (fc EmptyHtmlCode header_1 data_1) ...) header_n data_n`.
+
+Similarly, the result of each line is combined in the followind manner to form `processed s`:\
+`processed s = fl (... (fl EmptyHtmlCode line_1) ...) line_n`
+
+See #link("https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/Sqlite3/index.html#general-database-operations")[here] for reason the db couldn't be closed, and more specifications of the sqlite functions.
+
+=== Dynamic webpage
+
+
+#align(center, stack(spacing: 1em,
+    stack(dir:ltr, spacing: 1em,
+      prooftree(rule(
+        evaluatesTo(`E`, `e`, `v`),
+        pageEvaluatesTo([`E, x` #sym.mapsto `v`], `page`, `evald`),
+        pageEvaluatesTo(`E`, `(let x = e) :: page`, `evald`)
+      )),
+      prooftree(rule(
+        pageEvaluatesTo(`E`, `page`, `evald`),
+        pageEvaluatesTo(`E`, `pure_html :: page`, `pure_html :: evald`)
+      )),
+    ),
+    stack(dir:ltr, spacing: 1em,
+      prooftree(rule(
+        evaluatesTo(`E`, `e`, `v`),
+        pageEvaluatesTo([`E`], `page`, `evald`),
+        pageEvaluatesTo(`E`, `e :: page`, `v :: evald`)
+      )),
+    ),
+  )
+)
+
+#pagebreak()
+
 = TODO
+
+#sym.ballot Implement fstrings
 
 #sym.ballot See why special characters passed as argument of GET/POST requests is displayed weirdly.
 
