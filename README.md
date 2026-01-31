@@ -12,6 +12,22 @@ You can parametrize the server via [config.py].
 
 Supports POST and GET requests.
 
-# Dynamic webpage with ML-like language
+# Dynamic webpages with a ML-like language
 
 This server has support for a ML-like language within html webpages. See `webpage_parser/documentation.pdf` for more information.
+
+This language supports the following web features:
+- Access to GET and POST parameters as global variables.
+- SQL requests via sqlite3.
+
+# Dependencies
+
+## Server
+
+A python interpreter is needed to run the server.
+
+## ML-like intepreter
+
+`ocaml`, `ocamlfind`, `sqlite3-ocaml`
+
+The interpreter of the ML-like language is compiled using `ocamlc` with `ocamlfind`. The implementation of SQL request uses the ocaml package [sqlite3](https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/).
