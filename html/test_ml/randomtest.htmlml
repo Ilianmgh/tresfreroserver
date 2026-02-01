@@ -6,6 +6,9 @@
   <title>Coucou</title>
 </head>
 <body>
+  <{
+    let session_x = 42
+  }>
   <p>
     <{
       "co<i>ucou"
@@ -20,5 +23,12 @@
     <{"-->"}> hmm...
   -->
   <{ <[<strong>coucou</strong> <{"<strong>actuallyastring</strong>"}>]> }>
+
+  <p>
+    <form method="GET" action="randomtarget.htmlml">
+      <input id="1" type="text" name="NOM"></input>
+      <input id="2" type="submit" name="Envoyer"></input>
+    </form>
+  </p>
 </body>
 </html>

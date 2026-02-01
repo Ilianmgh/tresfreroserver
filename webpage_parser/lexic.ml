@@ -83,7 +83,7 @@ let keywords_tokens : (string * raw_token) list = [
 let symbols : string list = List.map fst symbols_tokens
 
 let keywords_map : raw_token StringMap.t =
-  let symbols_only_map = List.fold_left (fun acc_keywords_map (s, tok) -> StringMap.add s tok acc_keywords_map) StringMap.empty symbols_tokens in
+  let symbols_only_map = List.fold_left (fun acc_keywords_map (s, tok) -> StringMap.add s tok acc_keywords_map) StringMap.empty symbols_tokens in (* FIXME replace by of_list ? *)
   List.fold_left (fun acc_keywords_map (s, tok) -> StringMap.add s tok acc_keywords_map) symbols_only_map keywords_tokens
 
 

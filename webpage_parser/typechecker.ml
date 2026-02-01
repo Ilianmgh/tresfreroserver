@@ -193,7 +193,7 @@ and type_inferer (gamma : typing_environment) (page : dynml_webpage) : (typing_e
         | Script e -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in (cur_gamma, gamma_e, tau_e) :: (cur_gamma, last_gamma, tau) :: already_typed'
         | Pure s -> (cur_gamma, StringMap.empty, TypeHtml) :: (cur_gamma, last_gamma, tau) :: already_typed'
         | Decl (ExprDecl (x, e)) -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in (StringMap.add x tau_e cur_gamma, gamma_e, tau_e) :: (cur_gamma, last_gamma, tau) :: already_typed'
-        | Decl (TypeDecl (x, e)) -> failwith "TODO"
+        | Decl (TypeDecl (x, e)) -> raise (UnsupportedError "Type declaration unsupported by now (type_inferer)")
       end
     end
   end [(gamma, gamma, TypeBool)] page (* TODO remove this first one *)

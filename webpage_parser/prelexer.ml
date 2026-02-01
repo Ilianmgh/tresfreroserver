@@ -59,7 +59,7 @@ let update_word_list ((w1, w2) : (int * string) * (int * string)) (lexed : (int 
 
 
 let update_word_list_pretok ((w1, w2) : (int * string) * (int * string)) (lexed : pre_token list) : pre_token list = match w1, w2 with
-  | (_, ""), (_, "") -> Printf.fprintf stderr "Hum.\n%!"; lexed (* FIXME this is reached by TEST number 6 *)
+  | (_, ""), (_, "") -> Printf.fprintf stderr "Hum.\n%!"; lexed (* FIXME find out why it hums (TEST 6 among others) *)
   | (i, w), (_, "") | (_, ""), (i, w) -> (PretokMl (i, w)) :: lexed
   | (i1, w1), (i2, w2) -> (PretokMl (i1, w1)) :: (PretokMl (i2, w2)) :: lexed
 

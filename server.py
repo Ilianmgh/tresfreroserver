@@ -1,11 +1,11 @@
+import config
+from typing import Any
 from socket import socket
 from http import http_response
+import threading
 
 debug : bool = True
-
-serveur = socket()
-serveur.bind(('0.0.0.0', 9999))
-serveur.listen()
+thread_debug : bool = False
 
 http_methods : list[str] = ["get", "head", "options", "trace", "put", "delete", "post", "patch", "connect"]
 
@@ -40,37 +40,63 @@ def get_http_query(sock : socket) -> str :
     line = buffered_readline(sock).strip("\n\t\r ")
   return query
 
-def get_n_bytes(sock : socket, n : int) -> str :
+def get_n_bytes(sock : socket, n : int) -> bytes :
   """ Reads [n] bytes from [sock]. Blocking call, will loop until [n] bytes where read """
-  query : str = ""
+  data : bytes = b""
   n_bytes_read = 0
   while n_bytes_read < n :
-    bytes = sock.recv(n)
+    bytes = sock.recv(n - n_bytes_read)
     n_bytes_read += len(bytes)
-    query += bytes.decode()
-  return query
+    data += bytes
+  return data
+
+def manage_connection(sclient : socket, adclient : Any, generate_session_id_mut : threading.Lock) -> None :
+  if thread_debug :
+    print(f"{threading.get_ident()} is starting")
+  with pool_sem :
+    if thread_debug :
+      print(f"{threading.get_ident()} now exchanging messages")
+    keep_alive = True
+    while keep_alive and not(server_interrupt.is_set()) :
+      if debug :
+        print(f"thread n°{threading.get_ident()}: Waiting for msg...")
+      query : str = get_http_query(sclient)
+      if debug :
+        print(f"thread n°{threading.get_ident()}: Received sth...")
+      if query != "" :
+        if debug :
+          print(f"thread n°{threading.get_ident()}: QUERY STARTS ON NEXT LINE")
+          print(query)
+          print(f"thread n°{threading.get_ident()}: QUERY ENDS FROM PREV LINE")
+        keep_alive, response = http_response(query, lambda n : get_n_bytes(sclient, n), generate_session_id_mut)
+        sclient.send(response)
+      else :
+        keep_alive = False
+    if debug :
+      print(f"thread n°{threading.get_ident()}: Closing connection with current client...")
+    sclient.close()
+  if thread_debug :
+    print(f"{threading.get_ident()} now exiting")
+
+thread_pool : list[threading.Thread] = []
+pool_sem = threading.Semaphore(value = max(config.max_simultaneous_connections, 0))
+server_interrupt = threading.Event()
+generate_session_id_mut = threading.Lock()
+
+server = socket()
+server.bind(('0.0.0.0', 9999))
+server.listen()
 
 try :
   while True :
-    (sclient, adclient) = serveur.accept()
-    keep_alive = True
-    while keep_alive :
-      if debug :
-        print("Waiting for msg...")
-      query : str = get_http_query(sclient)
-      if debug :
-        print("Received sth...")
-      if query != "" :
-        if debug :
-          print("QUERY STARTS ON NEXT LINE")
-          print(query)
-          print("QUERY ENDS FROM PREV LINE")
-        keep_alive, response = http_response(query, lambda n : get_n_bytes(sclient, n))
-        sclient.send(response)
-      else :
-        keep_alive = False # TODO investigate if this have the right semantic. Firefox seems to send empty queries after some minutes of inactivity. We may want to keep the session open in these cases.
-    if debug :
-      print("Closing connection with current client...")
-    sclient.close()
+    (sclient, adclient) = server.accept()
+    if config.max_simultaneous_connections < 0 :
+      pool_sem.release()
+    t = threading.Thread(target=manage_connection, args=(sclient, adclient, generate_session_id_mut))
+    t.start()
 except KeyboardInterrupt :
-  serveur.close()
+  server_interrupt.set()
+  for t in thread_pool :
+    t.join()
+finally :
+  server.close()

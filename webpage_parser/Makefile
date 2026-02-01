@@ -1,42 +1,50 @@
 CC = ocamlfind ocamlc
 CFLAGS =
-LDFLAGS = -package sqlite3 -linkpkg
+LDFLAGS = -package sqlite3 -package str -linkpkg
 
 all: produce_page.x parse_url_dictionary.x test.x
 
 .PHONY: clean
-# Voir ocaml-deps
-produce_page.x: produce_page.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo parse_url_dictionary.cmo test.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo parse_url_dictionary.cmo produce_page.cmo
+# See if ocaml-deps can reduce this horrible makefile
+produce_page.x: produce_page.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo value.cmo interpreter.cmo parse_url_dictionary.cmo test.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo value.cmo interpreter.cmo test.cmo parse_url_dictionary.cmo produce_page.cmo
 
 produce_page.cmi: produce_page.cmo
 
-produce_page.cmo: produce_page.ml utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typechecker.cmi typeSyntax.cmi interpreter.cmi parse_url_dictionary.cmi test.cmi
+produce_page.cmo: produce_page.ml utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typechecker.cmi typeSyntax.cmi value.cmi interpreter.cmi parse_url_dictionary.cmi test.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o produce_page.cmo produce_page.ml
 
-parse_url_dictionary.x: utils.cmo parse_url_dictionary.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o parse_url_dictionary.x utils.cmo parse_url_dictionary.cmo
+parse_url_dictionary.x: utils.cmo syntax.cmo value.cmo parse_url_dictionary.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o parse_url_dictionary.x utils.cmo syntax.cmo value.cmo parse_url_dictionary.cmo
 
 parse_url_dictionary.cmi: parse_url_dictionary.cmo
 
-parse_url_dictionary.cmo: utils.cmi parse_url_dictionary.ml
+parse_url_dictionary.cmo: utils.cmi syntax.cmi value.cmi parse_url_dictionary.ml
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o parse_url_dictionary.cmo parse_url_dictionary.ml
 
-test.x: test.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o test.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo test.cmo
+test.x: test.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo value.cmo interpreter.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o test.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo value.cmo interpreter.cmo test.cmo
 
 test.cmi: test.cmo
 
-test.cmo: test.ml utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typechecker.cmi typeSyntax.cmi interpreter.cmi
+test.cmo: test.ml utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi typechecker.cmi typeSyntax.cmi value.cmi interpreter.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o test.cmo test.ml
 
-interpreter.x: interpreter.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo typeSyntax.cmo typechecker.cmo utils.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o interpreter.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo typeSyntax.cmo typechecker.cmo interpreter.cmo
+interpreter.x: interpreter.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo typeSyntax.cmo typechecker.cmo value.cmo utils.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o interpreter.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo typeSyntax.cmo typechecker.cmo value.cmo interpreter.cmo
 
 interpreter.cmi: interpreter.cmo
 
-interpreter.cmo: interpreter.ml lexic.cmi trie.cmi prelexer.cmi lexer.cmi parser.cmi typechecker.cmi syntax.cmi typeSyntax.cmi utils.cmi
+interpreter.cmo: interpreter.ml lexic.cmi trie.cmi prelexer.cmi lexer.cmi parser.cmi typechecker.cmi syntax.cmi typeSyntax.cmi value.cmi utils.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o interpreter.cmo interpreter.ml
+
+value.x: value.cmo utils.cmo syntax.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o value.x utils.cmo syntax.cmo value.cmo
+
+value.cmi: value.cmo
+
+value.cmo: value.ml syntax.cmi utils.cmi
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o value.cmo value.ml
 
 typechecker.x: typechecker.cmo utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo utils.cmo
 	$(CC) $(CFLAGS) $(LDFLAGS) -o typechecker.x utils.cmo trie.cmo lexic.cmo prelexer.cmo lexer.cmo syntax.cmo parser.cmo typeSyntax.cmo typechecker.cmo

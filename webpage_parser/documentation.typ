@@ -449,7 +449,9 @@ be a line of the resulting table of the query.
 We first allow to process one line in the following manner: the value `line_i` corresponding to the table above is: `fc (... (fc EmptyHtmlCode header_1 data_1) ...) header_n data_n`.
 
 Similarly, the result of each line is combined in the followind manner to form `processed s`:\
-`processed s = fl (... (fl EmptyHtmlCode line_1) ...) line_n`
+`processed s = fl (... (fl EmptyHtmlCode line_1) ...) line_n`.
+
+Actually, `fl` and `fc` can't be any functions for weird reasons. #todo explain or fix + see if it leads to actual limitations.
 
 See #link("https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/Sqlite3/index.html#general-database-operations")[here] for reason the db couldn't be closed, and more specifications of the sqlite functions.
 
@@ -478,13 +480,15 @@ See #link("https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/Sqlite3/index.html
   )
 )
 
+#todo write documentation for session variables
+
 #pagebreak()
 
 = TODO
 
 #sym.ballot Implement fstrings
 
-#sym.ballot See why special characters passed as argument of GET/POST requests is displayed weirdly.
+#sym.ballot.check Implement percent-encoding 
 
 #sym.ballot Don't lex ml located in html comment
 
@@ -498,7 +502,7 @@ See #link("https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/Sqlite3/index.html
 
 #sym.ballot Add pattern-matching
 
-#sym.ballot.check Add superglobal variables (e.g. given in argument of the interpreter in a yaml format)
+#sym.ballot.check Add superglobal variables
 
 #sym.ballot.check Add user-defined global variables
 

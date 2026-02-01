@@ -26,16 +26,17 @@ let test (i, code : int * string) : unit =
     if List.mem "parsed" displayed then Printf.printf "parsed: %s\n%!" (string_of_dynpage parsed);
     let types_infered = type_inferer StringMap.empty parsed in
     if List.mem "typed" displayed then List.iter (fun (gamma, tau) -> Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_typing_env gamma)) types_infered;
-    let values_evald = eval StringMap.empty parsed in
+    let _, values_evald = eval StringMap.empty parsed in
     if List.mem "eval'd" displayed then List.iter (fun v -> Printf.printf "eval'd: %s\n%!" (string_of_value v)) values_evald
   with
-    | LexingError s -> Printf.fprintf stdout "LexingError: %s\n" s
-    | ParsingError s -> Printf.fprintf stdout "ParsingError: %s\n" s
-    | TypingError s -> Printf.fprintf stdout "TypingError: %s\n" s
-    | UnificationError (alpha, beta, Recursive) -> Printf.fprintf stdout "UnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta)
-    | UnificationError (alpha, beta, Incompatible) -> Printf.fprintf stdout "UnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta)
-    | InterpreterError s -> Printf.fprintf stdout "InterpreterError: %s\n" s
-    | Failure "TODO" -> Printf.fprintf stdout "TODO\n"
+    | PrelexingError s -> Printf.fprintf stderr "PrelexingError: %s\n" s
+    | LexingError s -> Printf.fprintf stderr "LexingError: %s\n" s
+    | ParsingError s -> Printf.fprintf stderr "ParsingError: %s\n" s
+    | TypingError s -> Printf.fprintf stderr "TypingError: %s\n" s
+    | UnificationError (alpha, beta, Recursive) -> Printf.fprintf stderr "UnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta)
+    | UnificationError (alpha, beta, Incompatible) -> Printf.fprintf stderr "UnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta)
+    | InterpreterError s -> Printf.fprintf stderr "InterpreterError: %s\n" s
+    | UnsupportedError s -> Printf.fprintf stderr "UnsupportedError: %s\n" s
 
 (*
 
