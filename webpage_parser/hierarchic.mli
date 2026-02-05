@@ -1,3 +1,4 @@
+(** A hierarchic map: a collection of maps with parental links: each map has submap identified by their _names_, which are also of the type of the map's keys *)
 module type S = sig
   type key
   type 'a t
@@ -15,6 +16,7 @@ module type S = sig
   val submap : key -> 'a t -> 'a t
   (** Same as [submap] but with an option *)
   val submap_opt : key -> 'a t -> 'a t option
+  (** [map f s = s'] maps [f] to each element of [s]. Should only be called on a root. *)
   val map : ('a -> 'b) -> 'a t -> 'b t
   val is_empty : 'a t -> bool
   (** [iter f s] applies [f] to each element of [s] *)

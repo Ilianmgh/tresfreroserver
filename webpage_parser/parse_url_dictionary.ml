@@ -45,4 +45,4 @@ let parse_url_dictionary (value_of_string : string -> value) (url_data : string)
           (ParsingKey, c :: key_acc, value_acc, map_acc)
     end (ParsingKey, [], [], prev_subnamespace) (data ^ "&") (* FIXME this ugly & appended at the end could be better *)
   in
-  Environment.add_sub module_name_of_method final_map final_map
+  Environment.add_sub module_name_of_method final_map s

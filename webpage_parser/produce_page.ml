@@ -50,6 +50,9 @@ let test_file (source : string) : unit =
   close_in f_in;
   Test.test (-1, code)
 
+let print_env (s : environment) : unit =
+  Environment.iter (fun prefix x v -> Printf.fprintf stderr "%s |-> %s, " x (string_of_value v)) s
+
 let () =
   if Array.length Sys.argv > 2 then begin
     let source_path = Sys.argv.(1) in
@@ -63,9 +66,9 @@ let () =
     let args = if Array.length Sys.argv > 4 then (* parsing SESSION arguments *)
         Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(4) arguments
       else
-        Environment.empty
+        arguments
     in
-    (* Printf.printf "\nCURRENTENVPREEVALUATION:%s\n%!" (string_of_env args); *)
+    Printf.printf "\nCURRENTENVPREEVALUATION:%s\n%!" (string_of_env args);
     produce_page args source_path dest_path
     (* test_file source_path *)
   end else

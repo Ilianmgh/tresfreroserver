@@ -5,8 +5,8 @@ module type S = sig
   val add : key -> 'a -> 'a t -> 'a t
   val add_to_sub : key list -> key -> 'a -> 'a t -> 'a t
   val add_sub : key -> 'a t -> 'a t -> 'a t
-  val find_root : key -> 'a t -> 'a
-  val find_root_opt : key -> 'a t -> 'a option
+  val find : key -> 'a t -> 'a
+  val find_opt : key -> 'a t -> 'a option
   val submap : key -> 'a t -> 'a t
   val submap_opt : key -> 'a t -> 'a t option
   val map : ('a -> 'b) -> 'a t -> 'b t
@@ -15,12 +15,11 @@ module type S = sig
   val fold : (key list -> key -> 'a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc
 end
 
-(** A hierarchic map: a collection of maps with parental links: each map has submap identified by their _names_, which are also of the type of the map's keys *)
 module Make = functor (M : Map.S) -> struct
   type key = M.key
   type +!'a t = { root : 'a M.t ; sub : ('a t) M.t ; parent : 'a t option }
-  let empty_with_parent ?(parent : 'a t option = None) : 'a t = { root = M.empty ; sub = M.empty ; parent = parent }
-  let empty : 'a t = empty_with_parent ~parent:None
+  let empty_with_parent ?(parent : 'a t option = None) (() : unit) : 'a t = { root = M.empty ; sub = M.empty ; parent = parent }
+  let empty : 'a t = empty_with_parent () ~parent:None
   let add (k : key) (v : 'a) (s : 'a t) : 'a t = { root = M.add k v s.root ; sub = s.sub ; parent = s.parent }
   let rec add_to_sub (prefix : key list) (k : key) (v : 'a) (s : 'a t) : 'a t = match prefix with (* TODO make tail-rec *)
     | [] -> add k v s
@@ -43,10 +42,23 @@ module Make = functor (M : Map.S) -> struct
     end
   let submap (subk : key) (s : 'a t) : 'a t = M.find subk s.sub (* FIXME Maybe catch error and add a local error ? *)
   let submap_opt (subk : key) (s : 'a t) : 'a t option = M.find_opt subk s.sub
-  let rec map (f : 'a -> 'b) (s : 'a t) : 'b t = { root = M.map f s.root ; sub = M.map (map f) s.sub ; parent = s.parent}
+  let rec map_change_parents (f : 'a -> 'b) (new_parent : 'b t option) (s : 'a t) : 'b t =
+    let mapped_root = 
+      { root = M.map f s.root ;
+        sub = M.empty;
+        parent = None}
+    in
+    let new_sub = M.map (map_change_parents f (Some mapped_root)) s.sub in
+    { root = mapped_root.root ; sub = new_sub ; parent = new_parent}
+  let rec map (f : 'a -> 'b) (s : 'a t) : 'b t = map_change_parents f None s (* FIXME not sure it works with the two-sided pointers *)
   let is_empty (s : 'a t) : bool = M.is_empty s.root && M.is_empty s.sub (* maybe we rather want to explore the hierarchy tree and see if each node has an empty map *)
-  let rec iter (f : key -> key -> 'a -> unit) (s : 'a t) : unit = (* TODO add prefix when exploring children *)
-    M.iter (fun k v -> f k k v) s.root;
+  let rec iter (f : key list -> key -> 'a -> unit) (s : 'a t) : unit = (* TODO add prefix when exploring children *)
+    M.iter (fun k v -> f [] k v) s.root;
     M.iter (fun k sub_s -> iter f sub_s) s.sub
-  let fold (f : key list -> key -> 'a -> 'acc -> 'acc) (s : 'a t) (acc : 'acc) : 'acc = Printf.fprintf stderr "TODO Hierarchic.fold\n%!"; acc
-end
+  let fold (f : key list -> key -> 'a -> 'acc -> 'acc) (s : 'a t) (acc : 'acc) : 'acc =
+    let rec fold_acc_prefix (cur_prefix : key list) (f : key list -> key -> 'a -> 'acc -> 'acc) (s : 'a t) (acc : 'acc) : 'acc =
+      let current_folded = M.fold (f cur_prefix) s.root acc in
+      M.fold (fun subname submodule acc -> fold_acc_prefix (subname :: cur_prefix) f submodule acc) s.sub current_folded
+    in
+    fold_acc_prefix [] f s acc
+end (* Namespacing works for variable ; implemented correctly for Get/Post request. TODO implement it for Sqlite functions + for Session, maybe add a function or a different global declaration variable in the namespace Session to declare session variables. *)

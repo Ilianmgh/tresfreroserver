@@ -140,7 +140,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
 and string_of_env ?(escape_html : bool = false) (env : environment) : string = if Environment.is_empty env then "∅" else begin
     let string_of_one_env_binding (prefix : string list) (x : variable) (v : value) (acc : string) : string =
       if acc = "" then
-        Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)
+        Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v) (* TODO take into account [prefix] *)
       else
         Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
     in
@@ -152,6 +152,6 @@ and string_of_env ?(escape_html : bool = false) (env : environment) : string = i
 (** [repr_of_value v] provides a unique, decodable string for [v] : [repr_of_value (value_of_repr sv) = sv] *)
 let repr_of_value (v1 : value) : string = match v1 with
   | VInt n -> Printf.sprintf "%d" n
-  | _ -> failwith "TODO"
+  | _ -> failwith "TODO implement repr_of_value for the remaining of the possible values"
 (** [value_of_repr sv] decodes the string-encoded value [sv] : [value_of_repr (repr_of_value v) = v] *)
 let value_of_repr (sv : string) : value = VInt (int_of_string sv) (* TODO generalize *)
