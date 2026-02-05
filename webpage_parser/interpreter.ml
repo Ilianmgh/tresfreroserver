@@ -37,7 +37,7 @@ let value_of_query (db : Sqlite3.db) (combine_lines_into_table : value -> value 
 
 let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   | Empty -> assert false
-  | Let (x, e, e') -> let v = eval_expr env e in eval_expr (StringMap.add x v env) e'
+  | Let (x, e, e') -> let v = eval_expr env e in eval_expr (Environment.add x v env) e'
   | Fun (x, e) -> Clos (env, VFun (x, e))
   | Fix (f, x, e) -> Clos (env, VFix (f, x, e))
   | App (e, e') -> begin match eval_expr env e with
@@ -58,15 +58,15 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
       | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_expr e)))
     end
     | Clos (_, VSqliteExecPartialApp []) -> begin match eval_expr env e' with
-      | VDb db -> Clos (StringMap.empty, VSqliteExecPartialApp [VDb db])
+      | VDb db -> Clos (Environment.empty, VSqliteExecPartialApp [VDb db])
       | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_expr e)))
     end
     | Clos (_, VSqliteExecPartialApp [db]) -> begin match eval_expr env e' with
-      | Clos (captured, func) -> Clos (StringMap.empty, VSqliteExecPartialApp [db; Clos (captured, func)])
+      | Clos (captured, func) -> Clos (Environment.empty, VSqliteExecPartialApp [db; Clos (captured, func)])
       | _ -> raise (InterpreterError (Printf.sprintf "%s: function expected." (string_of_expr e)))
     end
     | Clos (_, VSqliteExecPartialApp [db; combine_lines]) -> begin match eval_expr env e' with
-      | Clos (captured, func) -> Clos (StringMap.empty, VSqliteExecPartialApp [db; combine_lines; Clos (captured, func)])
+      | Clos (captured, func) -> Clos (Environment.empty, VSqliteExecPartialApp [db; combine_lines; Clos (captured, func)])
       | _ -> raise (InterpreterError (Printf.sprintf "%s: function expected." (string_of_expr e)))
     end
     | Clos (_, VSqliteExecPartialApp
@@ -80,10 +80,10 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
             query)
       | _ -> raise (InterpreterError (Printf.sprintf "%s: string expected." (string_of_expr e)))
     end
-    | Clos (env', VFun (x, e_f)) -> let v = eval_expr env e' in eval_expr (StringMap.add x v env') e_f
+    | Clos (env', VFun (x, e_f)) -> let v = eval_expr env e' in eval_expr (Environment.add x v env') e_f
     | Clos (env', VFix (f, x, e_f)) -> let v = eval_expr env e' in
-      let env'_x = StringMap.add x v env' in
-      let env'_f_x = StringMap.add f (Clos (env', VFix (f, x, e_f))) env'_x in
+      let env'_x = Environment.add x v env' in
+      let env'_f_x = Environment.add f (Clos (env', VFix (f, x, e_f))) env'_x in
       eval_expr env'_f_x e_f
     | _ -> raise (InterpreterError (Printf.sprintf "%s: it is not a function, it cannot be applied." (string_of_expr e)))
   end
@@ -97,7 +97,7 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     drop v;
     v'
   | Html lst_e -> VContent (snd (eval env lst_e)) (* FIXME change here too cf comment in [eval] *)
-  | Var x -> begin match StringMap.find_opt x env with
+  | Var x -> begin match Environment.find_opt x env with
     | Some v -> v
     | None -> raise (InterpreterError (Printf.sprintf "%s: Undefined variable" x))
   end
@@ -105,11 +105,11 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     let v = eval_expr env e in
     let v' = eval_expr env e' in
     VCouple (v, v')
-  | Fst -> Clos (StringMap.empty, VFst)
-  | Snd -> Clos (StringMap.empty, VSnd)
-  | SqliteOpenDb -> Clos (StringMap.empty, VSqliteOpenDb)
-  | SqliteCloseDb -> Clos (StringMap.empty, VSqliteCloseDb)
-  | SqliteExec -> Clos (StringMap.empty, VSqliteExecPartialApp [])
+  | Fst -> Clos (Environment.empty, VFst)
+  | Snd -> Clos (Environment.empty, VSnd)
+  | SqliteOpenDb -> Clos (Environment.empty, VSqliteOpenDb)
+  | SqliteCloseDb -> Clos (Environment.empty, VSqliteCloseDb)
+  | SqliteExec -> Clos (Environment.empty, VSqliteExecPartialApp [])
   | Plus (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n + m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Plus (e, e')))))
@@ -196,6 +196,10 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   end
   | String s -> VString s
   | Fstring s -> raise (UnsupportedError "FString are not supported by now")
+  | WithModule (module_name, e) -> begin match Environment.submap_opt module_name env with
+    | None -> raise (InterpreterError (Printf.sprintf "%s: undefined module." module_name))
+    | Some sub_env -> eval_expr sub_env e 
+  end
 
   (* TODOTODOTODOTODOTODOTODOTODOTODOTODOTODO Implemented hierarchic, lexing & parsing of namespaces (modules, if seen from very far with a bad view) need to let sqlite be a """module""", as well as get and post + Implement hierarchic evaluation environment in value.ml/intepreter.ml *)
 

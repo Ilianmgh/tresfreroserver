@@ -27,11 +27,11 @@ let produce_page (arguments : environment) (path : string) (dest : string) : uni
   try
     let lexed = lexer code in
     let parsed = parser lexed in
-    let _ = type_inferer (StringMap.fold (fun x _ acc -> ModularTypEnv.add x TypeString acc) arguments ModularTypEnv.empty) parsed in
+    let _ = type_inferer (Environment.map (fun _ -> TypeString) arguments) parsed in
     let (session_vars, final_env), values = eval arguments parsed in
     let f_out = open_out dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
-    Printf.fprintf f_out "session%s\n" (List.fold_left (fun acc name -> Printf.sprintf "&%s=%s" name (repr_of_value (StringMap.find name final_env))) "" session_vars);
+    Printf.fprintf f_out "session%s\n" (List.fold_left (fun acc name -> Printf.sprintf "&%s=%s" name (repr_of_value (Environment.find name final_env))) "" session_vars);
     List.iter (fun v -> fprintf_value f_out v) values;
     close_out f_out
   with
@@ -55,17 +55,16 @@ let () =
     let source_path = Sys.argv.(1) in
     let dest_path = Sys.argv.(2) in
     (* TODO allow more lax multiple dictionaries passed this way, not strictly GETorPOST SESSION *)
-    let arguments = if Array.length Sys.argv > 3 then
-        Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(3)
+    let arguments = if Array.length Sys.argv > 3 then (* parsing GET/POST arguments *)
+        Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(3) Environment.empty
       else
-        StringMap.empty
+        Environment.empty
     in
-    let session_arguments = if Array.length Sys.argv > 4 then
-        Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(4)
+    let args = if Array.length Sys.argv > 4 then (* parsing SESSION arguments *)
+        Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(4) arguments
       else
-        StringMap.empty
+        Environment.empty
     in
-    let args = StringMap.union (fun key val1 val2 -> None)(* TODO replace by parse_url_dictionary taking a dictionary as argument ... *) arguments session_arguments in
     (* Printf.printf "\nCURRENTENVPREEVALUATION:%s\n%!" (string_of_env args); *)
     produce_page args source_path dest_path
     (* test_file source_path *)

@@ -13,9 +13,7 @@ type ml_type =
 
 type typing_environment = ml_type StringMap.t
 
-module ModularTypEnv = Hierarchic.Make(StringMap)
-
-type modular_typing_environment = ml_type ModularTypEnv.t
+type modular_typing_environment = ml_type Environment.t
 
 (** Fresh variables *)
 let letter_counter : int ref = ref (-1)

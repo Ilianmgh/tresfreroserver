@@ -9,7 +9,6 @@ type raw_function_value =
   | VSqliteExecPartialApp of value list
   | VFun of variable * expr
   | VFix of variable * variable * expr
-
 and value =
   | Clos of environment * raw_function_value
   | VDb of Sqlite3.db
@@ -19,7 +18,17 @@ and value =
   | VPure of string
   | VContent of value list
   | VCouple of value * value
-and environment = value StringMap.t
+and environment = value Environment.t
+
+(* 
+(** [update_env x v session_vars env] adds binding [x] |-> [v] to [env]. If [x] is a session variable, adds it to [session_vars]. *)
+let update_env (x : string) (v : value) (session_vars, env : string list * environment) : string list * environment = (* FIXME maybe write a module for environment to wrap session variables with it and, at some point, cookies. Maybe it'll help for cookies. *)
+  let new_session_vars = if Str.string_match (Str.regexp "session") x 0 then (* may be overkill.. String.sub & = ? *)
+      x :: session_vars (* for now, adding the full variable, maybe strip it from the prefix. Will be easier when namespaces are implemented *)
+    else
+      session_vars
+  in
+  (new_session_vars, StringMap.add x v env) *)
 
 (** [eval_expr anyEnv (expr_of_value v) = v].
   [expr_of_value v] tries to be as simple as possible for a lightweight re-evaluation. *)
@@ -43,14 +52,14 @@ let rec expr_of_value (v1 : value) : expr = match v1 with
   | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
 
-(** [update_env x v session_vars env] adds binding [x] |-> [v] to [env]. If [x] is a session variable, adds it to [session_vars]. *)
+(** [update_env x v session_vars env] adds binding [x] |-> [v] to [env]. If [x] is a session variable, adds it to [session_vars]. TODO change with new hierarchical structure *)
 let update_env (x : string) (v : value) (session_vars, env : string list * environment) : string list * environment = (* FIXME maybe write a module for environment to wrap session variables with it and, at some point, cookies. Maybe it'll help for cookies. *)
   let new_session_vars = if Str.string_match (Str.regexp "session") x 0 then (* may be overkill.. String.sub & = ? *)
       x :: session_vars (* for now, adding the full variable, maybe strip it from the prefix. Will be easier when namespaces are implemented *)
     else
       session_vars
   in
-  (new_session_vars, StringMap.add x v env)
+  (new_session_vars, Environment.add x v env)
 
 (** Pretty-printing *)
 
@@ -102,12 +111,13 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
     Printf.fprintf out ", fixfun %s %s -&gt; %s⟩" f x (string_of_expr e); (* FIXME maybe write fpritnf_expr *)
   end
 and fprintf_env (out : out_channel) ?(escape_html : bool = false) (env : environment) : unit =
-  if StringMap.is_empty env then Printf.fprintf out "∅" else begin
-    let string_of_one_env_binding (x : variable) (v : value) : unit =
+  if Environment.is_empty env then Printf.fprintf out "∅" else begin
+    let fprintf_one_env_binding (prefix : string list) (x : variable) (v : value) : unit =
+      (* Printf.fprintf out ", %s%s ↦ " prefix x; *)
       Printf.fprintf out ", %s ↦ " x;
       fprintf_value out ~escape_html:true v
     in
-    StringMap.iter string_of_one_env_binding env
+    Environment.iter fprintf_one_env_binding env
   end
 
 let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = match v1 with
@@ -127,14 +137,14 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   end
   | Clos (env, VFun (x, e)) -> Printf.sprintf "⟨%s, fun %s -> %s⟩" (string_of_env ~escape_html:escape_html env) x (string_of_expr e)
   | Clos (env, VFix (f, x, e)) -> Printf.sprintf "⟨%s, fixfun %s %s -> %s⟩" (string_of_env ~escape_html:escape_html env) f x (string_of_expr e)
-and string_of_env ?(escape_html : bool = false) (env : environment) : string = if StringMap.is_empty env then "∅" else begin
-    let string_of_one_env_binding (x : variable) (v : value) (acc : string) : string =
+and string_of_env ?(escape_html : bool = false) (env : environment) : string = if Environment.is_empty env then "∅" else begin
+    let string_of_one_env_binding (prefix : string list) (x : variable) (v : value) (acc : string) : string =
       if acc = "" then
         Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)
       else
         Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
     in
-    StringMap.fold string_of_one_env_binding env ""
+    Environment.fold string_of_one_env_binding env ""
   end
 
 (** Representation to send variable bindings to server *)

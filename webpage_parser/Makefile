@@ -112,19 +112,18 @@ trie.cmo: trie.ml trie.cmi utils.cmi
 trie.cmi: trie.mli
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o trie.cmi trie.mli
 
-hierarchic.cmo: hierarchic.cmi hierarchic.ml # TODO remove hierarchic when removed, or actually used
-	$(CC) $(CFLAGS) $(LDFLAGS) -c -o hierarchic.cmo hierarchic.ml
-
-hierarchic.cmi: hierarchic.mli # TODO remove hierarchic when removed, or actually used
-	$(CC) $(CFLAGS) $(LDFLAGS) -c -o hierarchic.cmi hierarchic.mli
-
-utils.x: utils.cmo
-	$(CC) $(CFLAGS) $(LDFLAGS) -o utils.x utils.cmo
+utils.x: hierarchic.cmo utils.cmo
+	$(CC) $(CFLAGS) $(LDFLAGS) -o utils.x hierarchic.cmo utils.cmo
 
 utils.cmi: utils.cmo
 
-utils.cmo: utils.ml
+utils.cmo: hierarchic.cmi utils.ml
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o utils.cmo utils.ml
 
+hierarchic.cmo: hierarchic.cmi hierarchic.ml
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o hierarchic.cmo hierarchic.ml
+
+hierarchic.cmi: hierarchic.mli
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o hierarchic.cmi hierarchic.mli
 clean:
 	rm -rf *.cmo *.cmi *.x 

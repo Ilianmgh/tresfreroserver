@@ -13,9 +13,7 @@ type ml_type =
 
 type typing_environment = ml_type StringMap.t
 
-module ModularTypEnv : Hierarchic.S with type key = string
-
-type modular_typing_environment = ml_type ModularTypEnv.t
+type modular_typing_environment = ml_type Environment.t
 
 (** Fresh variable *)
 val fresh : unit -> type_variable
