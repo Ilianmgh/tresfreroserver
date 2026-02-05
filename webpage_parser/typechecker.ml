@@ -56,28 +56,33 @@ let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
     | _, _ -> raise (UnificationError (alpha, beta, Incompatible)) (* TODO replace by hoisting the error to display "thingy should have type stuff but is of type otherstuff"*)
   in unify_aux alpha beta StringMap.empty
 
-(** [update_typing_env gamma theta] returns [gamma'] updating [gamma] s.t. [gamma'(x) = gamma(x) theta]
+(** [update_typing_env gamma theta = gamma'], an update of [gamma] s.t. [gamma'(x) = gamma(x) theta]
 Remark: If type variable ['a] is bound in [theta], then there are no more occurences of ['a] in the image of [gamma'] *)
-let update_typing_env (gamma : typing_environment) (theta : type_substitution) : typing_environment = StringMap.map (fun alpha -> apply_substitution alpha theta) gamma
+let rec update_typing_env (gamma : modular_typing_environment) (theta : type_substitution) : modular_typing_environment = ModularTypEnv.map (fun alpha -> apply_substitution alpha theta) gamma
 
 (** [update_typing_env_equalizing gamma alpha beta] updates [gamma] to a minimal typing environment compatible with [alpha = beta] *)
-let update_typing_env_equalizing (gamma : typing_environment) (alpha : ml_type) (beta : ml_type) : typing_environment = update_typing_env gamma (unify alpha beta)
+let update_typing_env_equalizing (gamma : modular_typing_environment) (alpha : ml_type) (beta : ml_type) : modular_typing_environment = update_typing_env gamma (unify alpha beta)
 
+
+(* TODOTODOTODOTODOTODOTODOTODOTODOTODOTODO Implemented hierarchic, lexing & parsing of namespaces (modules, if seen from very far with a bad view) need to let sqlite be a """module""", as well as get and post + Implement hierarchic evaluation environment in value.ml/intepreter.ml *)
+
+
+  
 (** [type_inferer_one_expr Γ e = α] iff types variables in Γ can be refined to obtain a Γ' such that Γ' ⊢ e : α *)
-let rec type_inferer_one_expr (gamma : typing_environment) (e1 : expr) : typing_environment * ml_type = match e1 with
+let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) : modular_typing_environment * ml_type = match e1 with
   | Empty -> assert false
   | Let (x, e, e') ->
     let gamma', alpha = type_inferer_one_expr gamma e in
-    type_inferer_one_expr (StringMap.add x alpha gamma') e'
-  | Fun (x, e) -> let gamma', beta = type_inferer_one_expr (StringMap.add x (TypeVar (fresh ())) gamma) e in
-    (gamma', Arr (StringMap.find x gamma', beta))
+    type_inferer_one_expr (ModularTypEnv.add x alpha gamma') e'
+  | Fun (x, e) -> let gamma', beta = type_inferer_one_expr (ModularTypEnv.add x (TypeVar (fresh ())) gamma) e in
+    (gamma', Arr (ModularTypEnv.find_root x gamma', beta)) (* ? why x is not well typechecked *)
   | Fix (f, x, e) ->
     let vartype_x = fresh () in
     let vartype_ret = fresh () in
-    let gamma_x = StringMap.add x (TypeVar vartype_x) gamma in
-    let gamma_x_f =  StringMap.add f (Arr (TypeVar vartype_x, TypeVar vartype_ret)) gamma_x in
+    let gamma_x = ModularTypEnv.add x (TypeVar vartype_x) gamma in
+    let gamma_x_f =  ModularTypEnv.add f (Arr (TypeVar vartype_x, TypeVar vartype_ret)) gamma_x in
     let final_gamma, beta = type_inferer_one_expr gamma_x_f e in
-    (final_gamma, Arr (StringMap.find x final_gamma, beta))
+    (final_gamma, Arr (ModularTypEnv.find_root x final_gamma, beta))
   | App (e, e') ->
     let gamma', func_type = type_inferer_one_expr gamma e in
     let gamma'', func_arg = type_inferer_one_expr gamma e' in
@@ -105,8 +110,8 @@ let rec type_inferer_one_expr (gamma : typing_environment) (e1 : expr) : typing_
     with
       UnificationError _ -> Printf.fprintf stderr "%s: is expected to have type unit." (string_of_expr (Seq (e, e'))); type_inferer_one_expr gamma' e'
   end
-  | Html h -> type_inferer gamma h; (gamma, TypeHtml) (* TODO see how to update only the non-globals (a global declaration should not affect in any way outside the code of [h]) *)
-  | Var x -> begin match StringMap.find_opt x gamma with
+  | Html h -> type_inferer gamma h; (gamma, TypeHtml)
+  | Var x -> begin match ModularTypEnv.find_root_opt x gamma with
     | Some t -> gamma, t
     | None -> raise (TypingError (Printf.sprintf "%s: undefined variable." (string_of_expr (Var x)))) (* TODO actually, shouldn't be a _typing_ error per se *)
   end 
@@ -185,28 +190,24 @@ let rec type_inferer_one_expr (gamma : typing_environment) (e1 : expr) : typing_
       | _ -> raise (TypingError (Printf.sprintf "%s: This expression has type %s but is expected to have type %s." (string_of_expr e) (string_of_ml_type t_str) (string_of_ml_type TypeString))) (* TODO keep replacing those tests by unification *)
   end
   | String s | Fstring s -> gamma, TypeString
+  | WithModule (module_name, e) -> begin match ModularTypEnv.find_sub_opt module_name gamma with
+    | None -> raise (TypingError (Printf.sprintf "%s: undefined module." module_name))
+    | Some new_env -> type_inferer_one_expr new_env e
+  end
 
-and type_inferer (gamma : typing_environment) (page : dynml_webpage) : (typing_environment * ml_type) list =
+and type_inferer (gamma : modular_typing_environment) (page : dynml_webpage) : (modular_typing_environment * ml_type) list =
   let types_and_env = List.fold_left begin fun already_typed element -> begin match already_typed with
       | [] -> assert false
       | (cur_gamma, last_gamma, tau) :: already_typed' -> begin match element with
         | Script e -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in (cur_gamma, gamma_e, tau_e) :: (cur_gamma, last_gamma, tau) :: already_typed'
-        | Pure s -> (cur_gamma, StringMap.empty, TypeHtml) :: (cur_gamma, last_gamma, tau) :: already_typed'
-        | Decl (ExprDecl (x, e)) -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in (StringMap.add x tau_e cur_gamma, gamma_e, tau_e) :: (cur_gamma, last_gamma, tau) :: already_typed'
+        | Pure s -> (cur_gamma, gamma, TypeHtml) :: (cur_gamma, last_gamma, tau) :: already_typed'
+        | Decl (ExprDecl (x, e)) -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in
+          (ModularTypEnv.add x tau_e cur_gamma, gamma_e, tau_e) ::
+          (cur_gamma, last_gamma, tau) ::
+          already_typed'
         | Decl (TypeDecl (x, e)) -> raise (UnsupportedError "Type declaration unsupported by now (type_inferer)")
       end
     end
   end [(gamma, gamma, TypeBool)] page (* TODO remove this first one *)
   in
   List.map (fun (x, y, z) -> (y, z)) types_and_env
-
-(** Pretty-printing *)
-
-let string_of_typing_env (gamma : typing_environment) =
-  let string_of_type_binding (x : variable) (alpha : ml_type) (acc : string) : string =
-    if acc = "" then
-      Printf.sprintf "%s : %s" x (string_of_ml_type alpha)
-    else
-      Printf.sprintf "%s : %s, %s" x (string_of_ml_type alpha) acc
-  in
-  StringMap.fold string_of_type_binding gamma ""

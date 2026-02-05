@@ -26,11 +26,12 @@ type keyword =
   | TokLpar | TokRpar (* parenthesis *)
   | TokOpenML | TokCloseML (* ML-opening/closing brackets *)
   | TokOpenHTML | TokCloseHTML (* HTML-opening/closing brackets *)
+  | TokDot (* Dots (for namespacing) *)
 
 type literal = TokTrue | TokFalse | TokInt of int | TokStr of string | TokFstr of string
 
 (** tokens without line numbering *)
-type raw_token = Id of string | Lit of literal | Keyword of keyword | TokHtml of string
+type raw_token = MId of string (* ids of modules (starting with a capital)*)| Id of string | Lit of literal | Keyword of keyword | TokHtml of string
 
 (** tokens labelled with a line number *)
 type token = int * raw_token
@@ -59,6 +60,7 @@ let symbols_tokens : (string * raw_token) list = [
   (")", Keyword TokRpar);
   (";", Keyword TokSeq);
   (",", Keyword TokComma);
+  (".", Keyword TokDot);
   ("++", Keyword TokStrConcat)]
 
 let keywords_tokens : (string * raw_token) list = [
@@ -115,6 +117,7 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokStrConcat -> "++"
   | TokSeq -> ";"
   | TokComma -> ","
+  | TokDot -> "."
   | TokFst -> "fst"
   | TokSnd -> "snd"
   | TokLpar -> "("
@@ -128,6 +131,7 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokCloseHTML -> "]>"
 
 let string_of_raw_token (tok : raw_token) : string = match tok with
+  | MId s -> Printf.sprintf "MId:%s" s
   | Id s -> Printf.sprintf "Id:%s" s
   | Keyword k -> Printf.sprintf "Kw:%s" (string_of_keyword k)
   | Lit TokFalse -> "Lit:false"

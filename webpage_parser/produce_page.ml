@@ -27,7 +27,7 @@ let produce_page (arguments : environment) (path : string) (dest : string) : uni
   try
     let lexed = lexer code in
     let parsed = parser lexed in
-    let _ = type_inferer (StringMap.map (fun s -> TypeString) arguments) parsed in
+    let _ = type_inferer (StringMap.fold (fun x _ acc -> ModularTypEnv.add x TypeString acc) arguments ModularTypEnv.empty) parsed in
     let (session_vars, final_env), values = eval arguments parsed in
     let f_out = open_out dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)

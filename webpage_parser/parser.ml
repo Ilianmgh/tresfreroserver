@@ -201,6 +201,10 @@ and parse_atom (l : token list) : int * expr * token list =
       let i_close_html, close_html, l_rem = eat_token (Keyword TokCloseHTML) l_rem (fun _ -> Printf.sprintf "line %d: HTML-closing bracket expected." i_html) in
       (i_close_html, Html html, l_rem) *)
     | TokHtml s -> raise (ParsingError (Printf.sprintf "line %d: Unexpected html code within ML delimiters." i)) (* assert false ? *)
+    | MId modu ->
+      let i_dot, dot, l_rem = eat_token (Keyword TokDot) l_rem (fun x -> Printf.sprintf "line %d: expected dot after '%s'." i modu) in (* TODO at some point, this error will not appear, since it'll be interpreted as a constructor *)
+      let i_expr, expr_, l_rem = parse_exp l_rem in
+      (i_expr, WithModule (modu, expr_), l_rem)
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Malformed expression." i))
   end
 

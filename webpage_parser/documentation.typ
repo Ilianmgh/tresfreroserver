@@ -1,11 +1,23 @@
 #import "@preview/curryst:0.6.0" : *
-
+#import "@preview/tdtr:0.5.0" : *
 #let todo = highlight[TODO]
 
 #set text(font:"Libertinus Sans")
 #set page(margin:2em)
 #let embed_page(body) = box.with(baseline:30%,stroke:stroke(thickness:.1em), inset:.3em)(body)
 #let embed_page_math(body) = box.with(baseline:25%,stroke:stroke(thickness:.1em), inset:.7em)(align(center + horizon, body))
+
+#show link: it => text(blue, underline(it))
+
+#let remark(..args) = {
+    if args.pos().len() == 2 [
+      *Remark.* _#args.pos().at(0)_: #args.pos().at(1)
+    ] else if args.pos().len() == 1 [
+      *Remark.* #args.pos().at(0)
+    ] else {
+      highlight[At most 2 elements expected in remark]
+    }
+  }
 
 = Language Syntax
 
@@ -18,8 +30,6 @@ bodyexp: anyHtmlCode> (<{exp}> anyHtmlCode)*
 ```
 
 == Expressions
-
-
 
 #columns(3)[
 === General expressions:
@@ -141,13 +151,52 @@ Strings are delimited by quotes: `"..."`.
 
 === Format strings
 
-Format strings are delimited by: `f"..."`. A formatter can be inserted in a format string with `%(value)`
+Format strings are delimited by: `f"..."`. A formatter can be inserted in a format string with `%(value)` #todo not implemented _yet_.
 
 === Booleans
 
 `true`, `false`
 
 #pagebreak()
+
+= Namespacing
+
+Modules' names starts with a capital letter but otherwise are the same as variable names.
+
+Variables are namespaced, more precisely:
+
+A variable is a variable name preceded by the module where it's defined e.g. `Sqlite.exec`.
+
+At some point, we would like to implement modules contained inside another module, maybe even functors if possible, and records types. When this is done, a full variable name will be `((modulevar.)*(expr.)*varname)` where each `expr` must be of type record.
+
+For instance, if module A contains module B which itself contains a record `r : {r' : rec'}` where `rec'` itself is a record with a field `x`, then `A.B.r.r'.x` designate the field `x` of the farthest nested record.
+
+A modular typing (resp. evaluation) environment therefore becomes a tree, where each edge is labelled with a module name, and each node is labelled with a typing (resp. evaluation) environment.
+
+#grid(columns:2,
+  tidy-tree-graph(compact: true)[
+    - `x : int, y : string`
+      + `Sqlite`
+      - `open_db : string -> db, ...`
+      + `A`
+      - `x : string * int`
+        + `B`
+        - `y : string * string * string`
+  ],
+  tidy-tree-graph(compact: true)[
+    - `x` #sym.mapsto `1`, `y` #sym.mapsto `"hey"`
+      + `Sqlite`
+      - `open_db` #sym.mapsto `something_outside_mllike`
+      + `A`
+      - `x` #sym.mapsto `("in A", 3)`
+        + `B`
+        - `x` #sym.mapsto `("in B", " and ", "fine")`
+  ]
+)
+#remark[
+  For now, user declarated modules are not implemented, thus the only modules are Get, Post, and Sqlite.
+]
+
 
 = Type system
 
@@ -505,6 +554,8 @@ See #link("https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/Sqlite3/index.html
 #sym.ballot.check Add superglobal variables
 
 #sym.ballot.check Add user-defined global variables
+
+#sym.ballot At some point, we would like to implement modules contained inside another module, and records types.
 
 #sym.ballot Add user-defined types
 

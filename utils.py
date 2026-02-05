@@ -37,6 +37,7 @@ def parse_url_dictionary(data : str, d : dict[str, str]) :
       d[key] = value
 
 def generate_session_id(generate_session_id_mut : Lock) -> str :
+  """ generates a fresh session id """
   with generate_session_id_mut :
     if not hasattr(generate_session_id, 'count') :
       generate_session_id.count = 0

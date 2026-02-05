@@ -24,19 +24,19 @@ let test (i, code : int * string) : unit =
     if List.mem "lexed" displayed then Printf.printf "lexed: %s\n%!" (string_of_list string_of_token lexed);
     let parsed = parser lexed in
     if List.mem "parsed" displayed then Printf.printf "parsed: %s\n%!" (string_of_dynpage parsed);
-    let types_infered = type_inferer StringMap.empty parsed in
-    if List.mem "typed" displayed then List.iter (fun (gamma, tau) -> Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_typing_env gamma)) types_infered;
+    let types_infered = type_inferer ModularTypEnv.empty parsed in
+    if List.mem "typed" displayed then List.iter (fun (gamma, tau) -> Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_modular_typing_environment gamma)) types_infered;
     let _, values_evald = eval StringMap.empty parsed in
     if List.mem "eval'd" displayed then List.iter (fun v -> Printf.printf "eval'd: %s\n%!" (string_of_value v)) values_evald
   with
-    | PrelexingError s -> Printf.fprintf stderr "PrelexingError: %s\n" s
-    | LexingError s -> Printf.fprintf stderr "LexingError: %s\n" s
-    | ParsingError s -> Printf.fprintf stderr "ParsingError: %s\n" s
-    | TypingError s -> Printf.fprintf stderr "TypingError: %s\n" s
-    | UnificationError (alpha, beta, Recursive) -> Printf.fprintf stderr "UnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta)
-    | UnificationError (alpha, beta, Incompatible) -> Printf.fprintf stderr "UnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta)
-    | InterpreterError s -> Printf.fprintf stderr "InterpreterError: %s\n" s
-    | UnsupportedError s -> Printf.fprintf stderr "UnsupportedError: %s\n" s
+    | PrelexingError s -> Printf.fprintf stderr "PrelexingError: %s\n%!" s
+    | LexingError s -> Printf.fprintf stderr "LexingError: %s\n%!" s
+    | ParsingError s -> Printf.fprintf stderr "ParsingError: %s\n%!" s
+    | TypingError s -> Printf.fprintf stderr "TypingError: %s\n%!" s
+    | UnificationError (alpha, beta, Recursive) -> Printf.fprintf stderr "UnificationError: %s and %s recursive.\n%!" (string_of_ml_type alpha) (string_of_ml_type beta)
+    | UnificationError (alpha, beta, Incompatible) -> Printf.fprintf stderr "UnificationError: %s and %s incompatible.\n%!" (string_of_ml_type alpha) (string_of_ml_type beta)
+    | InterpreterError s -> Printf.fprintf stderr "InterpreterError: %s\n%!" s
+    | UnsupportedError s -> Printf.fprintf stderr "UnsupportedError: %s\n%!" s
 
 (*
 
@@ -90,13 +90,14 @@ let db = sqlite3_opendb \"test.db\"
 }>
 <{
 sqlite3_exec db
-(fun x -> fun y -> x ++ y)
+(fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{hd}>: <{content}> <br/> ]>)
 \"SELECT * FROM Test\"
 }>
 <{
 sqlite3_closedb db
 }>"
       ; "<{let f = fun x -> fun y -> x}> <{f (fun x -> x) 2}>"
+      ; "<{ Test.x }>"
       (* TODO let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12*)
       (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
       (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)

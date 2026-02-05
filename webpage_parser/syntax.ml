@@ -2,15 +2,17 @@ exception ParsingError of string
 
 type html_code = string
 
-type variable = string
-
 type type_name = string
 
-type type_expr = int * int * int array * float list * float (* TODO put some junk because my linter is driving me crazy *)
+type module_name = string
+
+type variable = string
+
+type type_expr = int * int * int array * float list * float (* TODO replace by string, just put some junk because my linter is driving me crazy *)
 
 type global_declaration =
   | TypeDecl of type_name * type_expr
-  | ExprDecl of variable * expr
+  | ExprDecl of variable * expr (* TODO when adding module declarations: ModuleDecl of module_name * module_expr *)
 
 and dynml_element = Pure of string | Script of expr | Decl of global_declaration
 
@@ -26,6 +28,12 @@ and expr = (* TODO add match ... with, user-defined types *)
   | Seq of expr * expr
   | Html of dynml_webpage
   | Var of variable
+  | WithModule of module_name * expr
+  (* TODO
+    WithRecord of expr * variable list, e.g.
+    WithRecord (let nested2 = {z = 2} in let nested1 = {y = nested2} in {x = nested1}, x.y.z)
+    is what we get when parsing:
+    (let nested2 = {z = 2} in let nested1 = {y = nested2} in {x = nested1}).x.y.z *)
   (* tuples *)
   | Couple of expr * expr
   | Fst
@@ -74,6 +82,8 @@ and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasi
   | Seq (e, e') -> Printf.sprintf "%s;%s" (string_of_expr e) (string_of_expr e')
   | Html h -> string_of_dynpage h
   | Var x -> x
+  | WithModule (modu, Var x) -> Printf.sprintf "%s.%s" modu x
+  | WithModule (modu, e) -> Printf.sprintf "%s.(%s)" modu (string_of_expr e)
   | Couple (e, e') -> Printf.sprintf "(%s, %s)" (string_of_expr e) (string_of_expr e')
   | Fst -> Printf.sprintf "fst"
   | Snd -> Printf.sprintf "snd"
