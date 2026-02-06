@@ -201,8 +201,6 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     | Some sub_env -> eval_expr sub_env e 
   end
 
-  (* TODOTODOTODOTODOTODOTODOTODOTODOTODOTODO Implemented hierarchic, lexing & parsing of namespaces (modules, if seen from very far with a bad view) need to let sqlite be a """module""", as well as get and post + Implement hierarchic evaluation environment in value.ml/intepreter.ml *)
-
 and eval (env : environment) (page : dynml_webpage) : (string list * environment) * value list =
   let values_and_env = List.fold_left begin fun already_evald element -> begin match already_evald with
       | [] -> assert false

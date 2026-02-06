@@ -27,7 +27,8 @@ let produce_page (arguments : environment) (path : string) (dest : string) : uni
   try
     let lexed = lexer code in
     let parsed = parser lexed in
-    let _ = type_inferer (Environment.map (fun _ -> TypeString) arguments) parsed in
+    let typ_env = Environment.map (fun _ -> TypeString) arguments in
+    let _ = type_inferer typ_env parsed in
     let (session_vars, final_env), values = eval arguments parsed in
     let f_out = open_out dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
@@ -45,13 +46,10 @@ let produce_page (arguments : environment) (path : string) (dest : string) : uni
     | UnsupportedError s -> let f_out = open_out dest in Printf.fprintf f_out "\nUnsupportedError: %s\n" s; close_out f_out
   
 let test_file (source : string) : unit =
-  let f_in = open_in source in (* TODO add actual namespacing, especially for GET, POST and SESSION (and COOKIES at some point) variables *)
+  let f_in = open_in source in
   let code : string = str_of_file f_in in
   close_in f_in;
   Test.test (-1, code)
-
-let print_env (s : environment) : unit =
-  Environment.iter (fun prefix x v -> Printf.fprintf stderr "%s |-> %s, " x (string_of_value v)) s
 
 let () =
   if Array.length Sys.argv > 2 then begin
@@ -68,8 +66,9 @@ let () =
       else
         arguments
     in
-    Printf.printf "\nCURRENTENVPREEVALUATION:%s\n%!" (string_of_env args);
     produce_page args source_path dest_path
     (* test_file source_path *)
   end else
     Printf.printf "Usage: <program> <source path> <dest path> <arguments>*\n<arguments> are pre-defined variable to give to the program. It has to be of the form METHOD&x1=v1&...&xn=vn"
+
+    (* Namespacing works for variable ; implemented correctly for Get/Post request. TODO implement it for Sqlite functions + for Session, maybe add a function or a different global declaration variable in the namespace Session to declare session variables. FIXME problem with GET form in tests *)

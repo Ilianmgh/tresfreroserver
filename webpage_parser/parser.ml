@@ -203,8 +203,8 @@ and parse_atom (l : token list) : int * expr * token list =
     | TokHtml s -> raise (ParsingError (Printf.sprintf "line %d: Unexpected html code within ML delimiters." i)) (* assert false ? *)
     | MId modu ->
       let i_dot, dot, l_rem = eat_token (Keyword TokDot) l_rem (fun x -> Printf.sprintf "line %d: expected dot after '%s'." i modu) in (* TODO at some point, this error will not appear, since it'll be interpreted as a constructor *)
-      let i_expr, expr_, l_rem = parse_exp l_rem in
-      (i_expr, WithModule (modu, expr_), l_rem)
+      let i_scope_of_module, expr_in_scope_of_module, l_rem = parse_atom l_rem in
+      (i_scope_of_module, WithModule (modu, expr_in_scope_of_module), l_rem)
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Malformed expression." i))
   end
 
@@ -255,7 +255,7 @@ and parse_html_unit (lexed : token list) (is_root : bool) : int * dynml_webpage 
     | i_line, _, tok :: _ -> raise (ParsingError (Printf.sprintf "line %d: %s, HTML-closing bracket %s expected" i_line (string_of_token tok) (string_of_raw_token (Keyword TokCloseML))))
     | i_line, _, [] -> raise (ParsingError (Printf.sprintf "line %d: ML-closing bracket %s expected" i_line (string_of_raw_token (Keyword TokCloseML))))
   end
-  | _ -> Printf.fprintf stderr "%s\n" (string_of_list string_of_token lexed); raise (ParsingError "I don't know what happened")
+  | _ -> Printf.fprintf stderr "%s\n" (string_of_list string_of_token lexed); raise (ParsingError "Unexpected error")
 
 (** Parsing ml *)
 let rec parser (lexed : token list) : dynml_webpage = let _, parsed, _ = parse_html_unit lexed true in parsed

@@ -16,6 +16,12 @@ module type S = sig
   val submap : key -> 'a t -> 'a t
   (** Same as [submap] but with an option *)
   val submap_opt : key -> 'a t -> 'a t option
+  (** [supmap s = s'] where [s'] is the parent of [s] *)
+  val supmap : 'a t -> 'a t
+  (** Same as [supmap] but with an option *)
+  val supmap_opt : 'a t -> 'a t option
+  (** [supmap namespace s = s'] where [s'] is the parent of [s] only if [namespace] is the current map name i.e. the name by which [s'] is referred to by [s] *)
+  val supmap_namespace : key -> 'a t -> 'a t
   (** [map f s = s'] maps [f] to each element of [s]. Should only be called on a root. *)
   val map : ('a -> 'b) -> 'a t -> 'b t
   val is_empty : 'a t -> bool

@@ -8,7 +8,7 @@ open TypeSyntax
 open Typechecker
 open Interpreter
 
-let displayed = ["raw"; "prelexed"; "lexed"; "parsed"; "typed"; "eval'd"]
+let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 
 let test (i, code : int * string) : unit =
   begin if i < 0 then
@@ -53,22 +53,23 @@ let test (i, code : int * string) : unit =
 
 let test_input () =
   let tests = [
-      "<{}>"
-      ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%"
-      ;"<{let x = 5 in x}>"
-      ;"<{let x = 5 in % x}>"
-      ;"<{f\"coucou\"}>"
-      ;"<{let x = 5, 2 in fst x}>"
-      ;"<h1>Example</h1>%<{% let x = 1 in% if x + 1 = 2 then%<[% 2%]>% else %<[% DEADCODE%]>}>" (* TODO add this delimiter. Now prelexed alright, has to be parsed *)
-      ;"<{2 + 1 = 3}>"
-      ;"<{1-1}>"
-      ;"<{let y = 3 in let x = 4 in (fun x -> y) 5}>"
-      ;"<{let f = fun x -> fun y -> x in let x = 1 in let y = 2 in f x y}>"
+      "<{}>" (* parsing error *)
+      ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%" (* lex but parsing error *)
+      ;"<{let x = 5 in x}>" (* ok *)
+      ;"<{let x = 5 in % x}>" (* ok *)
+      ;"<{f\"coucou\"}>" (* FIXME lexing error + not implemented *)
+      ;"<{let x = 5, 2 in fst x}>" (* ok *)
+      ;"<h1>Example</h1>%<{% let x = 1 in% if x + 1 = 2 then%<[% 2%]>% else %<[% DEADCODE%]>}>" (* ok *)
+      ;"<{2 + 1 = 3}>" (* ok *)
+      ;"<{1-1}>" (* ok *)
+      ;"<{let y = 3 in let x = 4 in (fun x -> y) 5}>" (* ok *)
+      ;"<{ let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12 }>" (* ok *)
+      ;"<{let f = fun x -> fun y -> x in let x = 1 in let y = 2 in f x y}>" (* ok *)
       ;"<{if true then 1 else 2; 3}>" (* FIXME is parsed [if true then 1 else (2; 3)] and not as it should [(if true then 1 else 2); 3] *)
-      ;"<{let f = fun x -> x in (f (1))}>" (* FIXME is parsed [if true then 1 else (2; 3)] and not as it should [(if true then 1 else 2); 3] *)
-      ;"<{f\"cou#\"cou\"}>"
-      ;"<{\"cou<cou\"}>"
-      ;"<{\"co<i>\\\"uc</i>ou\"}>"
+      ;"<{let f = fun x -> x in (f (1))}>" (* ok *)
+      ;"<{f\"cou#\"cou\"}>" (* FIXME lexing error *)
+      ;"<{\"cou<cou\"}>" (* ok *)
+      ;"<{\"co<i>\\\"uc</i>ou\"}>" (* ok *)
       ;
 "<{let post_language = \"rust\"
 let post_version = \"1\" }>
@@ -82,8 +83,8 @@ let post_version = \"1\" }>
   <[
     couocu
   ]>
-}>"
-      ; "<{ (fun x -> x) = (fun x -> 1) }>"
+}>" (* ok *)
+      ; "<{ (fun x -> x) = (fun x -> 1) }>" (* interpreter error *)
       ;
 "<{
 let db = sqlite3_opendb \"test.db\"
@@ -95,10 +96,28 @@ sqlite3_exec db
 }>
 <{
 sqlite3_closedb db
-}>"
-      ; "<{let f = fun x -> fun y -> x}> <{f (fun x -> x) 2}>"
-      ; "<{ Test.x }>"
-      (* TODO let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12*)
+}>" (* ok *)
+      ; "<{let f = fun x -> fun y -> x}> <{f (fun x -> x) 2}>" (* ok *)
+      ; "<{ Test.x }>" (* should lex and parse *)
+      ;
+"
+<{
+  if Get.langage = \"zig\" then
+    Get.langage ++ \" même en version \" ++ Get.version ++ \" n'a toujours pas de borrow-checker\"
+  else
+    Get.langage ++ \" même en version \" ++ Get.version ++ \" n'a toujours pas d'argument defer\"
+}>
+<{
+  let n = 20
+}>" (* should lex and parse *)
+(* <{
+  (fixfun f n -> if n = 0 then
+    \"\"
+  else begin
+    Get.langage ++ (f (n-1))
+  end) n
+}>
+" *)
       (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
       (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)
     ]

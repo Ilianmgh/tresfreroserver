@@ -71,12 +71,19 @@ let string_of_type_substitution (gamma : typing_environment) : string =
   in
   StringMap.fold string_of_one_substitution gamma ""
 
-let rec string_of_modular_typing_environment ?(prefix : string = "") (gamma : modular_typing_environment) : string = "TODO maybe with a double_fold function in Hierarchic.Make"
-  (* if StringMap.is_empty gamma.sub then
-    string_of_type_substitution gamma.root
-  else
-    Printf.sprintf "%s, %s"
-      (string_of_typing_env ~prefix:prefix gamma.root)
-      (StringMap.fold begin fun module_name submodule_env acc ->
-          Printf.sprintf "%s, %s" acc (string_of_modular_typing_environment ~prefix:(Printf.sprintf "%s.%s" prefix module_name) submodule_env)
-        end gamma.sub "") *)
+let rec string_of_modular_typing_environment ?(prefix : string = "") (gamma : modular_typing_environment) : string =
+  if Environment.is_empty gamma then "∅" else begin
+    let string_of_one_type_binding (prefix : string list) (x : variable) (tau : ml_type) (acc : string) : string =
+      if acc = "" then
+        if List.is_empty prefix then
+          Printf.sprintf "%s ↦ %s" x (string_of_ml_type tau)
+        else
+          Printf.sprintf "%s.%s ↦ %s" (String.concat "." (List.rev prefix)) x (string_of_ml_type tau)
+      else
+        if List.is_empty prefix then
+          Printf.sprintf "%s ↦ %s, %s" x (string_of_ml_type tau) acc
+        else
+          Printf.sprintf "%s.%s ↦ %s, %s" (String.concat "." (List.rev prefix)) x (string_of_ml_type tau) acc
+    in
+    Environment.fold string_of_one_type_binding gamma ""
+  end

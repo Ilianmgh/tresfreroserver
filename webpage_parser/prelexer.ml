@@ -39,11 +39,6 @@ let lex_now (char_acc : char list) (symbol_acc : char list) (cur_symbol_lex : tr
     ((line_number, ""), (line_number, string_of_char_list (List.rev char_acc)))
   end
 
-let update_word_list ((w1, w2) : (int * string) * (int * string)) (lexed : (int * string) list) : (int * string) list = match w1, w2 with
-  | (_, ""), (_, "") -> Printf.fprintf stderr "Hum.\n%!"; lexed
-  | (i, w), (_, "") | (_, ""), (i, w) -> (i, w) :: lexed
-  | (i1, w1), (i2, w2) -> (i1, w1) :: (i2, w2) :: lexed
-
 (* Tests *)
 
 (* let () =

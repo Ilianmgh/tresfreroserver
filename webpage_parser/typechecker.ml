@@ -189,7 +189,10 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
   | String s | Fstring s -> gamma, TypeString
   | WithModule (module_name, e) -> begin match Environment.submap_opt module_name gamma with
     | None -> raise (TypingError (Printf.sprintf "%s: undefined module." module_name))
-    | Some new_env -> type_inferer_one_expr new_env e
+    | Some new_env -> begin
+      let gamma', tau = type_inferer_one_expr new_env e in
+      (Environment.supmap_namespace module_name gamma', tau)
+    end
   end
 
 and type_inferer (gamma : modular_typing_environment) (page : dynml_webpage) : (modular_typing_environment * ml_type) list =

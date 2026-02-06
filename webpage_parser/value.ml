@@ -140,9 +140,15 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
 and string_of_env ?(escape_html : bool = false) (env : environment) : string = if Environment.is_empty env then "∅" else begin
     let string_of_one_env_binding (prefix : string list) (x : variable) (v : value) (acc : string) : string =
       if acc = "" then
-        Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v) (* TODO take into account [prefix] *)
+        if List.is_empty prefix then
+          Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)
+        else
+          Printf.sprintf "%s.%s ↦ %s" (String.concat "." (List.rev prefix)) x (string_of_value ~escape_html:true v)
       else
-        Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
+        if List.is_empty prefix then
+          Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
+        else
+          Printf.sprintf "%s.%s ↦ %s, %s" (String.concat "." (List.rev prefix)) x (string_of_value ~escape_html:true v) acc
     in
     Environment.fold string_of_one_env_binding env ""
   end
