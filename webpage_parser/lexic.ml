@@ -17,12 +17,11 @@ type keyword =
   | TokLet | TokFun | TokArr | TokFix | TokIn (* declarations & functions *)
   | TokIf | TokThen | TokElse (* conditions *)
   | TokAnd | TokOr | TokNot (* boolean operators *)
-  | TokGt | TokLt | TokGeq | TokLeq | TokNeq | TokEq (* comparison operators *)
-  | TokPlus | TokMinus | TokTimes | TokDiv | TokExp (* arithmetic operators *)
-  | TokStrConcat (* strings *)
+  | TokGt | TokLt | TokGeq | TokLeq | TokNeq | TokEq (* comparison operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
+  | TokPlus | TokMinus | TokTimes | TokDiv | TokExp (* arithmetic operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
+  | TokStrConcat (* strings, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
   | TokSeq (* sequence *)
   | TokComma | TokFst | TokSnd (* pairs & tuples *)
-  | TokSqliteOpenDb | TokSqliteCloseDb | TokSqliteExec (* Sqlite3 functions *)
   | TokLpar | TokRpar (* parenthesis *)
   | TokOpenML | TokCloseML (* ML-opening/closing brackets *)
   | TokOpenHTML | TokCloseHTML (* HTML-opening/closing brackets *)
@@ -76,9 +75,6 @@ let keywords_tokens : (string * raw_token) list = [
   ("not", Keyword TokNot);
   ("fst", Keyword TokFst); (* TODO change to literals *)
   ("snd", Keyword TokSnd); (* TODO change to literals *)
-  ("sqlite3_opendb", Keyword TokSqliteOpenDb); (* TODO change to literals *)
-  ("sqlite3_closedb", Keyword TokSqliteCloseDb); (* TODO change to literals *)
-  ("sqlite3_exec", Keyword TokSqliteExec); (* TODO change to literals *)
   ("true", Lit TokTrue);
   ("false", Lit TokFalse)]
 
@@ -122,9 +118,6 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokSnd -> "snd"
   | TokLpar -> "("
   | TokRpar -> ")"
-  | TokSqliteOpenDb -> "sqlite3_opendb"
-  | TokSqliteCloseDb -> "sqlite3_closedb"
-  | TokSqliteExec -> "sqlite3_exec"
   | TokOpenML -> "<{"
   | TokCloseML -> "}>"
   | TokOpenHTML -> "<["

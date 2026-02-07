@@ -38,10 +38,6 @@ and expr = (* TODO add match ... with, user-defined types *)
   | Couple of expr * expr
   | Fst
   | Snd
-  (* sqlite *)
-  | SqliteOpenDb
-  | SqliteCloseDb
-  | SqliteExec
   (* arithmetic connectors *)
   | Plus of expr * expr
   | Minus of expr * expr
@@ -87,9 +83,6 @@ and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasi
   | Couple (e, e') -> Printf.sprintf "(%s, %s)" (string_of_expr e) (string_of_expr e')
   | Fst -> Printf.sprintf "fst"
   | Snd -> Printf.sprintf "snd"
-  | SqliteOpenDb -> Printf.sprintf "sqlite3_opendb"
-  | SqliteCloseDb -> Printf.sprintf "sqlite3_closedb"
-  | SqliteExec -> Printf.sprintf "sqlite3_exec"
   | Plus (e, e') -> Printf.sprintf "%s + %s" (string_of_expr e) (string_of_expr e')
   | Minus (e, e') -> Printf.sprintf "%s - %s" (string_of_expr e) (string_of_expr e')
   | Neg e -> Printf.sprintf "-%s" (string_of_expr e)

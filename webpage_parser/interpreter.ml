@@ -41,6 +41,10 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   | Fun (x, e) -> Clos (env, VFun (x, e))
   | Fix (f, x, e) -> Clos (env, VFix (f, x, e))
   | App (e, e') -> begin match eval_expr env e with
+    | Clos (_, VExternFunction (Args1 f)) -> f (eval_expr env e')
+    | Clos (_, VExternFunction (Args2 f)) -> Clos (Environment.empty, VExternFunction (Args1 (f (eval_expr env e'))))
+    | Clos (_, VExternFunction (Args3 f)) -> Clos (Environment.empty, VExternFunction (Args2 (f (eval_expr env e'))))
+    | Clos (_, VExternFunction (Args4 f)) -> Clos (Environment.empty, VExternFunction (Args3 (f (eval_expr env e'))))
     | Clos (_, VFst) -> begin match eval_expr env e' with
       | VCouple (v, v') -> v
       | _ -> raise (InterpreterError (Printf.sprintf "%s: pair expected." (string_of_expr e)))
@@ -48,37 +52,6 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     | Clos (_, VSnd) -> begin match eval_expr env e' with
       | VCouple (v, v') -> v'
       | _ -> raise (InterpreterError (Printf.sprintf "%s: pair expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteOpenDb) -> begin match eval_expr env e' with
-      | VString s -> VDb (Sqlite3.db_open s)
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: path to a database expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteCloseDb) -> begin match eval_expr env e' with
-      | VDb db -> VBool (Sqlite3.db_close db)
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteExecPartialApp []) -> begin match eval_expr env e' with
-      | VDb db -> Clos (Environment.empty, VSqliteExecPartialApp [VDb db])
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteExecPartialApp [db]) -> begin match eval_expr env e' with
-      | Clos (captured, func) -> Clos (Environment.empty, VSqliteExecPartialApp [db; Clos (captured, func)])
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: function expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteExecPartialApp [db; combine_lines]) -> begin match eval_expr env e' with
-      | Clos (captured, func) -> Clos (Environment.empty, VSqliteExecPartialApp [db; combine_lines; Clos (captured, func)])
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: function expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteExecPartialApp
-        [VDb db;
-         Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline));
-         Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content))]) -> begin match eval_expr env e' with (* for now, only non-recursive functions *)
-      | VString query ->
-          (value_of_query db
-            (fun v1 v2 -> eval_expr captured_combine_lines (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2)))
-            (fun line_acc hd content -> eval_expr captured_combine_cells (App (App ((App ((Fun (acc, body_function_of_hs_and_content)), expr_of_value line_acc)), String hd), String content)))
-            query)
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: string expected." (string_of_expr e)))
     end
     | Clos (env', VFun (x, e_f)) -> let v = eval_expr env e' in eval_expr (Environment.add x v env') e_f
     | Clos (env', VFix (f, x, e_f)) -> let v = eval_expr env e' in
@@ -107,9 +80,6 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     VCouple (v, v')
   | Fst -> Clos (Environment.empty, VFst)
   | Snd -> Clos (Environment.empty, VSnd)
-  | SqliteOpenDb -> Clos (Environment.empty, VSqliteOpenDb)
-  | SqliteCloseDb -> Clos (Environment.empty, VSqliteCloseDb)
-  | SqliteExec -> Clos (Environment.empty, VSqliteExecPartialApp [])
   | Plus (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n + m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Plus (e, e')))))
@@ -196,7 +166,7 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   end
   | String s -> VString s
   | Fstring s -> raise (UnsupportedError "FString are not supported by now")
-  | WithModule (module_name, e) -> begin match Environment.submap_opt module_name env with
+  | WithModule (module_name, e) -> begin match Environment.submap_opt module_name env with (* FIXME like in typechecker *)
     | None -> raise (InterpreterError (Printf.sprintf "%s: undefined module." module_name))
     | Some sub_env -> eval_expr sub_env e 
   end
@@ -219,5 +189,21 @@ and eval (env : environment) (page : dynml_webpage) : (string list * environment
     | [] -> ([], env)
   in
   (final_env, List.map snd values_and_env)
+
+and extern_sqlite_exec = fun db fold_lines fold_cells str_query -> match db, fold_lines, fold_cells, str_query with
+  | VDb db, Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline)), Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content)), VString query ->
+    (value_of_query db
+      (fun v1 v2 -> eval_expr captured_combine_lines (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2)))
+      (fun line_acc hd content -> eval_expr captured_combine_cells (App (App ((App ((Fun (acc, body_function_of_hs_and_content)), expr_of_value line_acc)), String hd), String content)))
+      query)
+  | _, _, _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s, %s, %s: Expected a database, a line folding function, a cell folding function and a SQL query (as a string)." (string_of_value db) (string_of_value fold_lines) (string_of_value fold_cells) (string_of_value str_query))) (* TODO maybe refine this bit *)
+
+let extern_sqlite_open_db (db_path : value) : value = match db_path with
+  | VString s -> VDb (Sqlite3.db_open s)
+  | _ -> raise (InterpreterError (Printf.sprintf "%s: path to a database expected." (string_of_value db_path)))
+let extern_sqlite_close_db (vdb : value) : value = begin match vdb with
+    | VDb db -> VBool (Sqlite3.db_close db)
+    | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_value vdb)))
+  end 
 
 (* TODO add "garbage-collection" *)

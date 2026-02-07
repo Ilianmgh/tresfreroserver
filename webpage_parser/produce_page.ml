@@ -6,6 +6,65 @@ open TypeSyntax
 open Typechecker
 open Interpreter
 
+(** Defining extern functions *)
+
+type extern_symbol = {namespaces : module_name list ; name : variable ; v : value ; tau : ml_type}
+
+let sqlite_module_name = "Sqlite"
+
+let ml_type_of_sqlite_exec =
+  Arr (
+    TypeDb,
+    Arr (
+      Arr (TypeHtml, Arr (TypeHtml, TypeHtml)),
+      Arr (
+        Arr (TypeHtml, Arr (TypeString, Arr (TypeString, TypeHtml))),
+        Arr (TypeString,
+          TypeHtml
+        )
+      )
+    )
+  )
+
+(* 
+let canonical_environment =
+  let sql_module = Environment.add "exec" (Clos (Environment.empty, VExternFunction (Args4 extern_sqlite_exec))) Environment.empty in
+  Environment.add_sub "Sql" sql_module Environment.empty *)
+
+(** [straightforward_ml_function1 f] is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
+let straigthforward_ml_function1 (f : value -> value) : value = Clos (Environment.empty, VExternFunction (Args1 f))
+
+(** [straightforward_ml_function2 f] is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
+let straigthforward_ml_function2 (f : value -> value -> value) : value = Clos (Environment.empty, VExternFunction (Args2 f))
+
+(** [straightforward_ml_function3 f] is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
+let straigthforward_ml_function3 (f : value -> value -> value -> value) : value = Clos (Environment.empty, VExternFunction (Args3 f))
+
+(** [straightforward_ml_function4 f] is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
+let straigthforward_ml_function4 (f : value -> value -> value -> value -> value) : value = Clos (Environment.empty, VExternFunction (Args4 f))
+
+let predefined_symbols = [
+      {namespaces = [sqlite_module_name] ; name = "exec"    ; v = straigthforward_ml_function4 extern_sqlite_exec ; tau = ml_type_of_sqlite_exec}
+    ; {namespaces = [sqlite_module_name] ; name = "opendb"  ; v = straigthforward_ml_function1 extern_sqlite_open_db ; tau = Arr (TypeString, TypeDb)}
+    ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = straigthforward_ml_function1 extern_sqlite_close_db ; tau = Arr (TypeDb, TypeString)}
+  ]
+
+let pre_included_environment =
+  List.fold_left
+    (fun acc entry -> Environment.add_to_sub entry.namespaces entry.name entry.v acc)
+    (Environment.add_sub sqlite_module_name Environment.empty Environment.empty)
+    predefined_symbols
+
+let pre_included_typing_env =
+  List.fold_left
+    (fun acc entry -> Environment.add_to_sub entry.namespaces entry.name entry.tau acc)
+    (Environment.add_sub sqlite_module_name Environment.empty Environment.empty)
+    predefined_symbols
+
+(** Producing a page *)
+
+let debug = true
+
 let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 
 (** [str_of_path f] returns the content of the file [f] (passed as a [in_channel]), as a string *)
@@ -27,7 +86,7 @@ let produce_page (arguments : environment) (path : string) (dest : string) : uni
   try
     let lexed = lexer code in
     let parsed = parser lexed in
-    let typ_env = Environment.map (fun _ -> TypeString) arguments in
+    let typ_env = Environment.fold Environment.add_to_sub pre_included_typing_env (Environment.map (fun _ -> TypeString) arguments) in (* FIXME for now, adding one by one implement union/merge for next time. *)
     let _ = type_inferer typ_env parsed in
     let (session_vars, final_env), values = eval arguments parsed in
     let f_out = open_out dest in
@@ -57,15 +116,16 @@ let () =
     let dest_path = Sys.argv.(2) in
     (* TODO allow more lax multiple dictionaries passed this way, not strictly GETorPOST SESSION *)
     let arguments = if Array.length Sys.argv > 3 then (* parsing GET/POST arguments *)
-        Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(3) Environment.empty
+        Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(3) pre_included_environment
       else
-        Environment.empty
+        pre_included_environment
     in
     let args = if Array.length Sys.argv > 4 then (* parsing SESSION arguments *)
         Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(4) arguments
       else
         arguments
     in
+    if debug then Printf.fprintf stderr "Pre-env: %s\n" (string_of_env args);
     produce_page args source_path dest_path
     (* test_file source_path *)
   end else

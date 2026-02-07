@@ -187,9 +187,6 @@ and parse_atom (l : token list) : int * expr * token list =
     | Lit (TokFstr s) -> (i, Fstring s, l_rem)
     | Keyword TokFst -> (i, Fst, l_rem)
     | Keyword TokSnd -> (i, Snd, l_rem)
-    | Keyword TokSqliteOpenDb -> (i, SqliteOpenDb, l_rem)
-    | Keyword TokSqliteCloseDb -> (i, SqliteCloseDb, l_rem)
-    | Keyword TokSqliteExec -> (i, SqliteExec, l_rem)
     | Id s -> (i, Var s, l_rem)
     | Keyword TokLpar ->
       let i_expr, expr, l_rem = parse_exp l_rem in

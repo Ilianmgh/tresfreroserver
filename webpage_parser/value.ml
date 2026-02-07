@@ -1,12 +1,13 @@
 open Utils
 open Syntax
 
+(** For genericity, extern functino can accept any value. But a function expecting a int has to match said value with a VInt, and in other cases, raises this error. *)
+exception InvalidMlArgument of string
+
 type raw_function_value =
   | VFst
   | VSnd
-  | VSqliteOpenDb
-  | VSqliteCloseDb
-  | VSqliteExecPartialApp of value list
+  | VExternFunction of extern_function
   | VFun of variable * expr
   | VFix of variable * variable * expr
 and value =
@@ -19,7 +20,12 @@ and value =
   | VContent of value list
   | VCouple of value * value
 and environment = value Environment.t
-
+(** A pre-defined symbol is either a value, or a function from values to value with an arbitrary number of arguments. *)
+and extern_function =
+    Args1 of (value -> value)
+  | Args2 of (value -> value -> value)
+  | Args3 of (value -> value -> value -> value)
+  | Args4 of (value -> value -> value -> value -> value)
 (* 
 (** [update_env x v session_vars env] adds binding [x] |-> [v] to [env]. If [x] is a session variable, adds it to [session_vars]. *)
 let update_env (x : string) (v : value) (session_vars, env : string list * environment) : string list * environment = (* FIXME maybe write a module for environment to wrap session variables with it and, at some point, cookies. Maybe it'll help for cookies. *)
@@ -43,12 +49,7 @@ let rec expr_of_value (v1 : value) : expr = match v1 with
   | Clos (_, VFst) -> Fst
   | Clos (_, VSnd) -> Snd
   (* I'm not sure we really want the following cases to work. At least for [value_of_query], I can't think of a useful use case *)
-  | Clos (_, VSqliteOpenDb) -> SqliteOpenDb
-  | Clos (_, VSqliteCloseDb) -> SqliteCloseDb
-  | Clos (_, VSqliteExecPartialApp []) -> SqliteExec
-  | Clos (_, VSqliteExecPartialApp [db]) -> App (SqliteExec, expr_of_value db) (* remark: won't actually work since db is not implemented *)
-  | Clos (_, VSqliteExecPartialApp [db; func]) -> App (App (SqliteExec, expr_of_value db), expr_of_value func)
-  | Clos (_, VSqliteExecPartialApp _) -> raise (UnsupportedError "Trying to get expr of value sqlite_exec applied to too many arguments")
+  | Clos (_, VExternFunction _) -> raise (UnsupportedError "Trying to get expr of value of an external function. FIXME maybe associate them with their name (variable to evaluate to get this function) and their arguments...")
   | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
 
@@ -93,12 +94,8 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
   end
   | Clos (_, VFst) -> Printf.fprintf out "⟨∅, fst⟩"
   | Clos (_, VSnd) -> Printf.fprintf out "⟨∅, snd⟩"
-  | Clos (_, VSqliteOpenDb) -> Printf.fprintf out "⟨∅, sqlite3_opendb⟩"
-  | Clos (_, VSqliteCloseDb) -> Printf.fprintf out "⟨∅, sqlite3_closedb⟩"
-  | Clos (_, VSqliteExecPartialApp vals) -> begin
-    Printf.fprintf out "⟨∅, sqlite3_exec";
-    List.iter (fun v -> Printf.fprintf out " "; fprintf_value out ~escape_html:escape_html v) vals;
-    Printf.fprintf out "⟩"
+  | Clos (_, VExternFunction _) -> begin
+    Printf.fprintf out "FIXME maybe associate them with their name (variable to evaluate to get this function) and their arguments..."
   end
   | Clos (env, VFun (x, e)) -> begin
     Printf.fprintf out "⟨";
@@ -130,11 +127,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VCouple (v, v') -> Printf.sprintf "(%s, %s)" (string_of_value ~escape_html:escape_html v) (string_of_value ~escape_html:escape_html v')
   | Clos (_, VFst) -> "⟨∅, fst⟩"
   | Clos (_, VSnd) -> "⟨∅, snd⟩"
-  | Clos (_, VSqliteOpenDb) -> "⟨∅, sqlite3_opendb⟩"
-  | Clos (_, VSqliteCloseDb) -> "⟨∅, sqlite3_closedb⟩"
-  | Clos (_, VSqliteExecPartialApp vals) -> begin
-    Printf.sprintf "⟨∅, sqlite3_exec %s⟩" (String.concat " " (List.map (fun v -> string_of_value ~escape_html:escape_html v) vals))
-  end
+  | Clos (_, VExternFunction _) -> "FIXME add name etc... see fprintf and expr_of_value."
   | Clos (env, VFun (x, e)) -> Printf.sprintf "⟨%s, fun %s -> %s⟩" (string_of_env ~escape_html:escape_html env) x (string_of_expr e)
   | Clos (env, VFix (f, x, e)) -> Printf.sprintf "⟨%s, fixfun %s %s -> %s⟩" (string_of_env ~escape_html:escape_html env) f x (string_of_expr e)
 and string_of_env ?(escape_html : bool = false) (env : environment) : string = if Environment.is_empty env then "∅" else begin

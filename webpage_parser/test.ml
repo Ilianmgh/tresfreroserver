@@ -87,16 +87,16 @@ let post_version = \"1\" }>
       ; "<{ (fun x -> x) = (fun x -> 1) }>" (* interpreter error *)
       ;
 "<{
-let db = sqlite3_opendb \"test.db\"
+let db = Sqlite.opendb \"test.db\"
 }>
 <{
-sqlite3_exec db
+Sqlite.exec db
 (fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{hd}>: <{content}> <br/> ]>)
 \"SELECT * FROM Test\"
 }>
 <{
-sqlite3_closedb db
-}>" (* ok *)
+Sqlite.closedb db
+}>" (* ko, Sqlite module is not included on its own, only in produce_page, to test use server. *)
       ; "<{let f = fun x -> fun y -> x}> <{f (fun x -> x) 2}>" (* ok *)
       ; "<{ Test.x }>" (* should lex and parse *)
       ;
