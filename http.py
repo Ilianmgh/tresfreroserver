@@ -42,11 +42,13 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
   if extension == "htmlml" :
     str_args : str = ""
     if arguments is not None :
-      str_args = arguments
+      str_args = f"\"{arguments}\""
     session_args : str = ""
     if session_id is not None and session_id in get_webpage.session :
       session_args = f"\"{utils.url_encoding("SESSION", get_webpage.session[session_id])}\""
-    os.system(f"./webpage_parser/produce_page.x {path} {name}.html \"{str_args}\" {session_args}")
+    produce_page_command_line : str = f"./webpage_parser/produce_page.x {path} {name}.html {str_args} {session_args}"
+    print("Executing...", produce_page_command_line)
+    os.system(produce_page_command_line)
     print("") # For a newline after subprocess call
     path = f"{name}.html"
     with open(path, mode = "r") as f :

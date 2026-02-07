@@ -190,8 +190,12 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
   | WithModule (module_name, e) -> begin match Environment.submap_opt module_name gamma with
     | None -> raise (TypingError (Printf.sprintf "%s: undefined module." module_name))
     | Some new_env -> begin
+      Printf.fprintf stderr "before entering module %s\n\tto evaluate %s\n\t, gamma = %s\n" module_name (string_of_expr e) (string_of_modular_typing_environment gamma);
       let gamma', tau = type_inferer_one_expr new_env e in
-      (Environment.supmap_namespace module_name gamma', tau)
+      Printf.fprintf stderr "BEGIN_supmap with gamma' = %s\n" (string_of_modular_typing_environment gamma');
+      let new_gamma = Environment.supmap_namespace module_name gamma' in 
+      Printf.fprintf stderr "END_supmap\n";
+      (new_gamma, tau)
     end
   end
 

@@ -27,14 +27,14 @@ module Make = functor (M : Map.S) -> struct
   let rec add_to_sub (prefix : key list) (k : key) (v : 'a) (s : 'a t) : 'a t = match prefix with (* TODO make tail-rec *)
     | [] -> add k v s
     | toplevel_module :: prefix_rem -> begin match M.find_opt toplevel_module s.sub with
-      | None -> raise Not_found
+      | None -> Printf.fprintf stderr "1\n"; raise Not_found
       | Some s' -> { root = s.root ; sub = M.add toplevel_module (add_to_sub prefix_rem k v s') s.sub ; parent = s.parent }
     end
   let add_sub (k : key) (sub_s : 'a t)  (s : 'a t) : 'a t = { root = s.root ; sub = M.add k { root = sub_s.root ; sub = sub_s.sub ; parent = Some s } s.sub ; parent = s.parent } (* TODO double usage here: we set parents twice, once on add/map/... and once on access to the chils. See where we can afford to not care about parents; maybe we simply need to put them here *)
   let rec find (k : key) (s : 'a t) : 'a = match M.find_opt k s.root with
     | Some v -> v
     | None -> begin match s.parent with
-      | None -> raise Not_found
+      | None -> Printf.fprintf stderr "2\n"; raise Not_found
       | Some p -> find k p
     end
   let rec find_opt (k : key) (s : 'a t) : 'a option = match M.find_opt k s.root with
@@ -47,6 +47,13 @@ module Make = functor (M : Map.S) -> struct
   let submap_opt (subk : key) (s : 'a t) : 'a t option = match M.find_opt subk s.sub with
     | None -> None
     | Some child -> Some { root = child.root ; sub = child.sub ; parent = Some s }
+  let supmap (s : 'a t) : 'a t = match s.parent with
+    | None -> Printf.fprintf stderr "3\n"; raise Not_found
+    | Some p -> p
+  let supmap_opt (s : 'a t) : 'a t option = s.parent
+  let supmap_namespace (namespace : key) (s : 'a t) : 'a t = match s.parent with
+    | None -> Printf.fprintf stderr "4\n"; raise Not_found
+    | Some p -> if submap namespace p = s then p else raise (Invalid_argument "Incorrect namespace") (* warning : this equality between maps is cost-y, for now used for debugging *)
   let rec map_change_parents (f : 'a -> 'b) (new_parent : 'b t option) (s : 'a t) : 'b t =
     let mapped_root = 
       { root = M.map f s.root ;
@@ -55,14 +62,10 @@ module Make = functor (M : Map.S) -> struct
     in
     let new_sub = M.map (map_change_parents f (Some mapped_root)) s.sub in
     { root = mapped_root.root ; sub = new_sub ; parent = new_parent}
-  let supmap (s : 'a t) : 'a t = match s.parent with
-    | None -> raise Not_found
-    | Some p -> p
-  let supmap_opt (s : 'a t) : 'a t option = s.parent
-  let supmap_namespace (namespace : key) (s : 'a t) : 'a t = match s.parent with
-    | None -> raise Not_found
-    | Some p -> if submap namespace p = s then p else raise (Invalid_argument "Incorrect namespace") (* warning : this equality between maps is cost-y, for now used for debugging *)
-  let rec map (f : 'a -> 'b) (s : 'a t) : 'b t = map_change_parents f None s (* FIXME not sure it works with the two-sided pointers *)
+  let rec map (f : 'a -> 'b) (s : 'a t) : 'b t = map_change_parents f begin match s.parent with
+      | None -> None
+      | Some p -> Some (map f p)
+    end s (* FIXME not sure it works with the two-sided pointers *)
   let is_empty (s : 'a t) : bool = M.is_empty s.root && M.is_empty s.sub (* maybe we rather want to explore the hierarchy tree and see if each node has an empty map *)
   let rec iter (f : key list -> key -> 'a -> unit) (s : 'a t) : unit = (* TODO add prefix when exploring children *)
     M.iter (fun k v -> f [] k v) s.root;
