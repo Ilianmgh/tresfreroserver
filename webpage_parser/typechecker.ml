@@ -68,7 +68,7 @@ let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
   let rec update_substitution (x : variable) (tau : ml_type) (theta : type_substitution) = match StringMap.find_opt x theta with
     | None -> StringMap.add x tau theta
     | Some tau' -> let theta_taus = unify_aux tau tau' theta in StringMap.add x (apply_substitution tau theta_taus) theta_taus
-  and unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match unpack_foralls alpha, unpack_foralls beta with (* FIXME maybe match unpack_foralls alpha/beta... *)
+  and unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match unpack_foralls alpha, unpack_foralls beta with
     | Arr (alpha, beta), Arr (alpha', beta') ->
       let theta' = unify_aux alpha alpha' theta in
       unify_aux beta beta' theta'
