@@ -29,6 +29,8 @@ module type S = sig
   val iter : (key list -> key -> 'a -> unit) -> 'a t -> unit
   (** [fold f s] TODO. *)
   val fold : (key list -> key -> 'a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc
+  (** [disjoint_union s1 s2]. For now only works on root; will erase parent + assumes not only the variables are disjoints, but also the namespaces. i.e. will fail if [s1] and [s2] has a submodule with same name [A]. *)
+  val disjoint_union : 'a t -> 'a t -> 'a t
 end
 
 module Make (M : Map.S) : S with type key = M.key

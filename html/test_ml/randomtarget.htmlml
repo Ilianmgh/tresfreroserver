@@ -1,1 +1,16 @@
-<{Post.nom}>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coucou</title>
+</head>
+<body>
+  <h1>Random target for random form</h1>
+  <h2>Form answer</h2>
+  <{ Get.nom }>
+  <h2>Modules</h2>
+  <p>
+    ko, following expression shouldn't be correctly parsed: <{ Get.let x = 5 in x }>
+  </p>
+</body>

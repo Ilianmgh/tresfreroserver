@@ -24,15 +24,6 @@ and extern_function =
   | Args2 of (value -> value -> value)
   | Args3 of (value -> value -> value -> value)
   | Args4 of (value -> value -> value -> value -> value)
-(* 
-(** [update_env x v session_vars env] adds binding [x] |-> [v] to [env]. If [x] is a session variable, adds it to [session_vars]. *)
-let update_env (x : string) (v : value) (session_vars, env : string list * environment) : string list * environment = (* FIXME maybe write a module for environment to wrap session variables with it and, at some point, cookies. Maybe it'll help for cookies. *)
-  let new_session_vars = if Str.string_match (Str.regexp "session") x 0 then (* may be overkill.. String.sub & = ? *)
-      x :: session_vars (* for now, adding the full variable, maybe strip it from the prefix. Will be easier when namespaces are implemented *)
-    else
-      session_vars
-  in
-  (new_session_vars, StringMap.add x v env) *)
 
 (** [eval_expr anyEnv (expr_of_value v) = v].
   [expr_of_value v] tries to be as simple as possible for a lightweight re-evaluation. *)
@@ -49,18 +40,9 @@ let rec expr_of_value (v1 : value) : expr = match v1 with
   | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
 
-(** [update_env x v session_vars env] adds binding [x] |-> [v] to [env]. If [x] is a session variable, adds it to [session_vars]. TODO change with new hierarchical structure *)
-let update_env (x : string) (v : value) (session_vars, env : string list * environment) : string list * environment = (* FIXME maybe write a module for environment to wrap session variables with it and, at some point, cookies. Maybe it'll help for cookies. *)
-  let new_session_vars = if Str.string_match (Str.regexp "session") x 0 then (* may be overkill.. String.sub & = ? *)
-      x :: session_vars (* for now, adding the full variable, maybe strip it from the prefix. Will be easier when namespaces are implemented *)
-    else
-      session_vars
-  in
-  (new_session_vars, Environment.add x v env)
-
 (** Pretty-printing *)
 
-(** Correctly escapes characters for web rendering cf https://html.spec.whatwg.org/multipage/named-characters.html TODO to them all (?) *)
+(** Correctly escapes characters for web rendering cf https://html.spec.whatwg.org/multipage/named-characters.html TODO do them all (?) *)
 let web_of_string (s : string) : string =
   let rec web_of_string_acc (s : string) (i : int) (n : int) (acc : char list) : char list = if i < n then begin match s.[i] with
       | '&' ->  web_of_string_acc s (i+1) n (';' :: 'p' :: 'm' :: 'a' :: '&' :: acc)
@@ -140,7 +122,11 @@ and string_of_env ?(escape_html : bool = false) (env : environment) : string = i
 
 (** [repr_of_value v] provides a unique, decodable string for [v] : [repr_of_value (value_of_repr sv) = sv] *)
 let repr_of_value (v1 : value) : string = match v1 with
-  | VInt n -> Printf.sprintf "%d" n
+  | VInt n -> Printf.sprintf "int:%d" n
+  | VString s -> Printf.sprintf "string:%s" s
   | _ -> failwith "TODO implement repr_of_value for the remaining of the possible values"
 (** [value_of_repr sv] decodes the string-encoded value [sv] : [value_of_repr (repr_of_value v) = v] *)
-let value_of_repr (sv : string) : value = VInt (int_of_string sv) (* TODO generalize *)
+let value_of_repr (sv : string) : value =
+  let new_str = List.hd (List.rev (String.split_on_char ':' sv)) in
+  Printf.fprintf stderr "\n\n\nvalue_of_repr %s = %s\n\n\n" sv new_str;
+  VString new_str (* TODO actually respect the spec + then generalize *)

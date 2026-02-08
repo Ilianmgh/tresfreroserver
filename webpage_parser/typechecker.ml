@@ -50,7 +50,7 @@ let rec occurs (var : type_variable) (tau : ml_type) (theta : type_substitution)
   let rec occurs_no_substitution (var : type_variable) (tau : ml_type) : bool = match tau with
     | Arr (alpha, beta) | Prod (alpha, beta) -> occurs_no_substitution var alpha || occurs_no_substitution var beta
     | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml | TypeDb -> false
-    | TypeForall (x, tau') -> if x = var then false else occurs_no_substitution var tau' (* TODO maybe these precautions erases the need of bound variables to be fresh. *)
+    | TypeForall (x, tau') -> if x = var then false else occurs_no_substitution var tau' (* TODO maybe these precautions neutralizes the need of bound variables to be fresh. *)
     | TypeVar s -> (s = var)
   in occurs_no_substitution var (apply_substitution tau theta)
 
@@ -207,7 +207,7 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
     end
   end
 
-and type_inferer (gamma : modular_typing_environment) (page : dynml_webpage) : (modular_typing_environment * ml_type) list =
+and type_inferer (gamma : modular_typing_environment) (page : dynml_webpage) : (modular_typing_environment * ml_type) list = (* FIXME maybe we should pass on (at least a part of) the accumulated environment when typing an expression if, at some point, we have actual weak types. *)
   let types_and_env = List.fold_left begin fun already_typed element -> begin match already_typed with
       | [] -> assert false
       | (cur_gamma, last_gamma, tau) :: already_typed' -> begin match element with
@@ -215,6 +215,10 @@ and type_inferer (gamma : modular_typing_environment) (page : dynml_webpage) : (
         | Pure s -> (cur_gamma, gamma, TypeHtml) :: (cur_gamma, last_gamma, tau) :: already_typed'
         | Decl (ExprDecl (x, e)) -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in
           (Environment.add x tau_e cur_gamma, gamma_e, tau_e) ::
+          (cur_gamma, last_gamma, tau) ::
+          already_typed'
+        | Decl (ModuleExprDecl (modu, x, e)) -> let gamma_e, tau_e = type_inferer_one_expr cur_gamma e in
+          (Environment.add_to_sub [modu] x tau_e cur_gamma, gamma_e, tau_e) ::
           (cur_gamma, last_gamma, tau) ::
           already_typed'
         | Decl (TypeDecl (x, e)) -> raise (UnsupportedError "Type declaration unsupported by now (type_inferer)")

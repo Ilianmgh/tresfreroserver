@@ -1,19 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Coucou</title>
+  <title>Accueil</title>
 </head>
 <body>
-  <h1>Test formulaire</h1>
+  <h1>Site de test tresfreroserver</h1>
+  <h2>Still here (?)</h2>
   <p>
-    <{
-      Post.utilisateur
-    }>
-    <{
-      Post.motdepasse
-    }>
+    Here it is: <{Session.x}>
   </p>
 </body>
 </html>

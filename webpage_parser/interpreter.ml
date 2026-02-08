@@ -162,24 +162,27 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     | Some sub_env -> eval_expr sub_env e 
   end
 (** [eval env page = ((session_vars, env'), res)] where [res] is the evaluation of [page] following the program semantics (cf. documentation). [env'] is the resulting environment ([env] + declared globals, etc) and [session_vars] is the list of globally-declared session variable (at top-level only). FIXME at some point, add a function to Session module to do that instead. See what to change. Should we authorise effect in expression or rather add another global declaration ? *)
-and eval (env : environment) (page : dynml_webpage) : (string list * environment) * value list =
+and eval (env : environment) (page : dynml_webpage) : environment * value list =
   (* Actually evaluating [page] *)
   let values_and_env = List.fold_left begin fun already_evald element -> begin match already_evald with
       | [] -> assert false
-      | ((cur_session_vars, cur_env), v) :: already_evald' -> begin match element with
-        | Script e -> let v_e = eval_expr cur_env e in ((cur_session_vars, cur_env), v_e) :: ((cur_session_vars, cur_env), v) :: already_evald' (* FIXME change here if we want to take into account nested session variables declarations *)
-        | Pure s -> ((cur_session_vars, cur_env), VPure s) :: ((cur_session_vars, cur_env), v) :: already_evald'
-        | Decl (ExprDecl (x, e)) -> let v_e = eval_expr cur_env e in (update_env x v_e (cur_session_vars, cur_env), v) :: already_evald' (* evaluating a global only enriches the environment, no value is added *)
+      | (cur_env, v) :: already_evald' -> begin match element with
+        | Script e -> let v_e = eval_expr cur_env e in (cur_env, v_e) :: (cur_env, v) :: already_evald' (* FIXME change here if we want to take into account nested session variables declarations *)
+        | Pure s -> (cur_env, VPure s) :: (cur_env, v) :: already_evald'
+        | Decl (ExprDecl (x, e)) -> let v_e = eval_expr cur_env e in
+          (Environment.add x v_e cur_env, v) :: already_evald' (* evaluating a global only enriches the environment, no value is added *)
+        | Decl (ModuleExprDecl (modu, x, e)) -> let v_e = eval_expr cur_env e in
+          (Environment.add_to_sub [modu] x v_e cur_env, v) :: already_evald' (* evaluating a global only enriches the environment, no value is added *)
         | Decl (TypeDecl (x, e)) -> raise (UnsupportedError "Type declarations are not supported by now (eval)")
       end
     end
-  end [(([], env), VBool true)] page
+  end [(env, VBool true)] page
   in
   (* Tidying up the results *)
   let values_and_env = List.tl (List.rev values_and_env) in (* removing the dummy true value. *)
   let final_env = match values_and_env with
     | (final_env', _) :: _ -> final_env'
-    | [] -> ([], env)
+    | [] -> env
   in
   (final_env, List.map snd values_and_env)
 

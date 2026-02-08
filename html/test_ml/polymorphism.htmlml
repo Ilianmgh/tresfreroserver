@@ -27,6 +27,10 @@
     <{
       f (fixfun g x -> g x)
     }>
+    <h2>The identity function applied to an integer and then a string ; ko test: fix it</h2>
+    <{
+      f 2; f "hey"
+    }>
   </p>
 </body>
 </html>

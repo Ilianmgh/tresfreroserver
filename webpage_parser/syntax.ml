@@ -12,7 +12,8 @@ type type_expr = int * int * int array * float list * float (* TODO replace by s
 
 type global_declaration =
   | TypeDecl of type_name * type_expr
-  | ExprDecl of variable * expr (* TODO when adding module declarations: ModuleDecl of module_name * module_expr *)
+  | ExprDecl of variable * expr
+  | ModuleExprDecl of module_name * variable * expr (* TODO when adding module declarations: ModuleDecl of module_name * module_expr *)
 
 and dynml_element = Pure of string | Script of expr | Decl of global_declaration
 
@@ -60,11 +61,16 @@ and expr = (* TODO add match ... with, user-defined types *)
   | String of string
   | Fstring of string
 
+(** Pre-defined modules *)
+let sqlite_module_name = "Sqlite"
+let session_module_name = "Session"
+
 (** Pretty-printing *)
 
 let rec string_of_global_declaration (global : global_declaration) : string = match global with
   | TypeDecl (_, _) -> failwith "TODO"
   | ExprDecl (x, e) -> Printf.sprintf "let %s = %s" x (string_of_expr e)
+  | ModuleExprDecl (modu, x, e) -> Printf.sprintf "%s.let %s = %s" modu x (string_of_expr e)
 
 and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasize the emph-th argument of the constructor by underlining it with \x1b[04mstufftobeunderlined\x1b[0m *)
   | Empty -> "<{}>"

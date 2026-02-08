@@ -10,9 +10,6 @@ open Interpreter
 
 type extern_symbol = {namespaces : module_name list ; name : string ; v : extern_function ; tau : ml_type}
 
-let sqlite_module_name = "Sqlite"
-let session_module_name = "Session"
-
 let ml_type_of_sqlite_exec =
   Arr (
     TypeDb,
@@ -45,7 +42,7 @@ let predefined_symbols = [
     ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = Args1 extern_sqlite_close_db ; tau = Arr (TypeDb, TypeString)}
     ; {namespaces = [] ; name = "fst" ; v = Args1 ml_fst ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst")))}
     ; {namespaces = [] ; name = "snd" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
-    ; {namespaces = [session_module_name] ; name = "let" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
+    (* ; {namespaces = [session_module_name] ; name = "let" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))} *)
   ]
 
 let pre_included_environment : environment =
@@ -85,12 +82,25 @@ let produce_page (arguments : environment) (path : string) (dest : string) : uni
   try
     let lexed = lexer code in
     let parsed = parser lexed in
-    let typ_env = Environment.fold Environment.add_to_sub pre_included_typing_env (Environment.map (fun _ -> TypeString) arguments) in (* FIXME for now, adding one by one implement union/merge for next time. *)
+    let typ_env = Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env in
     let _ = type_inferer typ_env parsed in
-    let (session_vars, final_env), values = eval arguments parsed in
+    let final_env, values = eval arguments parsed in
     let f_out = open_out dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
-    Printf.fprintf f_out "session%s\n" (List.fold_left (fun acc name -> Printf.sprintf "&%s=%s" name (repr_of_value (Environment.find name final_env))) "" session_vars);
+    (* slight optimization: do not re-send session variables that were not modified; but simply mention to the server to keep them *)
+    let session_bindings = match Environment.submap_opt session_module_name final_env with
+      | None -> ""
+      | Some session_env -> Environment.fold
+        (fun prefixes x v acc ->
+          if List.is_empty prefixes then begin (* for now, only top-level within module Session, could change for further needs *)
+            Printf.fprintf stderr "trying to repr: %s" (string_of_value v);
+            Printf.sprintf "%s&%s=%s" acc x (repr_of_value v)
+          end else
+            acc
+        )
+        session_env ""
+    in
+    Printf.fprintf f_out "session%s\n" session_bindings;
     List.iter (fun v -> fprintf_value f_out v) values;
     close_out f_out
   with
@@ -109,25 +119,36 @@ let test_file (source : string) : unit =
   close_in f_in;
   Test.test (-1, code)
 
+exception MalformedCommandLine
+
+(** [parse_command_line command_line = (source, dest, env)] parses the command line and retrieves the path to the source file [source], the path to the destination [dest] and the environment passed in argument [env] e.g. Post/Get/Session variables.
+  Raises [MalformedCommandLine] if [command_line] is ill-formed. *)
+let parse_command_line (command_line : string array) : string * string * environment =
+  let n = Array.length command_line in
+  if n > 2 then
+    let source_path = command_line.(1) in
+    let dest_path = command_line.(2) in
+    let rec parse_options (command_line : string array) (i : int) (env_acc : environment) : environment =
+      if i < n then
+        if i + 1 >= n then (* options are, for now, all of the form [-options ARGUMENTS] *)
+          (Printf.fprintf stderr "1\n"; raise MalformedCommandLine)
+        else begin
+          match String.lowercase_ascii command_line.(i) with
+            | "-argrepr" -> parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary value_of_repr command_line.(i + 1) env_acc)
+            | "-argstr" -> parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) command_line.(i + 1) env_acc)
+            | _ -> Printf.fprintf stderr "2\n"; raise MalformedCommandLine
+        end
+      else
+        env_acc
+    in
+    (source_path, dest_path, parse_options command_line 3 Environment.empty)
+  else
+    (Printf.fprintf stderr "3\n"; raise MalformedCommandLine)
 let () =
-  if Array.length Sys.argv > 2 then begin
-    let source_path = Sys.argv.(1) in
-    let dest_path = Sys.argv.(2) in
-    (* TODO allow more lax multiple dictionaries passed this way, not strictly GETorPOST SESSION *)
-    let arguments = if Array.length Sys.argv > 3 then (* parsing GET/POST arguments *)
-        Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(3) pre_included_environment
-      else
-        pre_included_environment
-    in
-    let args = if Array.length Sys.argv > 4 then (* parsing SESSION arguments *)
-        Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) Sys.argv.(4) arguments
-      else
-        arguments
-    in
-    if debug then Printf.fprintf stderr "Pre-env: %s\n" (string_of_env args);
-    produce_page args source_path dest_path
-    (* test_file source_path *)
-  end else
-    Printf.printf "Usage: <program> <source path> <dest path> <arguments>*\n<arguments> are pre-defined variable to give to the program. It has to be of the form METHOD&x1=v1&...&xn=vn"
+  try
+    let source_path, dest_path, env_args = parse_command_line Sys.argv in
+    produce_page env_args source_path dest_path
+  with
+    MalformedCommandLine -> Printf.printf "Usage: <program> <source path> <dest path> <arguments>*\n<arguments> are pre-defined variable to give to the program. It has to be of the form METHOD&x1=v1&...&xn=vn" (* TODO refresh that *)
 
     (* Namespacing works for variable ; implemented correctly for Get/Post request. TODO implement it for Sqlite functions + for Session, maybe add a function or a different global declaration variable in the namespace Session to declare session variables. FIXME problem with GET form in tests *)

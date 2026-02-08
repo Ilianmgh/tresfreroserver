@@ -16,6 +16,7 @@ module type S = sig
   val is_empty : 'a t -> bool
   val iter : (key list -> key -> 'a -> unit) -> 'a t -> unit
   val fold : (key list -> key -> 'a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc
+  val disjoint_union : 'a t -> 'a t -> 'a t
 end
 
 module Make = functor (M : Map.S) -> struct
@@ -53,7 +54,7 @@ module Make = functor (M : Map.S) -> struct
   let supmap_opt (s : 'a t) : 'a t option = s.parent
   let supmap_namespace (namespace : key) (s : 'a t) : 'a t = match s.parent with
     | None -> Printf.fprintf stderr "4\n"; raise Not_found
-    | Some p -> if submap namespace p = s then p else raise (Invalid_argument "Incorrect namespace") (* warning : this equality between maps is cost-y, for now used for debugging *)
+    | Some p -> p (* FIXME see if we want to leave the parent unchanged. The actual way, everythinf added to [s] will be discarded because we don't put [s] back as a child of [p], so [s] is restored to its last value when we called [submap] to get it. *)
   let rec map_change_parents (f : 'a -> 'b) (new_parent : 'b t option) (s : 'a t) : 'b t =
     let mapped_root = 
       { root = M.map f s.root ;
@@ -76,4 +77,8 @@ module Make = functor (M : Map.S) -> struct
       M.fold (fun subname submodule acc -> fold_acc_prefix (subname :: cur_prefix) f submodule acc) s.sub current_folded
     in
     fold_acc_prefix [] f s acc
+  let disjoint_union (s1 : 'a t) (s2 : 'a t) : 'a t =
+    { root = M.union (fun _ _ -> raise (Invalid_argument "Non-disjoint union")) s1.root s2.root
+    ; sub = M.union (fun _ _ -> raise (Invalid_argument "Non-disjoint union")) s1.sub s2.sub
+    ; parent = None}
 end

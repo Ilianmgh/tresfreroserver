@@ -6,7 +6,7 @@ let debug = false
 
 (** Result of attempt to parse a global declaration *)
 type parsed_let_expression =
-  | LetToBe of int * global_declaration * token list
+  | DeclToBe of int * global_declaration * token list
   | LetInToBe of int * (variable * expr) * token list
   | Nothing
 
@@ -192,31 +192,41 @@ and parse_atom (l : token list) : int * expr * token list =
       (i_rpar, expr, l_rem)
     | Keyword TokOpenHTML ->
       let line_after_close_html, html_sub, l_rem' = parse_html_unit l_rem false in (line_after_close_html, Html html_sub, l_rem')
-      (* let i_html, html, l_rem = eat_html l_rem (Printf.sprintf "line %d: No HTML code between HTML brackets??" i) in
-      let i_close_html, close_html, l_rem = eat_token (Keyword TokCloseHTML) l_rem (fun _ -> Printf.sprintf "line %d: HTML-closing bracket expected." i_html) in
-      (i_close_html, Html html, l_rem) *)
     | TokHtml s -> raise (ParsingError (Printf.sprintf "line %d: Unexpected html code within ML delimiters." i)) (* assert false ? *)
     | MId modu ->
       let i_dot, dot, l_rem = eat_token (Keyword TokDot) l_rem (fun x -> Printf.sprintf "line %d: expected dot after '%s'." i modu) in (* TODO at some point, this error will not appear, since it'll be interpreted as a constructor *)
-      let i_scope_of_module, expr_in_scope_of_module, l_rem = parse_atom l_rem in
+      let i_scope_of_module, expr_in_scope_of_module, l_rem = parse_atom l_rem in (* TODO too permissive e.g. ModuleName.fun x -> x shouldn't be parsed as ModuleName.(fun x -> x). Investigate. *)
       (i_scope_of_module, WithModule (modu, expr_in_scope_of_module), l_rem)
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Malformed expression." i))
   end
 
 (** PARSING GLOBALS *)
 
-(** [parse_global l] tries to parse a global from the token list [l], otherwise, raises [NotAGlobal].
-  If the beginning of [l] contains a let-in expression, the exception contains the variable name and the expression.
-*)
+(** [parse_global l] tries to parse a global from the token list [l], in the form of a [parsed_let_expression]; it can either be:
+  - [DeclToBe] : parsed a global declaration;
+  - [LetInToBe] : we started to parse a let ... = ... in, but, as a  in follows, we return the variable name and the expression, and the remaining list of token starts after the in;
+  - [Nothing] : something else needs to be parsed. *)
 and parse_global (l : token list) : parsed_let_expression =
-  match eat_token_opt [(Keyword TokLet)] l with
-    | Some (i_let, let_, l_rem) -> begin
+  (* We start by testing whether the code starts with a `ModuleName.` and if so, we store the module name. For now, only supports one-level module e.g. `ModuleName1.ModuleName2.let x = 5` can't be a valid global declaration *)
+  let l', module_declaration = match eat_token_opt [MId session_module_name] l with
+    | Some (i_session, MId module_name, l_rem) -> begin match eat_token_opt [Keyword TokDot] l_rem with
+      | Some (i_dot, dot, l_rem') -> l_rem', (Some module_name)
+      | None -> [], None
+    end
+    | None | Some _ -> l, None
+  in
+  match eat_token_opt [Keyword TokLet] l' with
+    | Some (i_let, let_, l_rem) (* TODO when type decl added, test if let_ is [Keyword TokLet] *) -> begin
       let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: let-expression: variable expected after 'let'." i_let) in
       let i_eq, eq, l_rem = eat_token (Keyword TokEq) l_rem (fun _ -> Printf.sprintf "line %d: let-expression: '=' expected after 'let'." i_var) in
       let i_x_expr, x_expr, l_rem = parse_exp l_rem in
       begin match eat_token_opt [(Keyword TokIn)] l_rem with
         | Some (_, tok_in, l_rem') -> LetInToBe (i_x_expr, (var, x_expr), l_rem')
-        | None -> LetToBe (i_x_expr, ExprDecl (var, x_expr), l_rem)
+        | None -> (* we parsed a global let declaration. we now test if it's a module global or a vanilla global *)
+          begin match module_declaration with
+            | None -> DeclToBe (i_x_expr, ExprDecl (var, x_expr), l_rem)
+            | Some mod_name -> DeclToBe (i_x_expr, ModuleExprDecl (mod_name, var, x_expr), l_rem)
+          end
       end 
     end
     | None -> Nothing
@@ -226,13 +236,13 @@ and parse_globals (l : token list) (acc : global_declaration list) : int * globa
   | [] -> raise (ParsingError "Unexpected end of document")
   | (i, Keyword TokCloseML) :: l_rem -> (i, acc, (i, Keyword TokCloseML) :: l_rem) (* TODO not exactly (for the line number) should be the line number of previous token *)
   | (i, h_tok) :: l_rem -> begin match parse_global ((i, h_tok) :: l_rem) with
-    | LetToBe (i, g, l_rem) -> parse_globals l_rem (g :: acc)
+    | DeclToBe (i, g, l_rem) -> parse_globals l_rem (g :: acc)
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Unexpected expression after global declaration" i))
   end
 
 and parse_ml_code (l : token list) : int * ml_code * token list =
   match parse_global l with
-  | LetToBe (i, g, l_rem) -> let i, parsed_globals, l_rem = parse_globals l_rem [g] in (i, Global (List.rev parsed_globals), l_rem)
+  | DeclToBe (i, g, l_rem) -> let i, parsed_globals, l_rem = parse_globals l_rem [g] in (i, Global (List.rev parsed_globals), l_rem)
   | Nothing -> let i, e, l_rem' = parse_exp l in (i, Expr e, l_rem')
   | LetInToBe (i_line, (x, e), l_rem) -> let i, body, l_rem = parse_exp l in (i, Expr (Let (x, e, body)), l_rem)
 

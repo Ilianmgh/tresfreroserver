@@ -6,9 +6,7 @@
   <title>Coucou</title>
 </head>
 <body>
-  <{
-    let session_x = 42
-  }>
+  <h1>Loads of useless tests</h1>
   <p>
     <{
       "co<i>ucou"
@@ -23,11 +21,19 @@
     <{"-->"}> hmm...
   -->
   <{ <[<strong>coucou</strong> <{"<strong>actuallyastring</strong>"}>]> }>
+  <h2>Couple</h2>
+  <p>
+    <{ let couple = (1, 2) }>
 
+    couple: <{ couple }><br/>
+    first: <{ fst couple }><br/>
+    second: <{ snd couple }>
+  </p>
+  <h2>Form</h2>
   <p>
     <form method="GET" action="randomtarget.htmlml">
-      <input id="1" type="text" name="NOM"></input>
-      <input id="2" type="submit" name="Envoyer"></input>
+      <input id="1" type="text" name="nom"></input>
+      <input id="2" type="submit" value="Envoyer"></input>
     </form>
   </p>
 </body>
