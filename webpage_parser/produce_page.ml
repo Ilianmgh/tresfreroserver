@@ -83,8 +83,9 @@ let produce_page (arguments : environment) (path : string) (dest : string) : uni
     let lexed = lexer code in
     let parsed = parser lexed in
     let typ_env = Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env in
+    let eval_env = Environment.disjoint_union arguments pre_included_environment in
     let _ = type_inferer typ_env parsed in
-    let final_env, values = eval arguments parsed in
+    let final_env, values = eval eval_env parsed in
     let f_out = open_out dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
     (* slight optimization: do not re-send session variables that were not modified; but simply mention to the server to keep them *)

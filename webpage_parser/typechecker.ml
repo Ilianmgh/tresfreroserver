@@ -68,7 +68,7 @@ let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
   let rec update_substitution (x : variable) (tau : ml_type) (theta : type_substitution) = match StringMap.find_opt x theta with
     | None -> StringMap.add x tau theta
     | Some tau' -> let theta_taus = unify_aux tau tau' theta in StringMap.add x (apply_substitution tau theta_taus) theta_taus
-  and unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match alpha, beta with (* FIXME maybe match unpack_foralls alpha/beta... *)
+  and unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match unpack_foralls alpha, unpack_foralls beta with (* FIXME maybe match unpack_foralls alpha/beta... *)
     | Arr (alpha, beta), Arr (alpha', beta') ->
       let theta' = unify_aux alpha alpha' theta in
       unify_aux beta beta' theta'
@@ -113,7 +113,6 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
     begin match unpack_foralls func_type, arg_type with
       | Arr (alpha, beta), alpha' ->
         let theta = unify alpha alpha' in
-        assert ((apply_substitution alpha theta) = (apply_substitution alpha' theta)); (* TODO: erase this line once convinced it's working *)
         (update_typing_env gamma'' theta, apply_substitution beta theta)
       | _, _ -> raise (TypingError (Printf.sprintf "%s: this is not a function, it cannot be applied." (string_of_expr (App (e, e'))))) (* TODO underline the function *)
     end
@@ -123,7 +122,6 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
       let gamma'', t_type = type_inferer_one_expr (update_typing_env gamma' theta) t in
       let gamma''', e_type = type_inferer_one_expr gamma'' e in
       let theta' = unify t_type e_type in
-      assert ((apply_substitution t_type theta') = (apply_substitution e_type theta')); (* TODO: erase this line once convinced it's working *)
       (update_typing_env gamma''' theta', apply_substitution t_type theta')
   end
   | Seq (e, e') -> begin
@@ -153,7 +151,6 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
     let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
     let t_int = apply_substitution alpha theta in 
-    assert (t_int = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
     match t_int with
       | TypeInt -> (update_typing_env gamma'' theta, TypeInt)
       | _ -> raise (TypingError (Printf.sprintf "%s: This expression has type %s but is expected to have type %s." (string_of_expr e) (string_of_ml_type t_int) (string_of_ml_type TypeInt))) (* TODO keep replacing those tests by unification *)
@@ -163,7 +160,6 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
     let gamma', alpha = type_inferer_one_expr gamma e in
     let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
-    assert ((apply_substitution alpha theta) = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
     (update_typing_env gamma'' theta, TypeBool)
   end
   | Not e -> begin
@@ -176,7 +172,6 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
     let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
     let t_bool = apply_substitution alpha theta in 
-    assert (t_bool = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
     match t_bool with
       | TypeBool -> (update_typing_env gamma'' theta, TypeBool)
       | _ -> raise (TypingError (Printf.sprintf "%s: This expression has type %s but is expected to have type %s." (string_of_expr e) (string_of_ml_type t_bool) (string_of_ml_type TypeBool)))
@@ -187,7 +182,6 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
     let gamma'', beta = type_inferer_one_expr gamma' e' in
     let theta = unify alpha beta in
     let t_unif = apply_substitution alpha theta in 
-    assert (t_unif = (apply_substitution beta theta)); (* TODO: erase this line once convinced it's working *)
     let theta' = unify t_unif TypeString in (* FIXME check if it works + if it does apply it verywhere else (&&, ||, +, * and so on...) *)
     let t_str = apply_substitution t_unif theta' in 
     match t_str with
