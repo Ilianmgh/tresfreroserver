@@ -35,6 +35,7 @@ let value_of_query (db : Sqlite3.db) (combine_lines_into_table : value -> value 
     | OK -> !value_acc
     | _ ->  raise (InterpreterError (Printf.sprintf "SQL query \"%s\" failed: %s" query (Sqlite3.Rc.to_string exec_code)))
 
+(** [eval_expr env e1 = v] where [v] is the evaluation of expression [e] following the program semantics (cf documentation). FIXME TO IMPLEMENT SESSION/COOKIES VARIABLES, BUT BETTER, maybe return the environment to retrieve sessions (and at some point, cookies) variables. maybe return only the interesting environment e.g. the sub environment Session and Cookie, not all the local variables. *)
 let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   | Empty -> assert false
   | Let (x, e, e') -> let v = eval_expr env e in eval_expr (Environment.add x v env) e'
@@ -160,7 +161,7 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     | None -> raise (InterpreterError (Printf.sprintf "%s: undefined module." module_name))
     | Some sub_env -> eval_expr sub_env e 
   end
-
+(** [eval env page = ((session_vars, env'), res)] where [res] is the evaluation of [page] following the program semantics (cf. documentation). [env'] is the resulting environment ([env] + declared globals, etc) and [session_vars] is the list of globally-declared session variable (at top-level only). FIXME at some point, add a function to Session module to do that instead. See what to change. Should we authorise effect in expression or rather add another global declaration ? *)
 and eval (env : environment) (page : dynml_webpage) : (string list * environment) * value list =
   (* Actually evaluating [page] *)
   let values_and_env = List.fold_left begin fun already_evald element -> begin match already_evald with
