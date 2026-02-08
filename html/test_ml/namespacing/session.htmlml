@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accueil</title>
+</head>
+<body>
+  <h1>Site de test tresfreroserver</h1>
+  <h2>Setting a Session-global variable...</h2>
+  <p>
+    ... before<{Session.let x = 1}>... after.
+  </p>
+  <h2>Getting...</h2>
+  <p>
+    Here it is: <{Session.x}><br/>
+    <a href="session2.htmlml">Go see it somewhere else</a>
+  </p>
+</body>
+</html>

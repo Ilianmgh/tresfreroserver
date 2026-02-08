@@ -10,18 +10,18 @@
   <h1>SQLite</h1>
   <p>
     <{
-      let db = sqlite3_opendb "test.db"
+      let db = Sqlite.opendb "test.db"
     }>
     <h1>Table Test</h1>
     <{
-      sqlite3_exec db (fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{ if hd <> "id" then begin <[ <{hd}>: <{content}> <br/> ]> end else <[]> }> ]>) "SELECT * FROM Test"
+      Sqlite.exec db (fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{ if hd <> "id" then begin <[ <{hd}>: <{content}> <br/> ]> end else <[]> }> ]>) "SELECT * FROM Test"
     }>
     <h1>Table Livre</h1>
     <{
-      sqlite3_exec db (fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{ if hd <> "id" then begin <[ <{hd}>: <{content}> <br/> ]> end else <[]> }> ]>) "SELECT * FROM Livre"
+      Sqlite.exec db (fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{ if hd <> "id" then begin <[ <{hd}>: <{content}> <br/> ]> end else <[]> }> ]>) "SELECT * FROM Livre"
     }>
     <{
-      sqlite3_closedb db
+      Sqlite.closedb db
     }>
   </p>
 </body>

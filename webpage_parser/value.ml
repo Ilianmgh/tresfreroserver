@@ -1,15 +1,13 @@
 open Utils
 open Syntax
 
+(** For genericity, extern functino can accept any value. But a function expecting a int has to match said value with a VInt, and in other cases, raises this error. *)
+exception InvalidMlArgument of string
+
 type raw_function_value =
-  | VFst
-  | VSnd
-  | VSqliteOpenDb
-  | VSqliteCloseDb
-  | VSqliteExecPartialApp of value list
+  | VExternFunction of string * extern_function (* an extern function, for pretty-printing, has to have an associated _name_, generally the name of the function within the ml language (although maybe at some point we could want to use something else). *)
   | VFun of variable * expr
   | VFix of variable * variable * expr
-
 and value =
   | Clos of environment * raw_function_value
   | VDb of Sqlite3.db
@@ -19,7 +17,13 @@ and value =
   | VPure of string
   | VContent of value list
   | VCouple of value * value
-and environment = value StringMap.t
+and environment = value Environment.t
+(** A pre-defined symbol is either a value, or a function from values to value with an arbitrary number of arguments. *)
+and extern_function =
+    Args1 of (value -> value)
+  | Args2 of (value -> value -> value)
+  | Args3 of (value -> value -> value -> value)
+  | Args4 of (value -> value -> value -> value -> value)
 
 (** [eval_expr anyEnv (expr_of_value v) = v].
   [expr_of_value v] tries to be as simple as possible for a lightweight re-evaluation. *)
@@ -31,30 +35,14 @@ let rec expr_of_value (v1 : value) : expr = match v1 with
   | VPure h -> Html [Pure h]
   | VContent l -> Html (List.map (fun v -> Script (expr_of_value v)) l)
   | VCouple (v, v') -> Couple (expr_of_value v, expr_of_value v')
-  | Clos (_, VFst) -> Fst
-  | Clos (_, VSnd) -> Snd
   (* I'm not sure we really want the following cases to work. At least for [value_of_query], I can't think of a useful use case *)
-  | Clos (_, VSqliteOpenDb) -> SqliteOpenDb
-  | Clos (_, VSqliteCloseDb) -> SqliteCloseDb
-  | Clos (_, VSqliteExecPartialApp []) -> SqliteExec
-  | Clos (_, VSqliteExecPartialApp [db]) -> App (SqliteExec, expr_of_value db) (* remark: won't actually work since db is not implemented *)
-  | Clos (_, VSqliteExecPartialApp [db; func]) -> App (App (SqliteExec, expr_of_value db), expr_of_value func)
-  | Clos (_, VSqliteExecPartialApp _) -> raise (UnsupportedError "Trying to get expr of value sqlite_exec applied to too many arguments")
+  | Clos (_, VExternFunction (name, _)) -> raise (UnsupportedError "Trying to get expr of value of an external function. _TODO: ADD VARIABLES IN VALUES_")
   | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
 
-(** [update_env x v session_vars env] adds binding [x] |-> [v] to [env]. If [x] is a session variable, adds it to [session_vars]. *)
-let update_env (x : string) (v : value) (session_vars, env : string list * environment) : string list * environment = (* FIXME maybe write a module for environment to wrap session variables with it and, at some point, cookies. Maybe it'll help for cookies. *)
-  let new_session_vars = if Str.string_match (Str.regexp "session") x 0 then (* may be overkill.. String.sub & = ? *)
-      x :: session_vars (* for now, adding the full variable, maybe strip it from the prefix. Will be easier when namespaces are implemented *)
-    else
-      session_vars
-  in
-  (new_session_vars, StringMap.add x v env)
-
 (** Pretty-printing *)
 
-(** Correctly escapes characters for web rendering cf https://html.spec.whatwg.org/multipage/named-characters.html TODO to them all (?) *)
+(** Correctly escapes characters for web rendering cf https://html.spec.whatwg.org/multipage/named-characters.html TODO do them all (?) *)
 let web_of_string (s : string) : string =
   let rec web_of_string_acc (s : string) (i : int) (n : int) (acc : char list) : char list = if i < n then begin match s.[i] with
       | '&' ->  web_of_string_acc s (i+1) n (';' :: 'p' :: 'm' :: 'a' :: '&' :: acc)
@@ -82,15 +70,7 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
     fprintf_value out ~escape_html:escape_html v';
     Printf.fprintf out ")"
   end
-  | Clos (_, VFst) -> Printf.fprintf out "⟨∅, fst⟩"
-  | Clos (_, VSnd) -> Printf.fprintf out "⟨∅, snd⟩"
-  | Clos (_, VSqliteOpenDb) -> Printf.fprintf out "⟨∅, sqlite3_opendb⟩"
-  | Clos (_, VSqliteCloseDb) -> Printf.fprintf out "⟨∅, sqlite3_closedb⟩"
-  | Clos (_, VSqliteExecPartialApp vals) -> begin
-    Printf.fprintf out "⟨∅, sqlite3_exec";
-    List.iter (fun v -> Printf.fprintf out " "; fprintf_value out ~escape_html:escape_html v) vals;
-    Printf.fprintf out "⟩"
-  end
+  | Clos (_, VExternFunction (name, _)) -> Printf.fprintf out "%s" name
   | Clos (env, VFun (x, e)) -> begin
     Printf.fprintf out "⟨";
     fprintf_env out ~escape_html:escape_html env;
@@ -102,12 +82,13 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
     Printf.fprintf out ", fixfun %s %s -&gt; %s⟩" f x (string_of_expr e); (* FIXME maybe write fpritnf_expr *)
   end
 and fprintf_env (out : out_channel) ?(escape_html : bool = false) (env : environment) : unit =
-  if StringMap.is_empty env then Printf.fprintf out "∅" else begin
-    let string_of_one_env_binding (x : variable) (v : value) : unit =
+  if Environment.is_empty env then Printf.fprintf out "∅" else begin
+    let fprintf_one_env_binding (prefix : string list) (x : variable) (v : value) : unit =
+      (* Printf.fprintf out ", %s%s ↦ " prefix x; *)
       Printf.fprintf out ", %s ↦ " x;
       fprintf_value out ~escape_html:true v
     in
-    StringMap.iter string_of_one_env_binding env
+    Environment.iter fprintf_one_env_binding env
   end
 
 let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = match v1 with
@@ -118,30 +99,34 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `produce_page` *)
   | VContent l -> List.fold_left (fun acc v -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:escape_html v)) "" l
   | VCouple (v, v') -> Printf.sprintf "(%s, %s)" (string_of_value ~escape_html:escape_html v) (string_of_value ~escape_html:escape_html v')
-  | Clos (_, VFst) -> "⟨∅, fst⟩"
-  | Clos (_, VSnd) -> "⟨∅, snd⟩"
-  | Clos (_, VSqliteOpenDb) -> "⟨∅, sqlite3_opendb⟩"
-  | Clos (_, VSqliteCloseDb) -> "⟨∅, sqlite3_closedb⟩"
-  | Clos (_, VSqliteExecPartialApp vals) -> begin
-    Printf.sprintf "⟨∅, sqlite3_exec %s⟩" (String.concat " " (List.map (fun v -> string_of_value ~escape_html:escape_html v) vals))
-  end
+  | Clos (_, VExternFunction (name, _)) -> name
   | Clos (env, VFun (x, e)) -> Printf.sprintf "⟨%s, fun %s -> %s⟩" (string_of_env ~escape_html:escape_html env) x (string_of_expr e)
   | Clos (env, VFix (f, x, e)) -> Printf.sprintf "⟨%s, fixfun %s %s -> %s⟩" (string_of_env ~escape_html:escape_html env) f x (string_of_expr e)
-and string_of_env ?(escape_html : bool = false) (env : environment) : string = if StringMap.is_empty env then "∅" else begin
-    let string_of_one_env_binding (x : variable) (v : value) (acc : string) : string =
+and string_of_env ?(escape_html : bool = false) (env : environment) : string = if Environment.is_empty env then "∅" else begin
+    let string_of_one_env_binding (prefix : string list) (x : variable) (v : value) (acc : string) : string = (* FIXME never prints prefixes *)
       if acc = "" then
-        Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)
+        if List.is_empty prefix then
+          Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)
+        else
+          Printf.sprintf "%s.%s ↦ %s" (String.concat "." (List.rev prefix)) x (string_of_value ~escape_html:true v)
       else
-        Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
+        if List.is_empty prefix then
+          Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
+        else
+          Printf.sprintf "%s.%s ↦ %s, %s" (String.concat "." (List.rev prefix)) x (string_of_value ~escape_html:true v) acc
     in
-    StringMap.fold string_of_one_env_binding env ""
+    Environment.fold string_of_one_env_binding env ""
   end
 
 (** Representation to send variable bindings to server *)
 
 (** [repr_of_value v] provides a unique, decodable string for [v] : [repr_of_value (value_of_repr sv) = sv] *)
 let repr_of_value (v1 : value) : string = match v1 with
-  | VInt n -> Printf.sprintf "%d" n
-  | _ -> failwith "TODO"
+  | VInt n -> Printf.sprintf "int:%d" n
+  | VString s -> Printf.sprintf "string:%s" s
+  | _ -> failwith "TODO implement repr_of_value for the remaining of the possible values"
 (** [value_of_repr sv] decodes the string-encoded value [sv] : [value_of_repr (repr_of_value v) = v] *)
-let value_of_repr (sv : string) : value = VInt (int_of_string sv) (* TODO generalize *)
+let value_of_repr (sv : string) : value =
+  let new_str = List.hd (List.rev (String.split_on_char ':' sv)) in
+  Printf.fprintf stderr "\n\n\nvalue_of_repr %s = %s\n\n\n" sv new_str;
+  VString new_str (* TODO actually respect the spec + then generalize *)

@@ -9,16 +9,16 @@
   <h1>Test Messagerie</h1>
   <p>
     <{
-      post_contenue
+      Post.contenue
     }>
     <{
-      let db = sqlite3_opendb "messagerie.db"
+      let db = Sqlite.opendb "messagerie.db"
     }>
     <{
-      sqlite3_exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) ("INSERT INTO Message(data) VALUES ('" ++ post_contenue ++ "')")
+      Sqlite.exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) ("INSERT INTO Message(data) VALUES ('" ++ Post.contenue ++ "')")
     }>
     <{
-      let x = sqlite3_closedb db
+      let x = Sqlite.closedb db
     }>
     <a href = "messagerie.htmlml">retour</a>
   </p>

@@ -35,55 +35,21 @@ let value_of_query (db : Sqlite3.db) (combine_lines_into_table : value -> value 
     | OK -> !value_acc
     | _ ->  raise (InterpreterError (Printf.sprintf "SQL query \"%s\" failed: %s" query (Sqlite3.Rc.to_string exec_code)))
 
+(** [eval_expr env e1 = v] where [v] is the evaluation of expression [e] following the program semantics (cf documentation). FIXME TO IMPLEMENT SESSION/COOKIES VARIABLES, BUT BETTER, maybe return the environment to retrieve sessions (and at some point, cookies) variables. maybe return only the interesting environment e.g. the sub environment Session and Cookie, not all the local variables. *)
 let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   | Empty -> assert false
-  | Let (x, e, e') -> let v = eval_expr env e in eval_expr (StringMap.add x v env) e'
+  | Let (x, e, e') -> let v = eval_expr env e in eval_expr (Environment.add x v env) e'
   | Fun (x, e) -> Clos (env, VFun (x, e))
   | Fix (f, x, e) -> Clos (env, VFix (f, x, e))
   | App (e, e') -> begin match eval_expr env e with
-    | Clos (_, VFst) -> begin match eval_expr env e' with
-      | VCouple (v, v') -> v
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: pair expected." (string_of_expr e)))
-    end
-    | Clos (_, VSnd) -> begin match eval_expr env e' with
-      | VCouple (v, v') -> v'
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: pair expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteOpenDb) -> begin match eval_expr env e' with
-      | VString s -> VDb (Sqlite3.db_open s)
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: path to a database expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteCloseDb) -> begin match eval_expr env e' with
-      | VDb db -> VBool (Sqlite3.db_close db)
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteExecPartialApp []) -> begin match eval_expr env e' with
-      | VDb db -> Clos (StringMap.empty, VSqliteExecPartialApp [VDb db])
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteExecPartialApp [db]) -> begin match eval_expr env e' with
-      | Clos (captured, func) -> Clos (StringMap.empty, VSqliteExecPartialApp [db; Clos (captured, func)])
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: function expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteExecPartialApp [db; combine_lines]) -> begin match eval_expr env e' with
-      | Clos (captured, func) -> Clos (StringMap.empty, VSqliteExecPartialApp [db; combine_lines; Clos (captured, func)])
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: function expected." (string_of_expr e)))
-    end
-    | Clos (_, VSqliteExecPartialApp
-        [VDb db;
-         Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline));
-         Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content))]) -> begin match eval_expr env e' with (* for now, only non-recursive functions *)
-      | VString query ->
-          (value_of_query db
-            (fun v1 v2 -> eval_expr captured_combine_lines (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2)))
-            (fun line_acc hd content -> eval_expr captured_combine_cells (App (App ((App ((Fun (acc, body_function_of_hs_and_content)), expr_of_value line_acc)), String hd), String content)))
-            query)
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: string expected." (string_of_expr e)))
-    end
-    | Clos (env', VFun (x, e_f)) -> let v = eval_expr env e' in eval_expr (StringMap.add x v env') e_f
+    | Clos (_, VExternFunction (_, Args1 f)) -> f (eval_expr env e')
+    | Clos (_, VExternFunction (name, Args2 f)) -> Clos (Environment.empty, VExternFunction (name, Args1 (f (eval_expr env e'))))
+    | Clos (_, VExternFunction (name, Args3 f)) -> Clos (Environment.empty, VExternFunction (name, Args2 (f (eval_expr env e'))))
+    | Clos (_, VExternFunction (name, Args4 f)) -> Clos (Environment.empty, VExternFunction (name, Args3 (f (eval_expr env e'))))
+    | Clos (env', VFun (x, e_f)) -> let v = eval_expr env e' in eval_expr (Environment.add x v env') e_f
     | Clos (env', VFix (f, x, e_f)) -> let v = eval_expr env e' in
-      let env'_x = StringMap.add x v env' in
-      let env'_f_x = StringMap.add f (Clos (env', VFix (f, x, e_f))) env'_x in
+      let env'_x = Environment.add x v env' in
+      let env'_f_x = Environment.add f (Clos (env', VFix (f, x, e_f))) env'_x in
       eval_expr env'_f_x e_f
     | _ -> raise (InterpreterError (Printf.sprintf "%s: it is not a function, it cannot be applied." (string_of_expr e)))
   end
@@ -97,7 +63,7 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     drop v;
     v'
   | Html lst_e -> VContent (snd (eval env lst_e)) (* FIXME change here too cf comment in [eval] *)
-  | Var x -> begin match StringMap.find_opt x env with
+  | Var x -> begin match Environment.find_opt x env with
     | Some v -> v
     | None -> raise (InterpreterError (Printf.sprintf "%s: Undefined variable" x))
   end
@@ -105,11 +71,6 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     let v = eval_expr env e in
     let v' = eval_expr env e' in
     VCouple (v, v')
-  | Fst -> Clos (StringMap.empty, VFst)
-  | Snd -> Clos (StringMap.empty, VSnd)
-  | SqliteOpenDb -> Clos (StringMap.empty, VSqliteOpenDb)
-  | SqliteCloseDb -> Clos (StringMap.empty, VSqliteCloseDb)
-  | SqliteExec -> Clos (StringMap.empty, VSqliteExecPartialApp [])
   | Plus (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n + m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Plus (e, e')))))
@@ -196,24 +157,49 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   end
   | String s -> VString s
   | Fstring s -> raise (UnsupportedError "FString are not supported by now")
-
-and eval (env : environment) (page : dynml_webpage) : (string list * environment) * value list =
+  | WithModule (module_name, e) -> begin match Environment.submap_opt module_name env with (* FIXME like in typechecker *)
+    | None -> raise (InterpreterError (Printf.sprintf "%s: undefined module." module_name))
+    | Some sub_env -> eval_expr sub_env e 
+  end
+(** [eval env page = ((session_vars, env'), res)] where [res] is the evaluation of [page] following the program semantics (cf. documentation). [env'] is the resulting environment ([env] + declared globals, etc) and [session_vars] is the list of globally-declared session variable (at top-level only). FIXME at some point, add a function to Session module to do that instead. See what to change. Should we authorise effect in expression or rather add another global declaration ? *)
+and eval (env : environment) (page : dynml_webpage) : environment * value list =
+  (* Actually evaluating [page] *)
   let values_and_env = List.fold_left begin fun already_evald element -> begin match already_evald with
       | [] -> assert false
-      | ((cur_session_vars, cur_env), v) :: already_evald' -> begin match element with
-        | Script e -> let v_e = eval_expr cur_env e in ((cur_session_vars, cur_env), v_e) :: ((cur_session_vars, cur_env), v) :: already_evald' (* FIXME change here if we want to take into account nested session variables declarations *)
-        | Pure s -> ((cur_session_vars, cur_env), VPure s) :: ((cur_session_vars, cur_env), v) :: already_evald'
-        | Decl (ExprDecl (x, e)) -> let v_e = eval_expr cur_env e in (update_env x v_e (cur_session_vars, cur_env), v) :: already_evald' (* evaluating a global only enriches the environment, no value is added *)
+      | (cur_env, v) :: already_evald' -> begin match element with
+        | Script e -> let v_e = eval_expr cur_env e in (cur_env, v_e) :: (cur_env, v) :: already_evald' (* FIXME change here if we want to take into account nested session variables declarations *)
+        | Pure s -> (cur_env, VPure s) :: (cur_env, v) :: already_evald'
+        | Decl (ExprDecl (x, e)) -> let v_e = eval_expr cur_env e in
+          (Environment.add x v_e cur_env, v) :: already_evald' (* evaluating a global only enriches the environment, no value is added *)
+        | Decl (ModuleExprDecl (modu, x, e)) -> let v_e = eval_expr cur_env e in
+          (Environment.add_to_sub [modu] x v_e cur_env, v) :: already_evald' (* evaluating a global only enriches the environment, no value is added *)
         | Decl (TypeDecl (x, e)) -> raise (UnsupportedError "Type declarations are not supported by now (eval)")
       end
     end
-  end [(([], env), VBool true)] page
+  end [(env, VBool true)] page
   in
-  let values_and_env = List.tl (List.rev values_and_env) in
+  (* Tidying up the results *)
+  let values_and_env = List.tl (List.rev values_and_env) in (* removing the dummy true value. *)
   let final_env = match values_and_env with
     | (final_env', _) :: _ -> final_env'
-    | [] -> ([], env)
+    | [] -> env
   in
   (final_env, List.map snd values_and_env)
+
+and extern_sqlite_exec = fun db fold_lines fold_cells str_query -> match db, fold_lines, fold_cells, str_query with
+  | VDb db, Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline)), Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content)), VString query ->
+    (value_of_query db
+      (fun v1 v2 -> eval_expr captured_combine_lines (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2)))
+      (fun line_acc hd content -> eval_expr captured_combine_cells (App (App ((App ((Fun (acc, body_function_of_hs_and_content)), expr_of_value line_acc)), String hd), String content)))
+      query)
+  | _, _, _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s, %s, %s: Expected a database, a line folding function, a cell folding function and a SQL query (as a string)." (string_of_value db) (string_of_value fold_lines) (string_of_value fold_cells) (string_of_value str_query))) (* TODO maybe refine this bit *)
+
+let extern_sqlite_open_db (db_path : value) : value = match db_path with
+  | VString s -> VDb (Sqlite3.db_open s)
+  | _ -> raise (InterpreterError (Printf.sprintf "%s: path to a database expected." (string_of_value db_path)))
+let extern_sqlite_close_db (vdb : value) : value = begin match vdb with
+    | VDb db -> VBool (Sqlite3.db_close db)
+    | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_value vdb)))
+  end 
 
 (* TODO add "garbage-collection" *)

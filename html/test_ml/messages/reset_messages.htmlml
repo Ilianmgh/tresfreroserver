@@ -8,13 +8,13 @@
 <body>
   <p>
     <{
-      let db = sqlite3_opendb "messagerie.db"
+      let db = Sqlite.opendb "messagerie.db"
     }>
     <{
-      sqlite3_exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) "DELETE FROM Message"
+      Sqlite.exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) "DELETE FROM Message"
     }>
     <{
-      let x = sqlite3_closedb db
+      let x = Sqlite.closedb db
     }>
     <a href = "messagerie.htmlml">retour</a>
   </p>

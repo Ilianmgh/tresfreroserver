@@ -9,10 +9,10 @@
   <h1>Test formulaire</h1>
   <p>
     <{
-      if get_langage = "zig" then
-        get_langage ++ " même en version " ++ get_version ++ " n'a toujours pas de borrow-checker"
+      if Get. (langage) = "zig" then
+        Get.(langage ++ " même en version " ++ version ++ " n'a toujours pas de borrow-checker")
       else
-        get_langage ++ " même en version " ++ get_version ++ " n'a toujours pas d'argument defer"
+        Get.langage ++ " même en version " ++ Get.version ++ " n'a toujours pas d'argument defer"
     }>
     <{
       let n = 20
@@ -21,7 +21,7 @@
       (fixfun f n -> if n = 0 then
         ""
       else begin
-        get_langage ++ (f (n-1))
+        Get.langage ++ (f (n-1))
       end) n
     }>
   </p>

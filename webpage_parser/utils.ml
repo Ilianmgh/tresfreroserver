@@ -1,5 +1,7 @@
 module StringMap = Map.Make(String)
 
+module Environment = Hierarchic.Make(StringMap)
+
 exception UnsupportedError of string
 
 let unpack_some (x : 'a option) (default : 'a) : 'a = match x with

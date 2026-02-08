@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Erreur <{server_status}></title>
+  <title>Erreur <{Server.status}></title>
   <!-- <script src="/home/ilian/Documents/codage/resilian/script.js"></script> -->
 </head>
 <body>
   <header>
-    <h1>Erreur <{server_status}></h1>
+    <h1>Erreur <{Server.status}></h1>
     <p>
-      <strong><{server_text}></strong>
-      <{server_additional}>
+      <strong><{Server.text}></strong>
+      <{Server.additional}>
     </p>
 </body>
 </html>

@@ -17,20 +17,20 @@ type keyword =
   | TokLet | TokFun | TokArr | TokFix | TokIn (* declarations & functions *)
   | TokIf | TokThen | TokElse (* conditions *)
   | TokAnd | TokOr | TokNot (* boolean operators *)
-  | TokGt | TokLt | TokGeq | TokLeq | TokNeq | TokEq (* comparison operators *)
-  | TokPlus | TokMinus | TokTimes | TokDiv | TokExp (* arithmetic operators *)
-  | TokStrConcat (* strings *)
+  | TokGt | TokLt | TokGeq | TokLeq | TokNeq | TokEq (* comparison operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
+  | TokPlus | TokMinus | TokTimes | TokDiv | TokExp (* arithmetic operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
+  | TokStrConcat (* strings, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
   | TokSeq (* sequence *)
-  | TokComma | TokFst | TokSnd (* pairs & tuples *)
-  | TokSqliteOpenDb | TokSqliteCloseDb | TokSqliteExec (* Sqlite3 functions *)
+  | TokComma (* pairs & tuples *)
   | TokLpar | TokRpar (* parenthesis *)
   | TokOpenML | TokCloseML (* ML-opening/closing brackets *)
   | TokOpenHTML | TokCloseHTML (* HTML-opening/closing brackets *)
+  | TokDot (* Dots (for namespacing) *)
 
 type literal = TokTrue | TokFalse | TokInt of int | TokStr of string | TokFstr of string
 
 (** tokens without line numbering *)
-type raw_token = Id of string | Lit of literal | Keyword of keyword | TokHtml of string
+type raw_token = MId of string (* ids of modules (starting with a capital)*)| Id of string | Lit of literal | Keyword of keyword | TokHtml of string
 
 (** tokens labelled with a line number *)
 type token = int * raw_token
@@ -59,6 +59,7 @@ let symbols_tokens : (string * raw_token) list = [
   (")", Keyword TokRpar);
   (";", Keyword TokSeq);
   (",", Keyword TokComma);
+  (".", Keyword TokDot);
   ("++", Keyword TokStrConcat)]
 
 let keywords_tokens : (string * raw_token) list = [
@@ -72,11 +73,6 @@ let keywords_tokens : (string * raw_token) list = [
   ("begin", Keyword TokLpar);
   ("end", Keyword TokRpar);
   ("not", Keyword TokNot);
-  ("fst", Keyword TokFst); (* TODO change to literals *)
-  ("snd", Keyword TokSnd); (* TODO change to literals *)
-  ("sqlite3_opendb", Keyword TokSqliteOpenDb); (* TODO change to literals *)
-  ("sqlite3_closedb", Keyword TokSqliteCloseDb); (* TODO change to literals *)
-  ("sqlite3_exec", Keyword TokSqliteExec); (* TODO change to literals *)
   ("true", Lit TokTrue);
   ("false", Lit TokFalse)]
 
@@ -115,19 +111,16 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokStrConcat -> "++"
   | TokSeq -> ";"
   | TokComma -> ","
-  | TokFst -> "fst"
-  | TokSnd -> "snd"
+  | TokDot -> "."
   | TokLpar -> "("
   | TokRpar -> ")"
-  | TokSqliteOpenDb -> "sqlite3_opendb"
-  | TokSqliteCloseDb -> "sqlite3_closedb"
-  | TokSqliteExec -> "sqlite3_exec"
   | TokOpenML -> "<{"
   | TokCloseML -> "}>"
   | TokOpenHTML -> "<["
   | TokCloseHTML -> "]>"
 
 let string_of_raw_token (tok : raw_token) : string = match tok with
+  | MId s -> Printf.sprintf "MId:%s" s
   | Id s -> Printf.sprintf "Id:%s" s
   | Keyword k -> Printf.sprintf "Kw:%s" (string_of_keyword k)
   | Lit TokFalse -> "Lit:false"

@@ -10,11 +10,11 @@
   <p>
     Mais
     <{
-      post_langage
+      Post.langage
     }>
     même en version
     <{
-      post_version
+      Post.version
     }>
     n'a pas de borrow checker.
   </p>

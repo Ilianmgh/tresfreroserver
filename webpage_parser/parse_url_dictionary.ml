@@ -25,20 +25,24 @@ let first_of_split_string (s : string) (sep : char) : string * string = let spli
 
 (** [parse_url_dictionary url_data] Converts a url-encoded dictionary to a [StringMap].
   Example: [parse_url_dictionary "METHOD&key1=val1&key2=val2&key3=val3"] returns a map associating [method_keyi] to [vali] *)
-let parse_url_dictionary (value_of_string : string -> value) (url_data : string) : environment =
+let parse_url_dictionary (value_of_string : string -> value) (url_data : string) (s : environment) : environment = (* TODO maybe simplify with a String.split_on_char...*)
   let method_of_data, data = first_of_split_string url_data '&' in
-  let lower_method_of_data = String.lowercase_ascii method_of_data in
+  let module_name_of_method = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else Char.lowercase_ascii c) method_of_data in
+  let prev_subnamespace = match Environment.submap_opt module_name_of_method s with
+    | None -> Environment.empty
+    | Some s' -> s'
+  in
   let (_, _, _, final_map) = String.fold_left begin fun (state, key_acc, value_acc, map_acc) c -> match state with
       | ParsingValue -> if c = '&' then
-          let key = Printf.sprintf "%s_%s" lower_method_of_data (string_of_char_list (List.rev key_acc)) in
+          let key = string_of_char_list (List.rev key_acc) in
           let value = value_of_string (convert_url_data (string_of_char_list (List.rev value_acc))) in
-          (ParsingKey, [], [], StringMap.add key value map_acc)
+          (ParsingKey, [], [], Environment.add key value map_acc)
         else
           (ParsingValue, key_acc, c :: value_acc, map_acc)
       | ParsingKey -> if c = '=' then
           (ParsingValue, key_acc, value_acc, map_acc)
         else
           (ParsingKey, c :: key_acc, value_acc, map_acc)
-    end (ParsingKey, [], [], StringMap.empty) (data ^ "&") (* FIXME this ugly & appended at the end could be better *)
+    end (ParsingKey, [], [], prev_subnamespace) (data ^ "&") (* FIXME this ugly & appended at the end could be better *)
   in
-  final_map
+  Environment.add_sub module_name_of_method final_map s

@@ -1,4 +1,5 @@
 open Lexic (* TODO put StringMap in utils *)
+open Syntax
 
 type type_variable = string
 
@@ -8,9 +9,12 @@ type ml_type =
   | TypeInt | TypeBool | TypeString | TypeUnit
   | TypeDb
   | TypeHtml
+  | TypeForall of type_variable * ml_type
   | TypeVar of type_variable
 
 type typing_environment = ml_type StringMap.t
+
+type modular_typing_environment = ml_type Environment.t
 
 (** Fresh variables *)
 let letter_counter : int ref = ref (-1)
@@ -42,6 +46,23 @@ let rec string_of_ml_type (t : ml_type) : string = match t with
   | TypeHtml -> "html"
   | TypeDb -> "db"
   | TypeVar s -> s
+  | TypeForall (x, tau) -> Printf.sprintf "Λ%s.%s" x (string_of_ml_type tau)
+
+let string_of_typing_env ?(prefix : string = "") (gamma : typing_environment) : string =
+  let non_empty_prefix = prefix = "" in
+  let string_of_one_substitution (x : type_variable) (alpha : ml_type) (acc : string) : string =
+    if acc = "" then
+      if non_empty_prefix then
+        Printf.sprintf "%s.%s : %s" prefix x (string_of_ml_type alpha)
+      else
+        Printf.sprintf "%s : %s" x (string_of_ml_type alpha)
+    else
+      if non_empty_prefix then
+        Printf.sprintf "%s.%s : %s, %s" prefix x (string_of_ml_type alpha) acc
+      else
+        Printf.sprintf "%s : %s, %s" x (string_of_ml_type alpha) acc
+  in
+  StringMap.fold string_of_one_substitution gamma ""
 
 let string_of_type_substitution (gamma : typing_environment) : string =
   let string_of_one_substitution (x : type_variable) (alpha : ml_type) (acc : string) : string =
@@ -51,3 +72,20 @@ let string_of_type_substitution (gamma : typing_environment) : string =
       Printf.sprintf "%s ↦ %s, %s" x (string_of_ml_type alpha) acc
   in
   StringMap.fold string_of_one_substitution gamma ""
+
+let rec string_of_modular_typing_environment ?(prefix : string = "") (gamma : modular_typing_environment) : string =
+  if Environment.is_empty gamma then "∅" else begin
+    let string_of_one_type_binding (prefix : string list) (x : variable) (tau : ml_type) (acc : string) : string =
+      if acc = "" then
+        if List.is_empty prefix then
+          Printf.sprintf "%s ↦ %s" x (string_of_ml_type tau)
+        else
+          Printf.sprintf "%s.%s ↦ %s" (String.concat "." (List.rev prefix)) x (string_of_ml_type tau)
+      else
+        if List.is_empty prefix then
+          Printf.sprintf "%s ↦ %s, %s" x (string_of_ml_type tau) acc
+        else
+          Printf.sprintf "%s.%s ↦ %s, %s" (String.concat "." (List.rev prefix)) x (string_of_ml_type tau) acc
+    in
+    Environment.fold string_of_one_type_binding gamma ""
+  end

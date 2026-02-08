@@ -8,7 +8,7 @@ open TypeSyntax
 open Typechecker
 open Interpreter
 
-let displayed = ["raw"; "prelexed"; "lexed"; "parsed"; "typed"; "eval'd"]
+let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 
 let test (i, code : int * string) : unit =
   begin if i < 0 then
@@ -24,19 +24,19 @@ let test (i, code : int * string) : unit =
     if List.mem "lexed" displayed then Printf.printf "lexed: %s\n%!" (string_of_list string_of_token lexed);
     let parsed = parser lexed in
     if List.mem "parsed" displayed then Printf.printf "parsed: %s\n%!" (string_of_dynpage parsed);
-    let types_infered = type_inferer StringMap.empty parsed in
-    if List.mem "typed" displayed then List.iter (fun (gamma, tau) -> Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_typing_env gamma)) types_infered;
-    let _, values_evald = eval StringMap.empty parsed in
+    let types_infered = type_inferer Environment.empty parsed in
+    if List.mem "typed" displayed then List.iter (fun (gamma, tau) -> Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_modular_typing_environment gamma)) types_infered;
+    let _, values_evald = eval Environment.empty parsed in
     if List.mem "eval'd" displayed then List.iter (fun v -> Printf.printf "eval'd: %s\n%!" (string_of_value v)) values_evald
   with
-    | PrelexingError s -> Printf.fprintf stderr "PrelexingError: %s\n" s
-    | LexingError s -> Printf.fprintf stderr "LexingError: %s\n" s
-    | ParsingError s -> Printf.fprintf stderr "ParsingError: %s\n" s
-    | TypingError s -> Printf.fprintf stderr "TypingError: %s\n" s
-    | UnificationError (alpha, beta, Recursive) -> Printf.fprintf stderr "UnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta)
-    | UnificationError (alpha, beta, Incompatible) -> Printf.fprintf stderr "UnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta)
-    | InterpreterError s -> Printf.fprintf stderr "InterpreterError: %s\n" s
-    | UnsupportedError s -> Printf.fprintf stderr "UnsupportedError: %s\n" s
+    | PrelexingError s -> Printf.fprintf stderr "PrelexingError: %s\n%!" s
+    | LexingError s -> Printf.fprintf stderr "LexingError: %s\n%!" s
+    | ParsingError s -> Printf.fprintf stderr "ParsingError: %s\n%!" s
+    | TypingError s -> Printf.fprintf stderr "TypingError: %s\n%!" s
+    | UnificationError (alpha, beta, Recursive) -> Printf.fprintf stderr "UnificationError: %s and %s recursive.\n%!" (string_of_ml_type alpha) (string_of_ml_type beta)
+    | UnificationError (alpha, beta, Incompatible) -> Printf.fprintf stderr "UnificationError: %s and %s incompatible.\n%!" (string_of_ml_type alpha) (string_of_ml_type beta)
+    | InterpreterError s -> Printf.fprintf stderr "InterpreterError: %s\n%!" s
+    | UnsupportedError s -> Printf.fprintf stderr "UnsupportedError: %s\n%!" s
 
 (*
 
@@ -53,51 +53,57 @@ let test (i, code : int * string) : unit =
 
 let test_input () =
   let tests = [
-      "<{}>"
-      ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%"
-      ;"<{let x = 5 in x}>"
-      ;"<{let x = 5 in % x}>"
-      ;"<{f\"coucou\"}>"
-      ;"<{let x = 5, 2 in fst x}>"
-      ;"<h1>Example</h1>%<{% let x = 1 in% if x + 1 = 2 then%<[% 2%]>% else %<[% DEADCODE%]>}>" (* TODO add this delimiter. Now prelexed alright, has to be parsed *)
-      ;"<{2 + 1 = 3}>"
-      ;"<{1-1}>"
-      ;"<{let y = 3 in let x = 4 in (fun x -> y) 5}>"
-      ;"<{let f = fun x -> fun y -> x in let x = 1 in let y = 2 in f x y}>"
+      "<{}>" (* parsing error *)
+      ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%" (* lex but parsing error *)
+      ;"<{let x = 5 in x}>" (* ok *)
+      ;"<{let x = 5 in % x}>" (* ok *)
+      ;"<{f\"coucou\"}>" (* FIXME lexing error + not implemented *)
+      ;"<{let x = 5, 2 in fst x}>" (* ok *)
+      ;"<h1>Example</h1>%<{% let x = 1 in% if x + 1 = 2 then%<[% 2%]>% else %<[% DEADCODE%]>}>" (* ok *)
+      ;"<{2 + 1 = 3}>" (* ok *)
+      ;"<{1-1}>" (* ok *)
+      ;"<{let y = 3 in let x = 4 in (fun x -> y) 5}>" (* ok *)
+      ;"<{ let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12 }>" (* ok *)
+      ;"<{let f = fun x -> fun y -> x in let x = 1 in let y = 2 in f x y}>" (* ok *)
       ;"<{if true then 1 else 2; 3}>" (* FIXME is parsed [if true then 1 else (2; 3)] and not as it should [(if true then 1 else 2); 3] *)
-      ;"<{let f = fun x -> x in (f (1))}>" (* FIXME is parsed [if true then 1 else (2; 3)] and not as it should [(if true then 1 else 2); 3] *)
-      ;"<{f\"cou#\"cou\"}>"
-      ;"<{\"cou<cou\"}>"
-      ;"<{\"co<i>\\\"uc</i>ou\"}>"
-      ;
-"<{let post_language = \"rust\"
-let post_version = \"1\" }>
-<{ if post_language = \"rust\" then
-  <[
-    <{ post_language }>
-    <{ post_version }>
-    est super!
-  ]>
-  else
-  <[
-    couocu
-  ]>
-}>"
-      ; "<{ (fun x -> x) = (fun x -> 1) }>"
+      ;"<{let f = fun x -> x in (f (1))}>" (* ok *)
+      ;"<{f\"cou#\"cou\"}>" (* FIXME lexing error *)
+      ;"<{\"cou<cou\"}>" (* ok *)
+      ;"<{\"co<i>\\\"uc</i>ou\"}>" (* ok *)
+      ; "<{ (fun x -> x) = (fun x -> 1) }>" (* interpreter error *)
       ;
 "<{
-let db = sqlite3_opendb \"test.db\"
+let db = Sqlite.opendb \"test.db\"
 }>
 <{
-sqlite3_exec db
-(fun x -> fun y -> x ++ y)
+Sqlite.exec db
+(fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{hd}>: <{content}> <br/> ]>)
 \"SELECT * FROM Test\"
 }>
 <{
-sqlite3_closedb db
-}>"
-      ; "<{let f = fun x -> fun y -> x}> <{f (fun x -> x) 2}>"
-      (* TODO let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12*)
+Sqlite.closedb db
+}>" (* ko, Sqlite module is not included on its own, only in produce_page, to test use server. *)
+      ; "<{let f = fun x -> fun y -> x}> <{f (fun x -> x) 2}>" (* ok *)
+      ; "<{ Test.x }>" (* should lex and parse *)
+      ;
+"
+<{
+  if Get.langage = \"zig\" then
+    Get.langage ++ \" même en version \" ++ Get.version ++ \" n'a toujours pas de borrow-checker\"
+  else
+    Get.langage ++ \" même en version \" ++ Get.version ++ \" n'a toujours pas d'argument defer\"
+}>
+<{
+  let n = 20
+}>" (* should lex and parse *)
+(* <{
+  (fixfun f n -> if n = 0 then
+    \"\"
+  else begin
+    Get.langage ++ (f (n-1))
+  end) n
+}>
+" *)
       (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
       (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)
     ]
