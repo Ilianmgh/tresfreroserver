@@ -41,18 +41,10 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   | Fun (x, e) -> Clos (env, VFun (x, e))
   | Fix (f, x, e) -> Clos (env, VFix (f, x, e))
   | App (e, e') -> begin match eval_expr env e with
-    | Clos (_, VExternFunction (Args1 f)) -> f (eval_expr env e')
-    | Clos (_, VExternFunction (Args2 f)) -> Clos (Environment.empty, VExternFunction (Args1 (f (eval_expr env e'))))
-    | Clos (_, VExternFunction (Args3 f)) -> Clos (Environment.empty, VExternFunction (Args2 (f (eval_expr env e'))))
-    | Clos (_, VExternFunction (Args4 f)) -> Clos (Environment.empty, VExternFunction (Args3 (f (eval_expr env e'))))
-    | Clos (_, VFst) -> begin match eval_expr env e' with
-      | VCouple (v, v') -> v
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: pair expected." (string_of_expr e)))
-    end
-    | Clos (_, VSnd) -> begin match eval_expr env e' with
-      | VCouple (v, v') -> v'
-      | _ -> raise (InterpreterError (Printf.sprintf "%s: pair expected." (string_of_expr e)))
-    end
+    | Clos (_, VExternFunction (_, Args1 f)) -> f (eval_expr env e')
+    | Clos (_, VExternFunction (name, Args2 f)) -> Clos (Environment.empty, VExternFunction (name, Args1 (f (eval_expr env e'))))
+    | Clos (_, VExternFunction (name, Args3 f)) -> Clos (Environment.empty, VExternFunction (name, Args2 (f (eval_expr env e'))))
+    | Clos (_, VExternFunction (name, Args4 f)) -> Clos (Environment.empty, VExternFunction (name, Args3 (f (eval_expr env e'))))
     | Clos (env', VFun (x, e_f)) -> let v = eval_expr env e' in eval_expr (Environment.add x v env') e_f
     | Clos (env', VFix (f, x, e_f)) -> let v = eval_expr env e' in
       let env'_x = Environment.add x v env' in
@@ -78,8 +70,6 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
     let v = eval_expr env e in
     let v' = eval_expr env e' in
     VCouple (v, v')
-  | Fst -> Clos (Environment.empty, VFst)
-  | Snd -> Clos (Environment.empty, VSnd)
   | Plus (e, e') -> begin match eval_expr env e, eval_expr env e' with
     | VInt n, VInt m -> VInt (n + m)
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Integers expected." (string_of_expr (Plus (e, e')))))
@@ -172,6 +162,7 @@ let rec eval_expr (env : environment) (e1 : expr) : value = match e1 with
   end
 
 and eval (env : environment) (page : dynml_webpage) : (string list * environment) * value list =
+  (* Actually evaluating [page] *)
   let values_and_env = List.fold_left begin fun already_evald element -> begin match already_evald with
       | [] -> assert false
       | ((cur_session_vars, cur_env), v) :: already_evald' -> begin match element with
@@ -183,7 +174,8 @@ and eval (env : environment) (page : dynml_webpage) : (string list * environment
     end
   end [(([], env), VBool true)] page
   in
-  let values_and_env = List.tl (List.rev values_and_env) in
+  (* Tidying up the results *)
+  let values_and_env = List.tl (List.rev values_and_env) in (* removing the dummy true value. *)
   let final_env = match values_and_env with
     | (final_env', _) :: _ -> final_env'
     | [] -> ([], env)

@@ -21,7 +21,7 @@ type keyword =
   | TokPlus | TokMinus | TokTimes | TokDiv | TokExp (* arithmetic operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
   | TokStrConcat (* strings, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
   | TokSeq (* sequence *)
-  | TokComma | TokFst | TokSnd (* pairs & tuples *)
+  | TokComma (* pairs & tuples *)
   | TokLpar | TokRpar (* parenthesis *)
   | TokOpenML | TokCloseML (* ML-opening/closing brackets *)
   | TokOpenHTML | TokCloseHTML (* HTML-opening/closing brackets *)
@@ -73,8 +73,6 @@ let keywords_tokens : (string * raw_token) list = [
   ("begin", Keyword TokLpar);
   ("end", Keyword TokRpar);
   ("not", Keyword TokNot);
-  ("fst", Keyword TokFst); (* TODO change to literals *)
-  ("snd", Keyword TokSnd); (* TODO change to literals *)
   ("true", Lit TokTrue);
   ("false", Lit TokFalse)]
 
@@ -114,8 +112,6 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokSeq -> ";"
   | TokComma -> ","
   | TokDot -> "."
-  | TokFst -> "fst"
-  | TokSnd -> "snd"
   | TokLpar -> "("
   | TokRpar -> ")"
   | TokOpenML -> "<{"

@@ -185,8 +185,6 @@ and parse_atom (l : token list) : int * expr * token list =
     | Lit (TokInt n) -> (i, Int n, l_rem)
     | Lit (TokStr s) -> (i, String s, l_rem)
     | Lit (TokFstr s) -> (i, Fstring s, l_rem)
-    | Keyword TokFst -> (i, Fst, l_rem)
-    | Keyword TokSnd -> (i, Snd, l_rem)
     | Id s -> (i, Var s, l_rem)
     | Keyword TokLpar ->
       let i_expr, expr, l_rem = parse_exp l_rem in

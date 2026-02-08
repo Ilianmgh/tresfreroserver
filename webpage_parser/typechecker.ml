@@ -14,36 +14,61 @@ exception TypingError of string
 
 type type_substitution = ml_type StringMap.t
 
+(** [erase_bound_variable x theta = theta'] where [theta'] is [theta] except:
+  - if [x] is bound in [theta], this binding is removed in [theta'] ; and
+  - if [x] occurs in some [theta(y)], then these occurences are replaced by a fresh variable in [theta'(y)]. *)
+let rec erase_bound_variable (x : type_variable) (theta : type_substitution) : type_substitution =
+  StringMap.fold begin fun y tau theta'_acc ->
+    if x = y then (* we remove the binding *)
+      theta'_acc
+    else begin (* we replace occurences of [x] by a fresh variable *)
+      StringMap.add y (apply_substitution tau (StringMap.add x (TypeVar (fresh ())) StringMap.empty)) theta'_acc
+    end
+  end theta StringMap.empty
+
 (** [apply_substitution alpha theta] applies the substitution [theta] to the type [alpha] *)
-let rec apply_substitution (alpha : ml_type) (theta : type_substitution) : ml_type = match alpha with
-  | Arr (alpha, beta) -> Arr (apply_substitution alpha theta, apply_substitution beta theta)
-  | Prod (alpha, beta) -> Prod (apply_substitution alpha theta, apply_substitution beta theta)
-  | TypeInt -> TypeInt
-  | TypeBool -> TypeBool
-  | TypeString -> TypeString
-  | TypeDb -> TypeDb
-  | TypeUnit -> TypeUnit
-  | TypeHtml -> TypeHtml
-  | TypeVar s -> begin match StringMap.find_opt s theta with
-    | Some tau -> tau
-    | None -> TypeVar s
+and apply_substitution (alpha : ml_type) (theta : type_substitution) : ml_type =
+  if StringMap.is_empty theta then alpha
+  else begin match alpha with
+    | Arr (alpha, beta) -> Arr (apply_substitution alpha theta, apply_substitution beta theta)
+    | Prod (alpha, beta) -> Prod (apply_substitution alpha theta, apply_substitution beta theta)
+    | TypeInt -> TypeInt
+    | TypeBool -> TypeBool
+    | TypeString -> TypeString
+    | TypeDb -> TypeDb
+    | TypeUnit -> TypeUnit
+    | TypeHtml -> TypeHtml
+    | TypeForall (x, alpha') -> apply_substitution alpha' (erase_bound_variable x theta)
+    | TypeVar s -> begin match StringMap.find_opt s theta with
+      | Some tau -> tau
+      | None -> TypeVar s
+    end
   end
 
-(** [occurs x tau = true] iff [x] occurs in [tau theta] *)
+(** [occurs x tau theta = true] iff [x] occurs in [tau theta] *)
 let rec occurs (var : type_variable) (tau : ml_type) (theta : type_substitution) : bool =
   let rec occurs_no_substitution (var : type_variable) (tau : ml_type) : bool = match tau with
     | Arr (alpha, beta) | Prod (alpha, beta) -> occurs_no_substitution var alpha || occurs_no_substitution var beta
     | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml | TypeDb -> false
+    | TypeForall (x, tau') -> if x = var then false else occurs_no_substitution var tau' (* TODO maybe these precautions erases the need of bound variables to be fresh. *)
     | TypeVar s -> (s = var)
   in occurs_no_substitution var (apply_substitution tau theta)
 
+(** [unpack_foralls (TypeForall (x1, TypeForall (x2, ...(TypeForall (xn, tau))))) = tau'], where [tau'] is [tau] where we replaced each occurence of [xi] by a fresh variable. *)
+let unpack_foralls (tau : ml_type) : ml_type =
+  let rec unpack_foralls_acc (tau : ml_type) (subst_acc : type_substitution) : ml_type = match tau with
+    | TypeForall (x, tau') -> unpack_foralls_acc tau' (StringMap.add x (TypeVar (fresh ())) subst_acc)
+    | _ -> apply_substitution tau subst_acc
+  in
+  unpack_foralls_acc tau StringMap.empty
+
 (** Type unification. Returns a minimal substitution [theta] s.t. [alpha theta = beta theta] *)
 let unify (alpha : ml_type) (beta : ml_type) : type_substitution =
-  if debug then Printf.fprintf stderr "Unifying %s --- %s\n%!" (string_of_ml_type alpha) (string_of_ml_type beta); (* TODO replace by breadth-first exploration of the types to unify *)
+  if debug then Printf.fprintf stderr "Unifying %s --- %s\n%!" (string_of_ml_type alpha) (string_of_ml_type beta); (* TODO replace by breadth-first exploration of the types to unify to get tail-recursion *)
   let rec update_substitution (x : variable) (tau : ml_type) (theta : type_substitution) = match StringMap.find_opt x theta with
     | None -> StringMap.add x tau theta
     | Some tau' -> let theta_taus = unify_aux tau tau' theta in StringMap.add x (apply_substitution tau theta_taus) theta_taus
-  and unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match alpha, beta with
+  and unify_aux (alpha : ml_type) (beta : ml_type) (theta : type_substitution) : type_substitution = match alpha, beta with (* FIXME maybe match unpack_foralls alpha/beta... *)
     | Arr (alpha, beta), Arr (alpha', beta') ->
       let theta' = unify_aux alpha alpha' theta in
       unify_aux beta beta' theta'
@@ -65,14 +90,16 @@ let rec update_typing_env (gamma : modular_typing_environment) (theta : type_sub
 let update_typing_env_equalizing (gamma : modular_typing_environment) (alpha : ml_type) (beta : ml_type) : modular_typing_environment =
   update_typing_env gamma (unify alpha beta)
   
-(** [type_inferer_one_expr Γ e = α] iff types variables in Γ can be refined to obtain a Γ' such that Γ' ⊢ e : α *)
+(** [type_inferer_one_expr Γ e = α] iff types variables in Γ can be refined to obtain a Γ' such that Γ' ⊢ e : α *) (* FIXME: not sure the universally quantified types behaves properly... We'll see. *)
 let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) : modular_typing_environment * ml_type = match e1 with
   | Empty -> assert false
   | Let (x, e, e') ->
     let gamma', alpha = type_inferer_one_expr gamma e in
     type_inferer_one_expr (Environment.add x alpha gamma') e'
-  | Fun (x, e) -> let gamma', beta = type_inferer_one_expr (Environment.add x (TypeVar (fresh ())) gamma) e in
-    (gamma', Arr (Environment.find x gamma', beta)) (* ? why x is not well typechecked *)
+  | Fun (x, e) ->
+    let x_type_variable = fresh () in
+    let gamma', beta = type_inferer_one_expr (Environment.add x (TypeVar x_type_variable) gamma) e in
+    (gamma', TypeForall (x_type_variable, Arr (Environment.find x gamma', beta)))
   | Fix (f, x, e) ->
     let vartype_x = fresh () in
     let vartype_ret = fresh () in
@@ -82,8 +109,8 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
     (final_gamma, Arr (Environment.find x final_gamma, beta))
   | App (e, e') ->
     let gamma', func_type = type_inferer_one_expr gamma e in
-    let gamma'', func_arg = type_inferer_one_expr gamma e' in
-    begin match func_type, func_arg with
+    let gamma'', arg_type = type_inferer_one_expr gamma e' in
+    begin match unpack_foralls func_type, arg_type with
       | Arr (alpha, beta), alpha' ->
         let theta = unify alpha alpha' in
         assert ((apply_substitution alpha theta) = (apply_substitution alpha' theta)); (* TODO: erase this line once convinced it's working *)
@@ -116,8 +143,6 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
     let gamma', alpha = type_inferer_one_expr gamma e in
     let gamma'', beta = type_inferer_one_expr gamma' e' in
     (gamma'', Prod (alpha, beta))
-  | Fst -> let alpha, beta = fresh (), fresh () in (gamma, Arr (Prod (TypeVar alpha, TypeVar beta), TypeVar alpha))
-  | Snd -> let alpha, beta = fresh (), fresh () in (gamma, Arr (Prod (TypeVar alpha, TypeVar beta), TypeVar beta))
   | Neg e -> begin
     let gamma', alpha = type_inferer_one_expr gamma e in
     let theta = unify TypeInt alpha in

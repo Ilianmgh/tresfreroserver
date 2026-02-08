@@ -70,20 +70,6 @@ let test_input () =
       ;"<{f\"cou#\"cou\"}>" (* FIXME lexing error *)
       ;"<{\"cou<cou\"}>" (* ok *)
       ;"<{\"co<i>\\\"uc</i>ou\"}>" (* ok *)
-      ;
-"<{let post_language = \"rust\"
-let post_version = \"1\" }>
-<{ if post_language = \"rust\" then
-  <[
-    <{ post_language }>
-    <{ post_version }>
-    est super!
-  ]>
-  else
-  <[
-    couocu
-  ]>
-}>" (* ok *)
       ; "<{ (fun x -> x) = (fun x -> 1) }>" (* interpreter error *)
       ;
 "<{

@@ -5,9 +5,7 @@ open Syntax
 exception InvalidMlArgument of string
 
 type raw_function_value =
-  | VFst
-  | VSnd
-  | VExternFunction of extern_function
+  | VExternFunction of string * extern_function (* an extern function, for pretty-printing, has to have an associated _name_, generally the name of the function within the ml language (although maybe at some point we could want to use something else). *)
   | VFun of variable * expr
   | VFix of variable * variable * expr
 and value =
@@ -46,10 +44,8 @@ let rec expr_of_value (v1 : value) : expr = match v1 with
   | VPure h -> Html [Pure h]
   | VContent l -> Html (List.map (fun v -> Script (expr_of_value v)) l)
   | VCouple (v, v') -> Couple (expr_of_value v, expr_of_value v')
-  | Clos (_, VFst) -> Fst
-  | Clos (_, VSnd) -> Snd
   (* I'm not sure we really want the following cases to work. At least for [value_of_query], I can't think of a useful use case *)
-  | Clos (_, VExternFunction _) -> raise (UnsupportedError "Trying to get expr of value of an external function. FIXME maybe associate them with their name (variable to evaluate to get this function) and their arguments...")
+  | Clos (_, VExternFunction (name, _)) -> raise (UnsupportedError "Trying to get expr of value of an external function. _TODO: ADD VARIABLES IN VALUES_")
   | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
 
@@ -92,11 +88,7 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
     fprintf_value out ~escape_html:escape_html v';
     Printf.fprintf out ")"
   end
-  | Clos (_, VFst) -> Printf.fprintf out "⟨∅, fst⟩"
-  | Clos (_, VSnd) -> Printf.fprintf out "⟨∅, snd⟩"
-  | Clos (_, VExternFunction _) -> begin
-    Printf.fprintf out "FIXME maybe associate them with their name (variable to evaluate to get this function) and their arguments..."
-  end
+  | Clos (_, VExternFunction (name, _)) -> Printf.fprintf out "%s" name
   | Clos (env, VFun (x, e)) -> begin
     Printf.fprintf out "⟨";
     fprintf_env out ~escape_html:escape_html env;
@@ -125,13 +117,11 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `produce_page` *)
   | VContent l -> List.fold_left (fun acc v -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:escape_html v)) "" l
   | VCouple (v, v') -> Printf.sprintf "(%s, %s)" (string_of_value ~escape_html:escape_html v) (string_of_value ~escape_html:escape_html v')
-  | Clos (_, VFst) -> "⟨∅, fst⟩"
-  | Clos (_, VSnd) -> "⟨∅, snd⟩"
-  | Clos (_, VExternFunction _) -> "FIXME add name etc... see fprintf and expr_of_value."
+  | Clos (_, VExternFunction (name, _)) -> name
   | Clos (env, VFun (x, e)) -> Printf.sprintf "⟨%s, fun %s -> %s⟩" (string_of_env ~escape_html:escape_html env) x (string_of_expr e)
   | Clos (env, VFix (f, x, e)) -> Printf.sprintf "⟨%s, fixfun %s %s -> %s⟩" (string_of_env ~escape_html:escape_html env) f x (string_of_expr e)
 and string_of_env ?(escape_html : bool = false) (env : environment) : string = if Environment.is_empty env then "∅" else begin
-    let string_of_one_env_binding (prefix : string list) (x : variable) (v : value) (acc : string) : string =
+    let string_of_one_env_binding (prefix : string list) (x : variable) (v : value) (acc : string) : string = (* FIXME never prints prefixes *)
       if acc = "" then
         if List.is_empty prefix then
           Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)

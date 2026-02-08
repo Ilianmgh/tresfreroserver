@@ -36,8 +36,6 @@ and expr = (* TODO add match ... with, user-defined types *)
     (let nested2 = {z = 2} in let nested1 = {y = nested2} in {x = nested1}).x.y.z *)
   (* tuples *)
   | Couple of expr * expr
-  | Fst
-  | Snd
   (* arithmetic connectors *)
   | Plus of expr * expr
   | Minus of expr * expr
@@ -81,8 +79,6 @@ and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasi
   | WithModule (modu, Var x) -> Printf.sprintf "%s.%s" modu x
   | WithModule (modu, e) -> Printf.sprintf "%s.(%s)" modu (string_of_expr e)
   | Couple (e, e') -> Printf.sprintf "(%s, %s)" (string_of_expr e) (string_of_expr e')
-  | Fst -> Printf.sprintf "fst"
-  | Snd -> Printf.sprintf "snd"
   | Plus (e, e') -> Printf.sprintf "%s + %s" (string_of_expr e) (string_of_expr e')
   | Minus (e, e') -> Printf.sprintf "%s - %s" (string_of_expr e) (string_of_expr e')
   | Neg e -> Printf.sprintf "-%s" (string_of_expr e)

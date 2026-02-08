@@ -8,9 +8,10 @@ open Interpreter
 
 (** Defining extern functions *)
 
-type extern_symbol = {namespaces : module_name list ; name : variable ; v : value ; tau : ml_type}
+type extern_symbol = {namespaces : module_name list ; name : string ; v : extern_function ; tau : ml_type}
 
 let sqlite_module_name = "Sqlite"
+let session_module_name = "Session"
 
 let ml_type_of_sqlite_exec =
   Arr (
@@ -26,39 +27,37 @@ let ml_type_of_sqlite_exec =
     )
   )
 
-(* 
-let canonical_environment =
-  let sql_module = Environment.add "exec" (Clos (Environment.empty, VExternFunction (Args4 extern_sqlite_exec))) Environment.empty in
-  Environment.add_sub "Sql" sql_module Environment.empty *)
+(** [straightforward_ml_function (Argsi f)] (with [i = 1,2,3,4]) is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
+let straigthforward_ml_function (name : string) (f : extern_function) : value =
+  Clos (Environment.empty, VExternFunction (name, f))
 
-(** [straightforward_ml_function1 f] is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
-let straigthforward_ml_function1 (f : value -> value) : value = Clos (Environment.empty, VExternFunction (Args1 f))
+let ml_fst (v : value) : value = match v with
+  | VCouple (v1, v2) -> v1
+  | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a pair." (string_of_value v)))
+let ml_snd (v : value) : value = match v with
+  | VCouple (v1, v2) -> v2
+  | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a pair." (string_of_value v)))
 
-(** [straightforward_ml_function2 f] is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
-let straigthforward_ml_function2 (f : value -> value -> value) : value = Clos (Environment.empty, VExternFunction (Args2 f))
-
-(** [straightforward_ml_function3 f] is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
-let straigthforward_ml_function3 (f : value -> value -> value -> value) : value = Clos (Environment.empty, VExternFunction (Args3 f))
-
-(** [straightforward_ml_function4 f] is a value [v] corresponding to the ml function that reflects [f : value -> value]*)
-let straigthforward_ml_function4 (f : value -> value -> value -> value -> value) : value = Clos (Environment.empty, VExternFunction (Args4 f))
-
+(** List of predefined symbols, pre-loaded in the environment at execution. *)
 let predefined_symbols = [
-      {namespaces = [sqlite_module_name] ; name = "exec"    ; v = straigthforward_ml_function4 extern_sqlite_exec ; tau = ml_type_of_sqlite_exec}
-    ; {namespaces = [sqlite_module_name] ; name = "opendb"  ; v = straigthforward_ml_function1 extern_sqlite_open_db ; tau = Arr (TypeString, TypeDb)}
-    ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = straigthforward_ml_function1 extern_sqlite_close_db ; tau = Arr (TypeDb, TypeString)}
+      {namespaces = [sqlite_module_name] ; name = "exec"    ; v = Args4 extern_sqlite_exec ; tau = ml_type_of_sqlite_exec}
+    ; {namespaces = [sqlite_module_name] ; name = "opendb"  ; v = Args1 extern_sqlite_open_db ; tau = Arr (TypeString, TypeDb)}
+    ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = Args1 extern_sqlite_close_db ; tau = Arr (TypeDb, TypeString)}
+    ; {namespaces = [] ; name = "fst" ; v = Args1 ml_fst ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst")))}
+    ; {namespaces = [] ; name = "snd" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
+    ; {namespaces = [session_module_name] ; name = "let" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
   ]
 
-let pre_included_environment =
+let pre_included_environment : environment =
   List.fold_left
-    (fun acc entry -> Environment.add_to_sub entry.namespaces entry.name entry.v acc)
-    (Environment.add_sub sqlite_module_name Environment.empty Environment.empty)
+    (fun acc entry -> Environment.add_to_sub entry.namespaces entry.name (straigthforward_ml_function entry.name entry.v) acc)
+    (Environment.add_sub sqlite_module_name Environment.empty Environment.empty) (* FIXME add this generically, not one by one for each added module *)
     predefined_symbols
 
-let pre_included_typing_env =
+let pre_included_typing_env : modular_typing_environment =
   List.fold_left
     (fun acc entry -> Environment.add_to_sub entry.namespaces entry.name entry.tau acc)
-    (Environment.add_sub sqlite_module_name Environment.empty Environment.empty)
+    (Environment.add_sub sqlite_module_name Environment.empty Environment.empty) (* FIXME add this generically, not one by one for each added module *)
     predefined_symbols
 
 (** Producing a page *)
