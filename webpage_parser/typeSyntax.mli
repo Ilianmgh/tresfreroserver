@@ -9,6 +9,7 @@ type ml_type =
   | TypeInt | TypeBool | TypeString | TypeUnit
   | TypeDb
   | TypeHtml
+  | TypeForall of type_variable * ml_type
   | TypeVar of type_variable
 
 type typing_environment = ml_type StringMap.t
