@@ -39,20 +39,6 @@ let lex_now (char_acc : char list) (symbol_acc : char list) (cur_symbol_lex : tr
     ((line_number, ""), (line_number, string_of_char_list (List.rev char_acc)))
   end
 
-(* Tests *)
-
-(* let () =
-  let s_ex1 = "<{let x = 5 in  x}>" in
-  let s_ex1 = String.init (String.length s_ex1) (fun i -> if i = 14 then '\n' else s_ex1.[i]) in
-  let s_ex2 = "<{f\"coucou\"}>" in
-  let s = if Array.length Sys.argv > 1 then
-      Sys.argv.(1)
-    else s_ex2
-  in
-  Printf.printf "raw: %s\n" s;
-  Printf.printf "lexed: %s\n" (string_of_list string_of_pre_token (prelexer s 0 (String.length s))) *)
-
-
 let update_word_list_pretok ((w1, w2) : (int * string) * (int * string)) (lexed : pre_token list) : pre_token list = match w1, w2 with
   | (_, ""), (_, "") -> Printf.fprintf stderr "Hum.\n%!"; lexed (* FIXME find out why it hums (TEST 6 among others) *)
   | (i, w), (_, "") | (_, ""), (i, w) -> (PretokMl (i, w)) :: lexed

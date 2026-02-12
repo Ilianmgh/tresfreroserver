@@ -1,0 +1,9 @@
+Usage: <program> <source> <dest> [<argoption> <arguments>]*
+  <source>: can either be a path to a file, or -stdin.
+  <dest>: can either be a path to a file, or -stdout.
+  You can pass argument to the program to pre-load a variable environment before evaluating the dynamic webpage.
+  <argoption>: the way the program should interpret the arguments immediatly following this flag. Can be any of the following options:
+    -argrepr: interpret each value following the built-in repr function. This allows to pass argument of any type.
+    -argstr: interpret each value as a string. 
+  <arguments>: A list of bindings, of th following form: METHOD&name1=arg1&...&namen=argn.
+    These variable will be available in the dynamic webpage within the namespace Method.

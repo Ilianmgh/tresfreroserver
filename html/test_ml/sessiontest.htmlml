@@ -7,7 +7,7 @@
 </head>
 <body>
   <{
-    let session_x = 42
+    Session.let x = 42
   }>
 </body>
 </html>

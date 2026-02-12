@@ -6,6 +6,6 @@
   <title>Coucou</title>
 </head>
 <body>
-  Session variable: <{ session_x }>
+  Session variable: <{ Session.x }>
 </body>
 </html>

@@ -30,3 +30,15 @@ let rec string_of_char_list (l : char list) : string = match l with
   | h :: t -> Printf.sprintf "%c%s" h (string_of_char_list t)
 
 let string_fold_lefti (f : 'a -> int * char -> 'a) (acc : 'a) (s : string) : 'a = List.fold_left f acc (List.mapi (fun i x -> (i, x)) (list_of_string s))
+
+(** File operations *)
+
+(** [read_whole_file_str f] returns the content of the file [f] (passed as a [in_channel]), as a string *)
+let read_whole_file_str (f : in_channel) : string =
+  let rec read_all_lines_str (f : in_channel) (acc : string list) : string list =
+    try
+      read_all_lines_str f ((input_line f) :: acc)
+    with
+      End_of_file -> acc
+  in
+  String.concat "\n" (List.rev (read_all_lines_str f []))

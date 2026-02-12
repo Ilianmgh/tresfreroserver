@@ -128,4 +128,4 @@ Sqlite.closedb db
     List.iter test cases
   end
 
-let () = Printf.printf "%s" Sys.argv.(0); if Sys.argv.(0) = "./test.x" then test_input ()
+let () = if Sys.argv.(0) = "./test.x" then test_input ()

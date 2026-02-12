@@ -1,7 +1,7 @@
 open Utils
 open Value
 
-(** PERCENT-ENCODING cf https://developer.mozilla.org/en-US/docs/Glossary/Percent-encoding *)
+(** PERCENT-ENCODING cf. https://developer.mozilla.org/en-US/docs/Glossary/Percent-encoding *)
 
 let percent_decoding (s : string) : string =
   let pattern = Str.matched_string s in

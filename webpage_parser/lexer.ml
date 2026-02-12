@@ -94,21 +94,3 @@ let pre_token_lexer (pretok : pre_token) : token = match pretok with
 let pre_tokens_lexer (l : pre_token list) : token list = List.map pre_token_lexer l
 
 let lexer (s : string) : token list = pre_tokens_lexer (prelexer_all s 0 (String.length s))
-
-(* Tests *)
-
-(* let () =
-  let tests = [
-      "<{}>"
-      ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%"
-      ;"<{let x = 5 in x}>"
-      ;"<{let x = 5 in % x}>"
-      ;"<{f\"coucou\"}>"
-    ]
-  in
-  let tests = List.map (fun s -> String.map (fun c -> if c = '%' then '\n' else c) s) tests in
-  let s = if Array.length Sys.argv > 1 then Sys.argv.(1)
-    else List.nth tests 4
-  in
-  Printf.printf "raw: %s\n" s;
-  Printf.printf "lexed: %s\n" (string_of_list string_of_token (lexer s)) *)
