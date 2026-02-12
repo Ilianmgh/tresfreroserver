@@ -1,7 +1,7 @@
 import time
-import os
 import utils
 import config
+import subprocess
 from threading import Lock
 from typing import Any, Callable, Iterable
 
@@ -37,37 +37,39 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
   path_split = path.split(".")
   potential_new_session_id : str = ""
   extension : str = path_split[-1]
-  name : str = path[:len(path) - len(extension) - 1]
-  res : bytes
+  evald_page : bytes
   if extension == "htmlml" :
-    str_args : str = ""
+    produce_page_command_line : list[str] = ["./webpage_parser/produce_page.x", path, "-stdout"]
     if arguments is not None :
-      str_args = f"-argstr \"{arguments}\""
-    session_args : str = ""
+      produce_page_command_line.append("-argstr")
+      produce_page_command_line.append(f"{arguments}")
     if session_id is not None and session_id in get_webpage.session :
-      session_args = f"-argrepr \"{utils.url_encoding("SESSION", get_webpage.session[session_id])}\""
-    produce_page_command_line : str = f"./webpage_parser/produce_page.x {path} {name}.html {str_args} {session_args}"
+      produce_page_command_line.append("-argrepr")
+      produce_page_command_line.append(f"{utils.url_encoding("SESSION", get_webpage.session[session_id])}")
     print("Executing...", produce_page_command_line)
-    os.system(produce_page_command_line)
-    print("") # For a newline after subprocess call
-    path = f"{name}.html"
-    with open(path, mode = "r") as f :
-      first_line = f.readline()
-      if session_id is None :
-        session_id = utils.generate_session_id(generate_session_id_mut)
-        potential_new_session_id = session_id
-      # assert session id is string (?)
-      if session_id not in get_webpage.session :
-        get_webpage.session[session_id] = {}
-      utils.parse_url_dictionary(first_line.strip("\n\t\r"), get_webpage.session[session_id]) # TODO add TTL to session-recorded values
-      if debug :
-        print(f"data received from ML page: {first_line}")
-        print(f"current session: {get_webpage.session[session_id]}")
-      res = f.read().encode()
+    page_evaluation_res : subprocess.CompletedProcess[Any] = subprocess.run(produce_page_command_line, capture_output = True, text = True)
+    if config.display_dynml_evaluation_error :
+      print("EVALUATION ERRORS :")
+      print(page_evaluation_res.stderr)
+      print("END EVALUATION ERRORS :")
+    # processing first line (session variables dictionary)
+    split_evald_output = utils.get_first_line_and_rest(page_evaluation_res.stdout)
+    first_line : str = split_evald_output[0]
+    evald_page = split_evald_output[1].encode()
+    if session_id is None :
+      session_id = utils.generate_session_id(generate_session_id_mut)
+      potential_new_session_id = session_id
+    # assert session id is string (?)
+    if session_id not in get_webpage.session :
+      get_webpage.session[session_id] = {}
+    utils.parse_url_dictionary(first_line.strip("\n\t\r"), get_webpage.session[session_id]) # TODO add TTL to session-recorded values
+    if debug :
+      print(f"data received from ML page: {first_line}")
+      print(f"current session: {get_webpage.session[session_id]}")
   else :
     with open(path, mode = "rb") as f :
-      res = f.read()
-  return (potential_new_session_id, res)
+      evald_page = f.read()
+  return (potential_new_session_id, evald_page)
 
 ## HTTP request manager
 

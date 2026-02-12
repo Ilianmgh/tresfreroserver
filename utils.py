@@ -59,3 +59,14 @@ def url_encoding(namespace : str, d : dict[str, str]) -> str :
   for key in d :
     res += f"&{key}={d[key]}"
   return res
+
+""" [get_first_line_and_rest(s)] returns [(first_line, rest)] where [first_line]
+  is the first line of string [s] and [rest] is the remainder of the string.
+  The [\n] used to delimit does not appear in any of the two returned strings. """
+def get_first_line_and_rest(s : str) -> tuple[str, str] :
+  n = len(s)
+  i = s.find('\n')
+  if i == -1 :
+    return (s, "")
+  else :
+    return (s[:i], s[i+1:])

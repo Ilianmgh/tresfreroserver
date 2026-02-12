@@ -35,3 +35,7 @@ def get_status_message(status : int) -> str :
   if 500 <= status < 600 :
     return status_message_500[status - 500]
   return ""
+
+## Debugging
+
+display_dynml_evaluation_error : bool = False
