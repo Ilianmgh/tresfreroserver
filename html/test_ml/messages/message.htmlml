@@ -15,7 +15,8 @@
       let db = Sqlite.opendb "messagerie.db"
     }>
     <{
-      Sqlite.exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) ("INSERT INTO Message(data) VALUES ('" ++ Post.contenue ++ "')")
+      let content = String.replace "'" "''" Post.contenue in
+      Sqlite.exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) ("INSERT INTO Message(data) VALUES ('" ++ content ++ "')")
     }>
     <{
       let x = Sqlite.closedb db

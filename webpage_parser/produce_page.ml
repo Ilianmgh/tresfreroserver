@@ -42,19 +42,19 @@ let predefined_symbols = [
     ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = Args1 extern_sqlite_close_db ; tau = Arr (TypeDb, TypeString)}
     ; {namespaces = [] ; name = "fst" ; v = Args1 ml_fst ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst")))}
     ; {namespaces = [] ; name = "snd" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
-    (* ; {namespaces = [session_module_name] ; name = "let" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))} *)
+    ; {namespaces = ["String"] ; name = "replace" ; v = Args3 ml_string_replace ; tau = Arr (TypeString, Arr (TypeString, Arr (TypeString, TypeString)))} (* TODO properly namespace *)
   ]
 
 let pre_included_environment : environment =
   List.fold_left
-    (fun acc entry -> Environment.add_to_sub entry.namespaces entry.name (straigthforward_ml_function entry.name entry.v) acc)
-    (Environment.add_sub sqlite_module_name Environment.empty Environment.empty) (* FIXME add this generically, not one by one for each added module *)
+    (fun acc entry -> Environment.add_and_path entry.namespaces entry.name (straigthforward_ml_function entry.name entry.v) acc)
+    Environment.empty
     predefined_symbols
 
 let pre_included_typing_env : modular_typing_environment =
   List.fold_left
-    (fun acc entry -> Environment.add_to_sub entry.namespaces entry.name entry.tau acc)
-    (Environment.add_sub sqlite_module_name Environment.empty Environment.empty) (* FIXME add this generically, not one by one for each added module *)
+    (fun acc entry -> Environment.add_and_path entry.namespaces entry.name entry.tau acc)
+    Environment.empty
     predefined_symbols
 
 (** Producing a page *)

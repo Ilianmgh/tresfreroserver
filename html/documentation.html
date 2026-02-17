@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <nav role="doc-toc">
+      <h2>Contents</h2>
+      <ol style="list-style-type: none">
+        <li><span style="text-decoration: underline"><a href="#loc-1">Introduction</a></span></li>
+        <li>
+          <div><span style="text-decoration: underline"><a href="#loc-2">Language Syntax</a></span></div>
+          <ol style="list-style-type: none">
+            <li><span style="text-decoration: underline"><a href="#loc-3">Webpage</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-4">Global declaration</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-5">Expressions</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-6">Identifiers</a></span></li>
+            <li>
+              <div><span style="text-decoration: underline"><a href="#loc-7">Literals</a></span></div>
+              <ol style="list-style-type: none">
+                <li><span style="text-decoration: underline"><a href="#loc-8">Integers</a></span></li>
+                <li><span style="text-decoration: underline"><a href="#loc-9">Strings</a></span></li>
+                <li><span style="text-decoration: underline"><a href="#loc-10">Booleans</a></span></li>
+              </ol>
+            </li>
+          </ol>
+        </li>
+        <li>
+          <div><span style="text-decoration: underline"><a href="#loc-11">Type system</a></span></div>
+          <ol style="list-style-type: none">
+            <li><span style="text-decoration: underline"><a href="#loc-12">Types</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-13">Typing rules</a></span></li>
+          </ol>
+        </li>
+        <li>
+          <div><span style="text-decoration: underline"><a href="#loc-14">Program semantics</a></span></div>
+          <ol style="list-style-type: none">
+            <li><span style="text-decoration: underline"><a href="#loc-15">Values</a></span></li>
+            <li>
+              <div><span style="text-decoration: underline"><a href="#loc-16">Evaluation rules</a></span></div>
+              <ol style="list-style-type: none">
+                <li>
+                  <div><span style="text-decoration: underline"><a href="#loc-17">Expression</a></span></div>
+                  <ol style="list-style-type: none">
+                    <li><span style="text-decoration: underline"><a href="#loc-18">Functions</a></span></li>
+                    <li><span style="text-decoration: underline"><a href="#loc-19">Declarations</a></span></li>
+                    <li><span style="text-decoration: underline"><a href="#loc-20">Operators</a></span></li>
+                    <li>
+                      <div><span style="text-decoration: underline"><a href="#loc-21">Predefined functions</a></span></div>
+                      <ol style="list-style-type: none">
+                        <li><span style="text-decoration: underline"><a href="#loc-22">Projections</a></span></li>
+                        <li><span style="text-decoration: underline"><a href="#loc-23">Arguments from the command line</a></span></li>
+                        <li><span style="text-decoration: underline"><a href="#loc-24">Database operations</a></span></li>
+                      </ol>
+                    </li>
+                  </ol>
+                </li>
+              </ol>
+            </li>
+            <li><span style="text-decoration: underline"><a href="#loc-25">Namespacing, modules and session variables</a></span></li>
+          </ol>
+        </li>
+        <li><span style="text-decoration: underline"><a href="#loc-26">TODO</a></span></li>
+      </ol>
+    </nav>
+    <h2 id="loc-1">Introduction</h2>
+    <p><span style="font-variant-caps: small-caps">Ml-Like for the web</span> is a functional language for writing dynamic webpages, evaluated on the server side.</p>
+    <h2 id="loc-2">Language Syntax</h2>
+    <h3 id="loc-3">Webpage</h3>
+    <p>A <em>dynamic webpage</em> (i.e. the programs we evaluate) consists of a list of <em>elements</em>.</p>
+    <p>Each element can be of three sorts:</p>
+    <ul>
+      <li>pure HTML code ; or</li>
+      <li>
+        <p><span style="font-variant-caps: small-caps">Ml-Like for the web</span> code, which can be either:</p>
+        <ul>
+          <li>a list of <em>global declarations</em> ; or</li>
+          <li>an expression.</li>
+        </ul>
+      </li>
+    </ul>
+    <p>bodyexp: anyHtmlCode (&lt;{exp | (global_declaration)*}> anyHtmlCode)*</p>
+    <h3 id="loc-4">Global declaration</h3>
+    <p>A global declaration declares and defines a variable, whose scope is (the remainder of) the entire webpage. They (currently) are of two kinds: either a simple global declaration (with let) or a declaration of a session variable Session.let.</p>
+    <p>declarator: let | Session.let</p>
+    <p>global_declaration: declarator id = exp</p>
+    <p>For now, only expressions can be declared by the user. At some point, we would like to allow user-defined types and modules.</p>
+    <h3 id="loc-5">Expressions</h3>
+    <p>String expressions:</p>
+    <p>sexp: exp ++ exp | string_literal</p>
+    <p>Tuple expressions:</p>
+    <p>texp: exp, exp</p>
+    <p>For now, only couples are allowed, and <code>(x1, x2, x3, x4)</code> is parsed as <code>(x1, (x2, (x3, x4)))</code>.</p>
+    <p>HTML:</p>
+    <p>html: &lt;[ anyHtmlCode ]></p>
+    <h3 id="loc-6">Identifiers</h3>
+    <p>In <span style="font-variant-caps: small-caps">Ml-Like for the web</span>, identifers are <em>namespaced</em>. An identifier is a sequence of namespace and the actual variable name.</p>
+    <p>value_name: (_|[a-z])(_|‘|[0-9]|[a-z]|[A-Z])*</p>
+    <p>Whereas a path is a sequence of modules name separated by a dot:</p>
+    <p>module_name : [A-Z](_|‘|[0-9]|[a-z]|[A-Z])*</p>
+    <p>path: M, M’ ::= module_name | module_name.M’</p>
+    <p>A identifier (path to a value) is then:</p>
+    <p>id: (path.)?value_name</p>
+    <p><strong>Example.</strong></p>
+    <ul>
+      <li>variable</li>
+      <li>Session.my_function_n_362</li>
+      <li>_MyFunction</li>
+      <li>A.B.C.D.E.myVariable067</li>
+    </ul>
+    <p>But not:</p>
+    <ul>
+      <li>MyFunction</li>
+      <li>SomeModule.01var</li>
+    </ul>
+    <h3 id="loc-7">Literals</h3>
+    <h4 id="loc-8">Integers</h4>
+    <p>For better readability for the programmer, we allow underscores in numbers.</p>
+    <p>int_literal: [0-9]([0-9]|_)*</p>
+    <p><strong>Example.</strong></p>
+    <ul>
+      <li>123</li>
+      <li>100_000</li>
+      <li>1_2_____3____</li>
+    </ul>
+    <h4 id="loc-9">Strings</h4>
+    <p>string_literal: “…”</p>
+    <h4 id="loc-10">Booleans</h4>
+    <p>bool_literal: true, false</p>
+    <h2 id="loc-11">Type system</h2>
+    <p><span style="font-variant-caps: small-caps">Ml-Like for the web</span> is strongly, statistically typed. For now, user type annotation are not allowed.</p>
+    <h3 id="loc-12">Types</h3>
+    <p>The only atomic native types represent integers, booleans, strings, unit, html code and databases. They can be combined with type constructors → for functions and × for tuples. For now, sum types are not implemented, but should be with user-defined types.</p>
+    <p>tlit: int | bool | string | unit | html | db</p>
+    <p>α, β, … ::= α -> β | α times β</p>
+    <h3 id="loc-13">Typing rules</h3>
+    <p>The only lax rule is the typing rule of sequences: if the left handside of the ; is not of type unit, it will only raise a warning.</p>
+    <h2 id="loc-14">Program semantics</h2>
+    <h3 id="loc-15">Values</h3>
+    <p>values: v, v’, … ::= ⟨E, function⟩ | n | true | false | string_literal | (v, v’) | | pure_html_code | <span style="display: inline-block">evald_page</span></p>
+    <p>function: fun x -> e | fixfun x -> e</p>
+    <p>evald_page: [v1; v2; …; vn] ⚠️ it’s <em>not</em> <span style="font-variant-caps: small-caps">Ml-Like for the web</span> list.</p>
+    <p>vdb: a value representing a database in the language</p>
+    <p>An evaluated webpage can be injected in a value (via the frame).</p>
+    <p><strong>Example.</strong> This happens when we evaluate &lt;{ &lt;[htmlcode &lt;{let x = 1 in x}> somemorehtmlcode]> }></p>
+    <h3 id="loc-16">Evaluation rules</h3>
+    <p>A dynamic webpage to evaluate is seen as a list of either:</p>
+    <ul>
+      <li>Pure html code ;</li>
+      <li>An expression ;</li>
+      <li>A global declaration.</li>
+    </ul>
+    <p>The interpreter evaluates following a big-step call-by-value semantics.</p>
+    <h4 id="loc-17">Expression</h4>
+    <h5 id="loc-18">Functions</h5>
+    <p>Functions are values; when they evaluate the variables needed to their evaluation are automatically captured. Functions can be passed as argument to other functions.</p>
+    <p>To write recursive functions, you must use fixfun it binds two variables: the first one is the name of the function (for the recursive call), the second one is the name of the argument.</p>
+    <p><strong>Example.</strong> The following code represents the factorial function:</p>
+    <p><code>fixfun fact n -> if n = 0 then 1 else n * fact (n - 1)</code></p>
+    <p>⚠️ if you declare a function, you mustn’t mistake the name of the resulting function in the let-binding and the name used for recursing. For instance:</p>
+    <pre><code>let fact = fixfun fact n -> if n = 0 then 1 else n * fact (n-1)<br>let fact = fixfun f n -> if n = 0 then 1 else n * f (n-1)</code></pre>
+    <p>both defines <code>fact</code> as the factorial function. Although:</p>
+    <pre><code>let fact = fixfun f n -> if n = 0 then 1 else n * fact (n-1)</code></pre>
+    <p>is incorrect, and will raised an error because <code>fact</code> is not defined when used here.</p>
+    <p>There is currently no support for mutually recursive functions.</p>
+    <h5 id="loc-19">Declarations</h5>
+    <p>A declaration can either be <em>global</em> i.e. its scope is the remainder of the file or <em>local</em> i.e. its scope is restricted to the expression after the <code>in</code> keyword.</p>
+    <p>Furthermore, global session declarations have a specific semantics: <code>Session.let x = e</code> will firstly have the same effect as <code>let x = e</code>, except:</p>
+    <ul>
+      <li>the bound variable is stored within the <code>Session</code> module i.e. to access it somewhere else, we need to write <code>Session.x</code>;</li>
+      <li>it defines a <em>session variables</em> i.e. it will be accessible across all the pages from now on, for the duration of the session <span style="text-decoration: underline"><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies">(see bullet point Session Cookie)</a></span>.</li>
+    </ul>
+    <h5 id="loc-20">Operators</h5>
+    <p>The language provides some operators on basic datatypes:</p>
+    <ul>
+      <li>And/or/not on booleans: <code>&amp;&amp;</code>, <code>||</code>, <code>not</code>.</li>
+      <li>Addition, multiplication, substraction, division, exponentiaion: <code>+</code>, <code>*</code>, <code>-</code> ,<code>/</code> ,<code>^</code>. The unary version of <code>-</code> is also available.</li>
+      <li>comparison operators less than, greater than, less or equal than, greater or equal than, equal, not equal: <code>&lt;</code>, <code>></code>, <code>&lt;=</code>, <code>>=</code>, <code>=</code>, <code>&lt;></code>. These are <em>polymorphic</em> i.e. they typecheck for any two expressions, provided that they are of the same type. It will fail at execution and raise an error on types for which it’s not implemented. Comparison is currently implemented only for basic types: integers, booleans, strings and <em>content</em> i.e. <span style="font-variant-caps: small-caps">Ml-Like for the web</span> code evaluated to HTML.</li>
+      <li>Concatenation of two strings: <code>++</code>.</li>
+    </ul>
+    <h5 id="loc-21">Predefined functions</h5>
+    <h6 id="loc-22">Projections</h6>
+    <p>To get the first or the second element of a <em>pair</em>, <code>fst</code> and <code>snd</code> are pre-defined.</p>
+    <h6 id="loc-23">Arguments from the command line</h6>
+    <p>You can have pre-defined values before even starting to evaluate the page.</p>
+    <p>To do that, you can pass them directly in the command line:</p>
+    <pre><code>Usage: &lt;program> &lt;source> &lt;dest> [&lt;argoption> &lt;arguments>]*<br>  &lt;source>: can either be a path to a file, or -stdin.<br>  &lt;dest>: can either be a path to a file, or -stdout.<br>  You can pass argument to the program to pre-load a variable environment before evaluating the dynamic webpage.<br>  &lt;argoption>: the way the program should interpret the arguments immediatly following this flag. Can be any of the following options:<br>    -argrepr: interpret each value following the built-in repr function. This allows to pass argument of any type.<br>    -argstr: interpret each value as a string. <br>  &lt;arguments>: A list of bindings, of th following form: METHOD&amp;name1=arg1&amp;...&amp;namen=argn.<br>    These variable will be available in the dynamic webpage within the namespace Method.</code></pre>
+    <p>This will create a module containing all the defined variables.</p>
+    <p><strong>Example.</strong> <code>&lt;program> file -stdout -argstr MODULE&amp;x=astring&amp;y=anotherstring</code> will evaluate <code>file</code>, but if <code>file</code> uses variable <code>Module.x</code> (resp. <code>Module.y</code>), it will be globally defined and its value will be <code>"astring"</code> (resp. <code>"anotherstring"</code>).</p>
+    <h6 id="loc-24">Database operations</h6>
+    <p>Three built-in functions are provided to interact with databases using <span style="text-decoration: underline"><a href="https://sqlite.org/">SQLite</a></span> via the <span style="text-decoration: underline"><a href="https://mmottl.github.io/sqlite3-ocaml/">sqlite3 ocaml library</a></span>.</p>
+    <p>One function opens a database, one to close one and one to perform SQL on them. All these functions are available in the module <code>Sqlite</code>.</p>
+    <p><code>Sqlite.open "path/to/adb"</code> evaluates to a value representing the database at path <code>path/to/db</code>, with which we can now interact using <code>exec</code>.</p>
+    <p><code>Sqlite.exec vdb fl fc query = processed_table</code> where <code>vdb</code> is a value obtained from <code>open</code>. <code>query</code> is a string corresponding to a SQL query, which is executed on the database <code>vdb</code>. If it has query statements, then <code>sqlite_exec</code> allow to process the resulting table with a double <em>left-folding</em> function applied on the resulting table i.e. let the resulting table be:</p>
+    <p>Firstly, <code>fc</code> is used to <em>fold</em> each line into a single HTML value <code>processed_line_i</code>. More precisely,</p>
+    <p><code>processed_line_i = fc (... (fc EmptyHtmlCode header_1 data_i_1) ...) header_n data_i_n</code>.</p>
+    <p>And now, we then again fold the resulting column into a single HTML value, using the <code>fl</code> function:</p>
+    <p><code>processed table = fl (... (fl EmptyHtmlCode line_1) ...) line_n</code>.</p>
+    <p><strong>Example.</strong> If you want to get the resulting relation of SQL query <code>query</code> on <code>vdb</code> as a HTML table, you can write the following code:</p>
+    <pre><code>&lt;table><br>&lt;{<br>  Sqlite.exec vdb<br>    (fun acc -> fun new_line -> &lt;[ &lt;{acc}> &lt;tr> &lt;{new_line}> &lt;/tr> ]>)<br>    begin fun acc -> fun hd -> fun content -><br>      &lt;[<br>        &lt;{ acc }><br>        &lt;td> &lt;{content}> &lt;/td><br>      ]><br>    end query<br>}><br>&lt;/table></code></pre>
+    <p><code>Sqlite.close vdb</code> closes the databases <code>vdb</code>. Returns a boolean telling whether the database could be closed. If <code>false</code>, the the database <em>remains open</em>. See <span style="text-decoration: underline"><a href="https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/Sqlite3/index.html#general-database-operations">here</a></span> for reason the database couldn’t be closed, and more specifications of the sqlite functions.</p>
+    <h3 id="loc-25">Namespacing, modules and session variables</h3>
+    <p>At some point, we would like to implement modules contained inside another module, maybe even functors if possible, and records types. When this is done, a full variable name will be <code>((modulevar.)*(expr.)*varname)</code> where each <code>expr</code> must be of type record.</p>
+    <p>For instance, if module A contains module B which itself contains a record <code>r : {r' : rec'}</code> where <code>rec'</code> itself is a record with a field <code>x</code>, then <code>A.B.r.r'.x</code> designates the field <code>x</code> of the farthest nested record.</p>
+    <p>A modular typing (resp. evaluation) environment therefore becomes a tree, where each edge is labelled with a module name, and each node is labelled with a typing (resp. evaluation) environment.</p>
+    <h2 id="loc-26">TODO</h2>
+    <p>☐ Implement escape characters in strings</p>
+    <p>☐ Implement fstrings</p>
+    <p>☑︎ Implement percent-encoding</p>
+    <p>☐ Don’t lex ml located in html comment</p>
+    <p>☐ Add comments within ML</p>
+    <p>☑︎ Allow HTML brackets to contain any dynpage e.g. &lt;[somehtml &lt;{“coucou”}> somemorehtml]></p>
+    <p>☐ Add syntactic sugar for multiple variables functions.</p>
+    <p>☐ Add t-uples</p>
+    <p>☐ Add pattern-matching</p>
+    <p>☑︎ Add superglobal variables</p>
+    <p>☑︎ Add user-defined global variables</p>
+    <p>☐ At some point, we would like to implement modules contained inside another module, and records types.</p>
+    <p>☐ Add user-defined types</p>
+    <p>☐ Once it’s done, implement basic types such as list directly within the language.</p>
+    <p>☐ Allow type annotations from the user</p>
+    <p>☐ Allow importing other ml files (as modules ?)</p>
+    <p>☐ Keep line number information on parsed term for better typing error messages (?)</p>
+  </body>
+</html>

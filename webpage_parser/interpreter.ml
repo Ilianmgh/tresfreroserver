@@ -21,7 +21,12 @@ let combine_array (a : 'a array) (b : 'b array) : ('a * 'b) array =
   else
     Array.init (Array.length a) (fun i -> (a.(i), b.(i)))
 
+(** [escape_single_quote_from_string s] returns a string identical to [s], where single quotes within single quotes are escaped. *)
+let escape_single_quote_from_string (s : string) : string = s
+
 let value_of_query (db : Sqlite3.db) (combine_lines_into_table : value -> value -> value) (combine_cells_into_line : value -> string -> string -> value) (query : string) : value =
+  (* we first need to escape ' character from the query, since they are the string delimiters in SQLite. *)
+  let query = escape_single_quote_from_string query in
   let value_acc = ref (VPure "") in
   let value_of_query_res (value_acc : value ref) (combine_cells_into_line : value -> string -> string -> value) (line : Sqlite3.row) (hdrs : Sqlite3.headers) : unit =
     let fold_line_to_value (value_acc : value) ((hdr, content) : Sqlite3.header * string option) : value = match content with
@@ -200,6 +205,11 @@ let extern_sqlite_open_db (db_path : value) : value = match db_path with
 let extern_sqlite_close_db (vdb : value) : value = begin match vdb with
     | VDb db -> VBool (Sqlite3.db_close db)
     | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_value vdb)))
+  end 
+
+let ml_string_replace = fun template replacement s ->  begin match template, replacement, s with
+    | VString template, VString replacement, VString s -> VString (Str.global_replace (Str.regexp template) replacement s)
+    | _ -> raise (InterpreterError (Printf.sprintf "%s, %s, %s: strings expected." (string_of_value template) (string_of_value replacement) (string_of_value s)))
   end 
 
 (* TODO add "garbage-collection" *)

@@ -6,6 +6,8 @@ module type S = sig
   val add : key -> 'a -> 'a t -> 'a t
   (** [add_to_sub prefixes k s] adds a binding from [k] to [s] to a submap of [s], designated by the chain of submodules [prefixes]. *)
   val add_to_sub : key list -> key -> 'a -> 'a t -> 'a t
+  (** [add_and_path prefixes k s] same as [add_to_sub prefixes k s], but if some of the prefixes along the path [prefixes] does not exist, they are created and added. *)
+  val add_and_path : key list -> key -> 'a -> 'a t -> 'a t
   (** [add_sub k s' s] adds [s'] as a submap of [s], with name [k]. *)
   val add_sub : key -> 'a t -> 'a t -> 'a t
   (** [find k s = v] where [k] is bound to [v] at the current namespace in [s]. *)

@@ -4,6 +4,7 @@ module type S = sig
   val empty : 'a t
   val add : key -> 'a -> 'a t -> 'a t
   val add_to_sub : key list -> key -> 'a -> 'a t -> 'a t
+  val add_and_path : key list -> key -> 'a -> 'a t -> 'a t
   val add_sub : key -> 'a t -> 'a t -> 'a t
   val find : key -> 'a t -> 'a
   val find_opt : key -> 'a t -> 'a option
@@ -30,6 +31,12 @@ module Make = functor (M : Map.S) -> struct
     | toplevel_module :: prefix_rem -> begin match M.find_opt toplevel_module s.sub with
       | None -> Printf.fprintf stderr "1\n"; raise Not_found
       | Some s' -> { root = s.root ; sub = M.add toplevel_module (add_to_sub prefix_rem k v s') s.sub ; parent = s.parent }
+    end
+  let rec add_and_path (prefix : key list) (k : key) (v : 'a) (s : 'a t) : 'a t = match prefix with (* TODO make tail-rec *)
+    | [] -> add k v s
+    | toplevel_module :: prefix_rem -> begin match M.find_opt toplevel_module s.sub with
+      | None -> { root = s.root ; sub = M.add toplevel_module (add_and_path prefix_rem k v empty) s.sub ; parent = s.parent }
+      | Some s' -> { root = s.root ; sub = M.add toplevel_module (add_and_path prefix_rem k v s') s.sub ; parent = s.parent }
     end
   let add_sub (k : key) (sub_s : 'a t)  (s : 'a t) : 'a t = { root = s.root ; sub = M.add k { root = sub_s.root ; sub = sub_s.sub ; parent = Some s } s.sub ; parent = s.parent } (* TODO double usage here: we set parents twice, once on add/map/... and once on access to the chils. See where we can afford to not care about parents; maybe we simply need to put them here *)
   let rec find (k : key) (s : 'a t) : 'a = match M.find_opt k s.root with
@@ -62,7 +69,7 @@ module Make = functor (M : Map.S) -> struct
         parent = None}
     in
     let new_sub = M.map (map_change_parents f (Some mapped_root)) s.sub in
-    { root = mapped_root.root ; sub = new_sub ; parent = new_parent}
+    { root = mapped_root.root ; sub = new_sub ; parent = new_parent }
   let rec map (f : 'a -> 'b) (s : 'a t) : 'b t = map_change_parents f begin match s.parent with
       | None -> None
       | Some p -> Some (map f p)

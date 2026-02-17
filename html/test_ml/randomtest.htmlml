@@ -36,5 +36,11 @@
       <input id="2" type="submit" value="Envoyer"></input>
     </form>
   </p>
+  <h2>Tests on strings</h2>
+  <p>
+    <{ "\tcoucou" }>
+
+    <{ "cou'c\'ou\0\ncoucou2\rcoucou3enfait\"\tautre" }>
+  </p>
 </body>
 </html>
