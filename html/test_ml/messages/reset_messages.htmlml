@@ -1,22 +1,6 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  <p>
-    <{
-      let db = Sqlite.opendb "messagerie.db"
-    }>
-    <{
-      Sqlite.exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) "DELETE FROM Message"
-    }>
-    <{
-      let x = Sqlite.closedb db
-    }>
-    <a href = "messagerie.htmlml">retour</a>
-  </p>
-</body>
-</html>
+<{
+  let db = Sqlite.opendb "messagerie.db"
+  let dump = Sqlite.exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) "DELETE FROM Message"
+  let dump = Sqlite.closedb db
+  let dump = Http.redirect "/test_ml/messages/messagerie.htmlml"
+}>

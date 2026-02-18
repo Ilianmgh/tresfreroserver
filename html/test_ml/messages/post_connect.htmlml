@@ -1,0 +1,4 @@
+<{
+  Session.let pseudo = Post.pseudo
+  let _ = Http.redirect "/test_ml/messages/messagerie.htmlml"
+}>
