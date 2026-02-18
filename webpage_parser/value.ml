@@ -17,6 +17,7 @@ and value =
   | VPure of string
   | VContent of value list
   | VCouple of value * value
+  | VLocation of string
 and environment = value Environment.t
 (** A pre-defined symbol is either a value, or a function from values to value with an arbitrary number of arguments. *)
 and extern_function =
@@ -39,6 +40,7 @@ let rec expr_of_value (v1 : value) : expr = match v1 with
   | Clos (_, VExternFunction (name, _)) -> raise (UnsupportedError "Trying to get expr of value of an external function. _TODO: ADD VARIABLES IN VALUES_")
   | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
+  | _ -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
 
 (** Pretty-printing *)
 
@@ -61,6 +63,7 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
   | VDb db -> Printf.fprintf out "adatabase" (* TODO !!!! *)
   | VBool b -> if b then Printf.fprintf out "true" else Printf.fprintf out "false"
   | VString s -> Printf.fprintf out "%s" (web_of_string s)
+  | VLocation s -> Printf.fprintf out "to:%s" (web_of_string s)
   | VPure h -> if escape_html then Printf.fprintf out "%s" (web_of_string h) else Printf.fprintf out "%s" h (* FIXME not sure if useful since bypassed in `produce_page` *)
   | VContent l -> List.iter (fun v -> fprintf_value out ~escape_html:escape_html v) l
   | VCouple (v, v') -> begin
@@ -96,6 +99,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VInt n -> Printf.sprintf "%d" n
   | VBool b -> if b then "true" else "false"
   | VString f -> f
+  | VLocation s -> Printf.sprintf "to:%s" (web_of_string s)
   | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `produce_page` *)
   | VContent l -> List.fold_left (fun acc v -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:escape_html v)) "" l
   | VCouple (v, v') -> Printf.sprintf "(%s, %s)" (string_of_value ~escape_html:escape_html v) (string_of_value ~escape_html:escape_html v')

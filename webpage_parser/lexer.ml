@@ -15,17 +15,16 @@ let is_char_lowercase_letter (c : char) : bool =
 let is_char_uppercase_letter (c : char) : bool =
   int_of_char 'A' <= int_of_char c && int_of_char c <= int_of_char 'Z'
 
-let is_first_character_of_Id (c : char) : bool =
-  c = '_' || (is_char_uppercase_letter c)
+let is_first_character_of_Id (c : char) : bool = is_char_uppercase_letter c
 
 let is_first_character_of_id (c : char) : bool =
-  c = '_' || (is_char_lowercase_letter c)
+  (c = '_') || (is_char_lowercase_letter c)
 
 let is_character_of_num (c : char) : bool =
-  c = '_' || (is_char_num c)
+  (c = '_') || (is_char_num c)
 
 let is_character_of_id (c : char) : bool =
-  c = '\'' || c = '_' || (is_char_num c) || (is_char_lowercase_letter c) || (is_char_uppercase_letter c)
+  (c = '\'') || (c = '_') || (is_char_num c) || (is_char_lowercase_letter c) || (is_char_uppercase_letter c)
 
 (** While we are lexing a string [s], let [l] be the list of its character in reverse order, either it can be completed to become a token of types either [x1] or ... or [xn]: [CouldBe ([x1; ...; xn], l)], either it is a token [Is l] *)
 type 'a lexing_state = CouldBe of 'a list * char list | Is of 'a * char list (* FIXME maybe merge CouldBe and IsNot; CouldBe ([],_) can represent IsNot *)
@@ -75,7 +74,7 @@ let rec eat_letter_lex_literal (st : literals_kind lexing_state) (c : char) : li
   | CouldBe ([Fstring], '\\' :: s'), 'r' -> CouldBe ([Fstring], '\r' :: s')
   | CouldBe ([Fstring], '\\' :: s'), 't' -> CouldBe ([Fstring], '\t' :: s')
   | CouldBe ([Fstring], '\\' :: s'), '0' -> CouldBe ([Fstring], (char_of_int 0) :: s')
-  | CouldBe ([String], '\\' :: s'), c' -> raise (LexingError (Printf.sprintf "\\%c: undefined espace character." c'))
+  | CouldBe ([Fstring], '\\' :: s'), c' -> raise (LexingError (Printf.sprintf "\\%c: undefined espace character." c'))
   (* start/end of fstring*)
   | CouldBe ([Fstring], c1 :: c2 :: fstr), '\"' -> Is (Fstring, '\"' :: c1 :: c2 :: fstr) (* we need at least two characters to open a fstring: f and a quote *)
   | CouldBe ([Fstring], c1 :: c2 :: fstr), c -> CouldBe ([Fstring], c :: c1 :: c2 :: fstr)

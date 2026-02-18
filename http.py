@@ -30,13 +30,14 @@ def bytes_of_path(path : str) -> bytes :
     res = f.read()
   return res
 
-def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | str = None, session_id : None | str = None) -> tuple[str, bytes] :
+def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | str = None, session_id : None | str = None) -> tuple[str, str | bytes] :
   """ Returns as bytes the content of the file given by [path]. Also returns a session id if one was assigned when evaluating the page, the empty string otherwise. """
   if not hasattr(get_webpage, 'session') :
     get_webpage.session : dict[str, dict[str, str]] = {}
   path_split = path.split(".")
   potential_new_session_id : str = ""
   extension : str = path_split[-1]
+  location : str | None = None
   evald_page : bytes
   if extension == "htmlml" :
     produce_page_command_line : list[str] = ["./webpage_parser/produce_page.x", path, "-stdout"]
@@ -49,12 +50,14 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
     print("Executing...", produce_page_command_line)
     page_evaluation_res : subprocess.CompletedProcess[Any] = subprocess.run(produce_page_command_line, capture_output = True, text = True)
     if config.display_dynml_evaluation_error :
+      print("EVALUATION OUT :")
+      print(page_evaluation_res.stdout)
       print("EVALUATION ERRORS :")
       print(page_evaluation_res.stderr)
       print("END EVALUATION ERRORS :")
     # processing first line (session variables dictionary)
     split_evald_output = utils.get_first_line_and_rest(page_evaluation_res.stdout)
-    first_line : str = split_evald_output[0]
+    first_line : str = split_evald_output[0].strip("\n\t\r")
     evald_page = split_evald_output[1].encode()
     if session_id is None :
       session_id = utils.generate_session_id(generate_session_id_mut)
@@ -62,14 +65,27 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
     # assert session id is string (?)
     if session_id not in get_webpage.session :
       get_webpage.session[session_id] = {}
-    utils.parse_url_dictionary(first_line.strip("\n\t\r"), get_webpage.session[session_id]) # TODO add TTL to session-recorded values
+    # Extracting useful information from first line
+    split_first_line = first_line.split(';')
+    print("DOFSOIFHSDJFLKSJFLKDSF:", split_first_line)
+    assert (len(split_first_line) == 2)
+    raw_session_variables = split_first_line[0]
+    raw_location = split_first_line[1]
+    location_prefix = "redirect="
+    location_prefix_len = 9 # len("redirect=")
+    if raw_location[:9] == location_prefix :
+      location = raw_location[9:]
+    utils.parse_url_dictionary(raw_session_variables, get_webpage.session[session_id]) # TODO add TTL to session-recorded values
     if debug :
       print(f"data received from ML page: {first_line}")
       print(f"current session: {get_webpage.session[session_id]}")
   else :
     with open(path, mode = "rb") as f :
       evald_page = f.read()
-  return (potential_new_session_id, evald_page)
+  if location is not None :
+    return (potential_new_session_id, location)
+  else :
+    return (potential_new_session_id, evald_page)
 
 ## HTTP request manager
 
@@ -190,16 +206,26 @@ def is_accepted(contenttype : str, contentaccepted : Iterable[str]) -> bool :
           return True
   return False
 
-def make_body(status : int, generate_session_id_mut : Lock, path : str = "", additional_data : str | None = None, additional_message : str | None = None, session_id : str | None = None) -> tuple[int, tuple[str, bytes]] :
+def make_body(status : int, generate_session_id_mut : Lock, path : str = "", additional_data : str | None = None, additional_message : str | None = None, session_id : str | None = None) -> tuple[int, tuple[str, bytes | str]] :
   """ If [status] is a supported error, fetches the appropriate error page.
       If [status] is 200, tries to fetch the page from the [config.to_send_content_folder] folder.
-      Returns the updated status and the body e.g. 404 instead of 200 if the page is not in the folder. """
+      Returns the updated status and the body e.g. 404 instead of 200 if the page is not in the folder.
+      If [status] is 3XX, then instead of bytes representing the body, it returns the location of the redirection """
   if status == 200 :
     try :
+      session_id : str
+      payload : bytes | str
       if additional_data is not None :
-        return (200, get_webpage(path, generate_session_id_mut, additional_data, session_id=session_id))
+        session_id, payload = get_webpage(path, generate_session_id_mut, additional_data, session_id=session_id)
       else :
-        return (200, get_webpage(path, generate_session_id_mut, session_id=session_id))
+        session_id, payload = get_webpage(path, generate_session_id_mut, session_id=session_id)
+      if isinstance(payload, str) : # If a redirection occured
+        print("REDIRECTION")
+        return (303, (session_id, payload))
+      else :
+        print("NO REDIRECTION")
+        assert (isinstance(payload, bytes))
+        return (200, (session_id, payload))
     except (IsADirectoryError, FileNotFoundError) as e :
       status = 404
   if status in config.displayable_errors :
@@ -207,20 +233,27 @@ def make_body(status : int, generate_session_id_mut : Lock, path : str = "", add
     if additional_message is not None :
       arguments = f"SERVER&status={status}&text={config.get_status_message(status)}&additional={additional_message}"
     else :
-      arguments = f"SERVER&status={status}&text={config.get_status_message(status)}&additional=" # Ugly fix for now, change when able to check for defined variables in ML
+      arguments = f"SERVER&status={status}&text={config.get_status_message(status)}&additional=" # FIXME Ugly fix for now, change when able to check for defined variables in ML
     return (status, get_webpage(f"./error.htmlml", generate_session_id_mut, arguments))
   return (500, get_webpage(f"./error.htmlml", generate_session_id_mut, f"SERVER&status={status}&text=bonjour&additional={additional_message}"))
 
-def make_header(status : int, contenttype : str, language : str, contentlength : int, cookies : dict[str, tuple[str, dict[str, str]]]) -> str :
+def make_header(status : int, contenttype : str, language : str | None, contentlength : int, cookies : dict[str, tuple[str, dict[str, str]]], location : str | None = None) -> str :
   """ Produces the HTTP header according to the informations passed as argument.
     [cookies] is a dictionary from cookies' names to cookies' data e.g. {"mycookie" : ("42", {"Secure": True, "SameSite": "Strict"})} will result in the line: Set-Cookie: mycookie=42; Secure; SameSite=Strict """
+  header_lines : list[str] = []
+  # Status
   first_line = f"HTTP/1.1 {status}"
   if status == 200 :
     first_line += " OK"
-  contenttype_line = "Content-Type: " + contenttype
-  language_line = "Content-Language: " + language
-  contentlength_line = "Content-Length: " + str(contentlength)
-  cookies_lines = ""
+  header_lines.append(first_line)
+  # Content-Type
+  header_lines.append("Content-Type: " + contenttype)
+  # Content-Language
+  if language is not None :
+    header_lines.append("Content-Language: " + language)
+  # Content-Length
+  header_lines.append("Content-Length: " + str(contentlength))
+  # Set-Cookie
   for cookie_name in cookies :
     value, cookie_params = cookies[cookie_name]
     cookie_line = f"Set-Cookie: {cookie_name}={value}"
@@ -241,8 +274,15 @@ def make_header(status : int, contenttype : str, language : str, contentlength :
         cookie_line += f"; SameSite={cookie_params[param]}"
       if param.lower() == "Secure" :
         cookie_line += f"; Secure"
-    cookies_lines += (cookie_line + "\r\n")
-  return first_line + "\r\n" + contenttype_line + "\r\n" + language_line + "\r\n" + contentlength_line + "\r\n" + cookies_lines
+    header_lines.append(cookie_line + "\r\n")
+  # Location
+  if location is not None :
+    header_lines.append("Location: " + location)
+  # Building the header with all lines
+  str_header : str = ""
+  for line in header_lines :
+    str_header += (line + "\r\n")
+  return str_header
 
 def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], generate_session_id_mut : Lock) -> tuple[bool, bytes] :
   """ Returns a tuple [(keep_alive, response)] of :
@@ -314,9 +354,20 @@ def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], generate_s
     path = ""
     status = 400
   status, (new_session_id, body) = make_body(status, generate_session_id_mut, path, additional_data, session_id=cur_session_id)
+  empty_body : bool = isinstance(body, str)
   if new_session_id != "" :
     to_send_cookies["sessionId"] = (new_session_id, {"SameSite": "Strict"})
   if status in config.displayable_errors :
     contenttype = config.contenttypeofhtmlfiles
-  header : bytes = make_header(status, contenttype, config.contentlanguage, len(body), to_send_cookies).encode()
-  return (keep_alive, header + "\r\n\r\n".encode() + body + "\r\n\r\n".encode())
+  if 300 <= status < 400 : # A redirection occured
+    if not(empty_body) :
+      print("AAAAAAAAAAHHHHHHHHHHHHHHHhh")
+    header : bytes = make_header(status, contenttype, config.contentlanguage, 0, to_send_cookies, location = body).encode()
+  else :
+    header : bytes = make_header(status, contenttype, config.contentlanguage, len(body), to_send_cookies).encode()
+  final_message : string
+  if empty_body :
+    final_message = header + "\r\n".encode()
+  else :
+    final_message = header + "\r\n".encode() + body + "\r\n\r\n".encode()
+  return (keep_alive, final_message)

@@ -42,5 +42,14 @@
 
     <{ "cou'c\'ou\0\ncoucou2\rcoucou3enfait\"\tautre" }>
   </p>
+  <h2>Variable names</h2>
+  <p>
+    <{
+      let _x = 5 in _x
+    }>
+    <{
+      let _x = 5 in _x
+    }>
+  </p>
 </body>
 </html>

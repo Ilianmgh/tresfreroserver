@@ -26,7 +26,7 @@ let test (i, code : int * string) : unit =
     if List.mem "parsed" displayed then Printf.printf "parsed: %s\n%!" (string_of_dynpage parsed);
     let types_infered = type_inferer Environment.empty parsed in
     if List.mem "typed" displayed then List.iter (fun (gamma, tau) -> Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_modular_typing_environment gamma)) types_infered;
-    let _, values_evald = eval Environment.empty parsed in
+    let _, _, values_evald = eval Environment.empty parsed in
     if List.mem "eval'd" displayed then List.iter (fun v -> Printf.printf "eval'd: %s\n%!" (string_of_value v)) values_evald
   with
     | PrelexingError s -> Printf.fprintf stderr "PrelexingError: %s\n%!" s
@@ -96,16 +96,9 @@ Sqlite.closedb db
 <{
   let n = 20
 }>" (* should lex and parse *)
-(* <{
-  (fixfun f n -> if n = 0 then
-    \"\"
-  else begin
-    Get.langage ++ (f (n-1))
-  end) n
-}>
-" *)
       (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
       (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)
+      ; "<{let _x = 5 in _x}>"
     ]
   in
   if Array.length Sys.argv <= 1 then

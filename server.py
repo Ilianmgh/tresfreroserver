@@ -84,7 +84,7 @@ server_interrupt = threading.Event()
 generate_session_id_mut = threading.Lock()
 
 server = socket()
-server.bind(('0.0.0.0', 9999))
+server.bind(('0.0.0.0', 9997))
 server.listen()
 
 try :

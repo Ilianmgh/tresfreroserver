@@ -42,7 +42,8 @@ let predefined_symbols = [
     ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = Args1 extern_sqlite_close_db ; tau = Arr (TypeDb, TypeString)}
     ; {namespaces = [] ; name = "fst" ; v = Args1 ml_fst ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst")))}
     ; {namespaces = [] ; name = "snd" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
-    ; {namespaces = ["String"] ; name = "replace" ; v = Args3 ml_string_replace ; tau = Arr (TypeString, Arr (TypeString, Arr (TypeString, TypeString)))} (* TODO properly namespace *)
+    ; {namespaces = ["String"] ; name = "replace" ; v = Args3 ml_string_replace ; tau = Arr (TypeString, Arr (TypeString, Arr (TypeString, TypeString)))}
+    ; {namespaces = ["Http"] ; name = "redirect" ; v = Args1 ml_redirect ; tau = Arr (TypeString, TypeUnit)} (* FIXME GIVE AN ACTUAL TYPE !!!! *)
   ]
 
 let pre_included_environment : environment =
@@ -74,7 +75,7 @@ let produce_page (arguments : environment) (source : in_channel) (dest : out_cha
     let typ_env = Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env in
     let eval_env = Environment.disjoint_union arguments pre_included_environment in
     let _ = type_inferer typ_env parsed in
-    let final_env, values = eval eval_env parsed in
+    let final_env, location, values = eval eval_env parsed in
     let f_out = dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
     (* slight optimization: do not re-send session variables that were not modified; but simply mention to the server to keep them *)
@@ -90,18 +91,22 @@ let produce_page (arguments : environment) (source : in_channel) (dest : out_cha
         )
         session_env ""
     in
-    Printf.fprintf f_out "session%s\n" session_bindings;
+    Printf.fprintf f_out "session%s;" session_bindings; (* FIXME may lead to issues if ';' occurs in a session variable *)
+    (match location with
+      | None -> ()
+      | Some target -> Printf.fprintf f_out "redirect=%s" target);
+    Printf.fprintf f_out "\n";
     List.iter (fun v -> fprintf_value f_out v) values;
     close_out f_out
   with
-    | PrelexingError s -> let f_out = dest in Printf.fprintf f_out "\nPrelexingError: %s\n" s; close_out f_out
-    | LexingError s -> let f_out = dest in Printf.fprintf f_out "\nLexingError: %s\n" s; close_out f_out
-    | ParsingError s -> let f_out = dest in Printf.fprintf f_out "\nParsingError: %s\n" s; close_out f_out
-    | TypingError s -> let f_out = dest in Printf.fprintf f_out "\nTypingError: %s\n" s; close_out f_out
-    | UnificationError (alpha, beta, Recursive) -> let f_out = dest in Printf.fprintf f_out "\nUnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
-    | UnificationError (alpha, beta, Incompatible) -> let f_out = dest in Printf.fprintf f_out "\nUnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
-    | InterpreterError s -> let f_out = dest in Printf.fprintf f_out "\nInterpreterError: %s\n" s; close_out f_out
-    | UnsupportedError s -> let f_out = dest in Printf.fprintf f_out "\nUnsupportedError: %s\n" s; close_out f_out
+    | PrelexingError s -> let f_out = dest in Printf.fprintf f_out ";\nPrelexingError: %s\n" s; close_out f_out
+    | LexingError s -> let f_out = dest in Printf.fprintf f_out ";\nLexingError: %s\n" s; close_out f_out
+    | ParsingError s -> let f_out = dest in Printf.fprintf f_out ";\nParsingError: %s\n" s; close_out f_out
+    | TypingError s -> let f_out = dest in Printf.fprintf f_out ";\nTypingError: %s\n" s; close_out f_out
+    | UnificationError (alpha, beta, Recursive) -> let f_out = dest in Printf.fprintf f_out ";\nUnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
+    | UnificationError (alpha, beta, Incompatible) -> let f_out = dest in Printf.fprintf f_out ";\nUnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
+    | InterpreterError s -> let f_out = dest in Printf.fprintf f_out ";\nInterpreterError: %s\n" s; close_out f_out
+    | UnsupportedError s -> let f_out = dest in Printf.fprintf f_out ";\nUnsupportedError: %s\n" s; close_out f_out
   
 let test_file (source : string) : unit =
   let f_in = open_in source in

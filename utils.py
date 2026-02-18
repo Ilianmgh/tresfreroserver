@@ -25,6 +25,7 @@ def extract_content_type(s : str) -> str :
   return t[0]
 
 def parse_url_dictionary(data : str, d : dict[str, str]) :
+  """ [parse_url_dictionary(data, d)] adds bindings describe by [data] in [d]. """
   data_split = data.split("&")
   if data_split[0].lower() == "session" : # I actually think it's generic for any method, except for percent-encoding
     for binding in data_split[1:] :
