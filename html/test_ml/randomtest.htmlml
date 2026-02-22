@@ -51,5 +51,21 @@
       let _x = 5 in _x
     }>
   </p>
+  <h2>Characters/Strings</h2>
+  <p>
+    <{
+      let s = "α"
+    }>
+    s:
+    <{
+      s
+    }>
+    <br/>
+    first char of s:
+
+    <{
+      String.get s 0
+    }>
+  </p>
 </body>
 </html>

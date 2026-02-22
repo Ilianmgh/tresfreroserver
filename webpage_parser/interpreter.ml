@@ -240,18 +240,18 @@ let ml_redirect (v : value) : value = match v with
   | _ -> raise (InterpreterError (Printf.sprintf "%s: string expected" (string_of_value v)))
 
 (** If [i] is nonnegative and [len_s] is less than the length of [s], [ustring_get s from i = c] where [c] is a string representing the [i]-th utf-8 character of [s[from..len_s]]. *)
-let rec ustring_get (s : string) (len_s : int) (i : int) (j : int) : string =
-  if i > len_s then
-    let length_jth_uchar = Uchar.utf_decode_length (String.get_utf_8_uchar s i) in
-    if i = 0 then
-      String.sub s i length_jth_uchar
+let rec ustring_get (s : string) (len_s_ascii : int) (from_ascii : int) (j_utf8 : int) (orig_j_utf8 : int) : string =
+  if from_ascii < len_s_ascii then
+    let length_cur_uchar = Uchar.utf_decode_length (String.get_utf_8_uchar s from_ascii) in
+    if j_utf8 = 0 then
+      String.sub s from_ascii length_cur_uchar
     else
-      ustring_get s len_s (i + length_jth_uchar) (j - 1)
+      ustring_get s len_s_ascii (from_ascii + length_cur_uchar) (j_utf8 - 1) orig_j_utf8
   else
-    raise (InterpreterError (Printf.sprintf "%s: get out of bounds." s))
+    raise (InterpreterError (Printf.sprintf "%d-th character of %s: get out of bounds." orig_j_utf8 s))
 
 let ml_string_get (v_s : value) (v_i : value) : value = match v_s, v_i with
-  | VString s, VInt i -> VString (ustring_get s (String.length s) 0 i)
+  | VString s, VInt i -> VString (ustring_get s (String.length s) 0 i i)
   | _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s: string and integer expected." (string_of_value v_s) (string_of_value v_i)))
 
 (* TODO add "garbage-collection" *)
