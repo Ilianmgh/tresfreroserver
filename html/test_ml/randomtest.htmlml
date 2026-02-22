@@ -55,16 +55,15 @@
   <p>
     <{
       let s = "α"
+      let t = f"cou%{fun x -> x}%cou"
     }>
-    s:
+    s: <{s}><br/>
+    first char of s: <{String.get s 0}><br/>
+    t: <{t}><br/>
     <{
-      s
-    }>
-    <br/>
-    first char of s:
-
-    <{
-      String.get s 0
+      let i = 3 in
+      (<[<{i}>-th char of t:]>
+      ,String.get t i)
     }>
   </p>
 </body>
