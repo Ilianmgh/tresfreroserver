@@ -563,3 +563,5 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 #sym.ballot Keep line number information on parsed term for better typing error messages (?)
 
 #sym.ballot Allow relative path in redirection
+
+#sym.ballot Properly implement utf-8 strings + see if it's not too restrictive to only consider utf-8 (must be ascii-compatible though (web standard))
