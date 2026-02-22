@@ -3,7 +3,7 @@ body {
 }
 
 #applicationFrame {
-  background-color: rgb(180, 234, 255);
+  background-color: rgb(182, 182, 182);
   border: .3em black solid;
 }
 
@@ -12,7 +12,7 @@ body {
   padding-right:.5em;
   padding-left:.5em;
   border-bottom: .3em black solid;
-  background-color: rgba(127, 255, 212, 0.164);
+  background-color: rgb(219, 219, 219);
   display:flex;
   flex-direction: column;
   justify-content: space-between;
@@ -81,6 +81,7 @@ body {
 /* Reset button */
 
 #resetButton, #resetButton:visited  {
+  text-align: center;
   background-color: grey;
   border: .1em black solid;
   border-radius: .3em;
