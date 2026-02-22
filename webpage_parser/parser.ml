@@ -2,7 +2,7 @@ open Lexer
 open Utils
 open Syntax
 
-let debug = true
+let debug = false
 
 (** Result of attempt to parse a global declaration *)
 type parsed_let_expression =
@@ -118,7 +118,7 @@ let rec parse_exp (l : token list) : int * expr * token list = if debug then Pri
 and parse_sequence (l : token list) : int * expr * token list =
   (if debug then Printf.fprintf stderr "PARSE SEQ\n%!");
   let i_lhs, lhs, l_rem = parse_if l in
-  (if debug then Printf.fprintf stderr "PARSE SEQ OK: lrem: %s\n%!" (string_of_list string_of_token l_rem));
+  (if debug then Printf.fprintf stderr "PARSE SEQ OK\n%!");
   match eat_token_opt [(Keyword TokSeq)] l_rem with
     | Some (i_seq, seq, l_rem) ->
       let i_rhs, rhs, l_rem = parse_sequence l_rem in (i_rhs, Seq (lhs, rhs), l_rem)
