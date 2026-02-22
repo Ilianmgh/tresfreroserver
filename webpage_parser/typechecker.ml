@@ -110,11 +110,13 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
   | App (e, e') ->
     let gamma', func_type = type_inferer_one_expr gamma e in
     let gamma'', arg_type = type_inferer_one_expr gamma e' in
-    begin match unpack_foralls func_type, arg_type with
+    let alpha_var, beta_var = fresh (), fresh () in
+    let theta_func = unify func_type (Arr (TypeVar alpha_var, TypeVar beta_var)) in (* [e] must be a fuction *)
+    begin match apply_substitution (unpack_foralls func_type) theta_func, arg_type with
       | Arr (alpha, beta), alpha' ->
         let theta = unify alpha alpha' in
         (update_typing_env gamma'' theta, apply_substitution beta theta)
-      | _, _ -> raise (TypingError (Printf.sprintf "%s: this is not a function, it cannot be applied." (string_of_expr (App (e, e'))))) (* TODO underline the function *)
+      | func_type, arg_type -> raise (TypingError (Printf.sprintf "%s, %s, %s: this is not a function, it cannot be applied." (string_of_expr (App (e, e'))) (string_of_ml_type func_type) (string_of_ml_type arg_type))) (* TODO underline the function *)
     end
   | If (c, t, e) -> begin
       let gamma', tau = type_inferer_one_expr gamma c in
@@ -188,7 +190,12 @@ let rec type_inferer_one_expr (gamma : modular_typing_environment) (e1 : expr) :
       | TypeString -> (update_typing_env gamma'' theta, TypeString)
       | _ -> raise (TypingError (Printf.sprintf "%s: This expression has type %s but is expected to have type %s." (string_of_expr e) (string_of_ml_type t_str) (string_of_ml_type TypeString))) (* TODO keep replacing those tests by unification *)
   end
-  | String s | Fstring s -> gamma, TypeString
+  | String _ -> gamma, TypeString
+  | Fstring lst -> List.fold_left begin fun cur_gamma -> function
+      | FstrExpr e -> fst (type_inferer_one_expr cur_gamma e)
+      | FstrString s -> cur_gamma
+    end gamma lst, TypeString
+  | Unit -> gamma, TypeUnit
   | WithModule (module_name, e) -> begin match Environment.submap_opt module_name gamma with
     | None -> raise (TypingError (Printf.sprintf "%s: undefined module." module_name))
     | Some new_env -> begin

@@ -8,6 +8,8 @@ type module_name = string
 
 type variable = string
 
+type parameter = variable
+
 type type_expr = int * int * int array * float list * float (* TODO replace by string, just put some junk because my linter is driving me crazy *)
 
 type global_declaration =
@@ -22,8 +24,8 @@ and dynml_webpage = dynml_element list
 and expr = (* TODO add match ... with, user-defined types *)
     Empty (* TODO see if it's really necessary *)
   | Let of variable * expr * expr
-  | Fun of variable * expr
-  | Fix of variable * variable * expr
+  | Fun of parameter * expr
+  | Fix of variable * parameter * expr
   | App of expr * expr
   | If of expr * expr * expr
   | Seq of expr * expr
@@ -37,6 +39,8 @@ and expr = (* TODO add match ... with, user-defined types *)
     (let nested2 = {z = 2} in let nested1 = {y = nested2} in {x = nested1}).x.y.z *)
   (* tuples *)
   | Couple of expr * expr
+  (* unit *)
+  | Unit
   (* arithmetic connectors *)
   | Plus of expr * expr
   | Minus of expr * expr
@@ -59,7 +63,9 @@ and expr = (* TODO add match ... with, user-defined types *)
   (* strings connectors *)
   | Concat of expr * expr
   | String of string
-  | Fstring of string
+  | Fstring of fstr_element list
+
+and fstr_element = FstrString of string | FstrExpr of expr
 
 (** Pre-defined modules *)
 let sqlite_module_name = "Sqlite"
@@ -85,6 +91,7 @@ and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasi
   | WithModule (modu, Var x) -> Printf.sprintf "%s.%s" modu x
   | WithModule (modu, e) -> Printf.sprintf "%s.(%s)" modu (string_of_expr e)
   | Couple (e, e') -> Printf.sprintf "(%s, %s)" (string_of_expr e) (string_of_expr e')
+  | Unit -> "()"
   | Plus (e, e') -> Printf.sprintf "%s + %s" (string_of_expr e) (string_of_expr e')
   | Minus (e, e') -> Printf.sprintf "%s - %s" (string_of_expr e) (string_of_expr e')
   | Neg e -> Printf.sprintf "-%s" (string_of_expr e)
@@ -104,7 +111,12 @@ and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasi
   | Bool b -> if b then "true" else "false"
   | Concat (e, e') -> Printf.sprintf "%s ++ %s" (string_of_expr e) (string_of_expr e')
   | String s -> s
-  | Fstring s -> s
+  | Fstring lst -> Printf.sprintf "%s\"" begin List.fold_left
+      (fun acc -> function
+        | FstrExpr e -> Printf.sprintf "%s%%{%s}%%" acc (string_of_expr e)
+        | FstrString s -> Printf.sprintf "%s%s" acc s)
+      "f\"" lst
+    end
 
 and string_of_dynelement (elt : dynml_element) : string = match elt with
   | Pure s -> s

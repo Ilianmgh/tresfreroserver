@@ -33,6 +33,41 @@ let eat_token_opt (toks : raw_token list) (l : token list) : (int * raw_token * 
   | (i_line, tok') :: l_rem -> if List.mem tok' toks then Some (i_line, tok', l_rem) else None
   | _ -> None
 
+(** TYPE EXPRESSIONS *)
+
+let parse_type_identifier (l : token list) : int * type_name * token list = eat_variable l "type name expected."
+
+let parse_type_param (l : token list) : int * variable * token list = 
+  let _, _, l_rem = eat_token (Keyword TokLpar) l (fun t -> match t with | None -> "" | Some tok -> Printf.sprintf "%s: quote expected." (string_of_raw_token tok)) in
+  eat_variable l_rem "type name expected."
+
+(** [parse_type_params l = (i, [var1, ..., varn], l_rem)] parses type parameters [('var1, ..., 'varn)] from the beginning of [l]. Can be 'a or ('a1, ..., 'an) *)
+let parse_type_params (l : token list) : int * variable list * token list =
+  (** parses ['var1, 'var2, ..., 'varn)]*)
+  let rec parse_type_params_until_close_par (l : token list) (acc : variable list) : int * variable list * token list = match eat_token_opt [Keyword TokRpar] l with
+    | Some (ipar, rpar, l_rem) -> ipar, (List.rev acc), l_rem
+    | None -> begin let i, var_name, l_rem = parse_type_param l in
+      let i_comma, comma, l_rem = eat_token (Keyword TokComma) l_rem (fun t -> match t with | None -> "" | Some tok -> Printf.sprintf "%s: comma expected." (string_of_raw_token tok)) in
+      parse_type_params_until_close_par l_rem (var_name :: acc)
+    end
+  in match eat_token_opt [Keyword TokLpar] l with
+    | Some (ipar, lpar, l_rem) -> parse_type_params_until_close_par l_rem []
+    | None -> let i, var_name, l_rem = parse_type_param l in (i, [var_name], l_rem)
+
+(** [parse_type_record_opt l] tries to parse a record type expression. If doesn't start with a `{`, returns [None] *)
+let parse_type_record_opt (l : token list) : (int * expr * token list) option = match eat_token_opt [Keyword TokRBracket] l with
+  | Some (i_line, open_curly_bracket, l_rem) -> failwith "TODO: parse record types."
+  | _ -> None
+
+
+let parse_type_expr (l : token list) : int * expr * token list = failwith "TODO"
+
+let parse_type_constrargs (l : token list) : int * expr * token list = failwith "TODO"
+
+let parse_type_constrdecl (l : token list) : int * expr * token list = failwith "TODO"
+
+let parse_type_sum (l : token list) : int * expr * token list = failwith "TODO"
+
 (** LEFT ASSOCIATIVITY *)
 
 let merge_additive (op : raw_token) (e1 : expr) (e2 : expr) = match op with
@@ -64,16 +99,47 @@ let rec parse_application_accumulator (parse_argument : token list -> (int * exp
   with
     | ParsingError _ -> (last_line, acc, l)
 
+(** Parse functions' parameter *)
+
+let eat_parameter (i : int) (l : token list) (error_message : int -> string) : int * parameter * token list =
+  eat_variable l (error_message i)
+
+(** [eat_parameters i l = (i, [p1;...;pn], l_rem)] parses all function parameters [[p1;...;pn]] from [l] until it founds a [->]. [lrem] is the tail [l], from just after the [->] token. *)
+let eat_parameters (i : int) (l : token list) (error_message : int -> string) : int * parameter list * token list =
+  let rec eat_parameters_acc (i : int) (l : token list) (acc : parameter list) : int * parameter list * token list =
+    match eat_token_opt [Keyword TokArr] l with
+    | Some (i_arr, tok_arr, l_rem) -> i_arr, List.rev acc, l_rem
+    | None -> (* it must be a parameter *) let i_p, p, l_rem = eat_parameter i l error_message in eat_parameters_acc i_p l_rem (p :: acc)
+  in
+  eat_parameters_acc i l []
+
 (** Returns [(last_line, remaining, e)]: [last_line] the number of the last line from which we parsed something; [remaining] the list of tokens that remained to be parsed; [e] the parsed expression *)
 let rec parse_exp (l : token list) : int * expr * token list = if debug then Printf.printf "PARSING: %s\n" (string_of_list string_of_token l); parse_sequence l
 and parse_sequence (l : token list) : int * expr * token list =
   (if debug then Printf.fprintf stderr "PARSE SEQ\n%!");
-  let i_lhs, lhs, l_rem = parse_tuple l in
+  let i_lhs, lhs, l_rem = parse_if l in
   (if debug then Printf.fprintf stderr "PARSE SEQ OK\n%!");
   match eat_token_opt [(Keyword TokSeq)] l_rem with
     | Some (i_seq, seq, l_rem) ->
       let i_rhs, rhs, l_rem = parse_sequence l_rem in (i_rhs, Seq (lhs, rhs), l_rem)
     | None -> (i_lhs, lhs, l_rem)
+and parse_if (l : token list) : int * expr * token list =
+  (if debug then Printf.fprintf stderr "PARSE IF\n%!");
+  match l with
+  | [] -> raise (ParsingError "Unexpected end of document")
+  | (i, tok) :: l_rem -> begin match tok with
+    | Keyword TokIf -> begin
+      let i_condition, condition, l_rem = parse_tuple l_rem in
+      let i_then, tok_then, l_rem = eat_token (Keyword TokThen) l_rem (fun _ -> Printf.sprintf "line %d: if-expression: `then` expected after 'if <condition>'." i_condition) in
+      let i_then_body, then_body, l_rem = parse_tuple l_rem in
+      begin match eat_token_opt [Keyword TokElse] l_rem with
+        | None -> (i_then_body, If (condition, then_body, Unit), l_rem)
+        | Some (i_else, tok_else, l_rem) -> let i_else_body, else_body, l_rem = parse_tuple l_rem in
+          (i_else_body, If (condition, then_body, else_body), l_rem)
+      end
+    end
+    | _ -> parse_tuple l
+  end
 and parse_tuple (l : token list) : int * expr * token list = (* for now, only couples are allowed *)
 (if debug then Printf.fprintf stderr "PARSE TUPLE\n%!");
   let i_lhs, lhs, l_rem = parse_disjunction l in
@@ -159,37 +225,40 @@ and parse_atom (l : token list) : int * expr * token list =
       (i, Let (var, x_expr, body_expr), l_rem)
     end
     | Keyword TokFun -> begin
-      let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: fun-expression: variable expected after 'fun'." i) in
-      let i_arrow, arrow, l_rem = eat_token (Keyword TokArr) l_rem (fun _ -> Printf.sprintf "line %d: fun-expression: '->' expected after 'fun <var>'." i_var) in
-      let i_body, body, l_rem = parse_exp l_rem in
-      (i_body, Fun (var, body), l_rem)
+      let i_params, params, l_rem = eat_parameters i l_rem (Printf.sprintf "line %d: fun-expression: parameters expected after 'fun'.") in
+      let i_body, body_e, l_rem = parse_exp l_rem in
+      (i_body, List.fold_right (fun p body -> Fun (p, body)) params body_e, l_rem)
     end
     | Keyword TokFix -> begin
       let i_f_var, f_var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: fixfun-expression: function variable expected after 'fixfun'." i) in
-      let i_x_var, x_var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: fixfun-expression: variable expected after 'fixfun'." i) in
-      let i_arrow, arrow, l_rem = eat_token (Keyword TokArr) l_rem (fun _ -> Printf.sprintf "line %d: fun-expression: '->' expected after 'fun <var>'." i_x_var) in
-      let i_body, body, l_rem = parse_exp l_rem in
-      (i_body, Fix (f_var, x_var, body), l_rem)
-    end
-    | Keyword TokIf -> begin
-      let i_condition, condition, l_rem = parse_exp l_rem in
-      let i_then, tok_then, l_rem = eat_token (Keyword TokThen) l_rem (fun _ -> Printf.sprintf "line %d: if-expression: `then` expected after 'if <condition>'." i_condition) in
-      let i_then_body, then_body, l_rem = parse_exp l_rem in
-      let i_else, tok_else, l_rem = eat_token (Keyword TokElse) l_rem (fun _ -> Printf.sprintf "line %d: if-expression: `else` expected after 'if <condition> then <body>'." i_then_body) in
-      let i_else_body, else_body, l_rem = parse_exp l_rem in
-      (i_else_body, If (condition, then_body, else_body), l_rem)
+      let i_params, params, l_rem = eat_parameters i l_rem (Printf.sprintf "line %d: fixfun-expression: parameters expected after 'fixfun'.") in
+      let first_param = List.hd params in (* there has to be at least one parameter *)
+      let other_params = List.tl params in
+      let i_body_e, body_e, l_rem = parse_exp l_rem in
+      (* For [fixfun f x1 x2 ... xn -> e], [actual_body] represents [fun x2 ... xn -> e], since it is seen as [fixfun f x1 -> fun x2 ... xn -> e] *)
+      let actual_body = List.fold_right (fun p body -> Fun (p, body)) other_params body_e in
+      (i_body_e, Fix (f_var, first_param, actual_body), l_rem)
     end
     | Keyword TokCloseML -> raise (ParsingError (Printf.sprintf "line %d: Unexpected end of ml code." i))
     | Lit TokTrue -> (i, Bool true, l_rem)
     | Lit TokFalse -> (i, Bool false, l_rem)
     | Lit (TokInt n) -> (i, Int n, l_rem)
     | Lit (TokStr s) -> (i, String s, l_rem)
-    | Lit (TokFstr s) -> (i, Fstring s, l_rem)
+    (* | Lit (TokFstr s) -> (i, Fstring s, l_rem) *)
     | Id s -> (i, Var s, l_rem)
     | Keyword TokLpar ->
-      let i_expr, expr, l_rem = parse_exp l_rem in
-      let i_rpar, rpar, l_rem = eat_token (Keyword TokRpar) l_rem (fun x -> Printf.sprintf "line %d: %s closing parenthesis expected." i_expr (match x with | Some tok -> string_of_raw_token tok | None -> "")) in
-      (i_rpar, expr, l_rem)
+      begin match eat_token_opt [Keyword TokRpar] l_rem with
+        | None -> let i_expr, expr, l_rem = parse_exp l_rem in
+          let i_rpar, rpar, l_rem = eat_token (Keyword TokRpar) l_rem (fun x ->
+            Printf.sprintf "line %d: %s closing parenthesis expected." i_expr
+              (match x with
+                | Some tok -> string_of_raw_token tok
+                | None -> ""
+              )
+            ) in
+          (i_rpar, expr, l_rem)
+        | Some (i_rpar, rpar, l_rem) -> (i_rpar, Unit, l_rem)
+    end
     | Keyword TokOpenHTML ->
       let line_after_close_html, html_sub, l_rem' = parse_html_unit l_rem false in (line_after_close_html, Html html_sub, l_rem')
     | TokHtml s -> raise (ParsingError (Printf.sprintf "line %d: Unexpected html code within ML delimiters." i)) (* assert false ? *)
@@ -197,6 +266,7 @@ and parse_atom (l : token list) : int * expr * token list =
       let i_dot, dot, l_rem = eat_token (Keyword TokDot) l_rem (fun x -> Printf.sprintf "line %d: expected dot after '%s'." i modu) in (* TODO at some point, this error will not appear, since it'll be interpreted as a constructor *)
       let i_scope_of_module, expr_in_scope_of_module, l_rem = parse_atom l_rem in (* TODO too permissive e.g. ModuleName.fun x -> x shouldn't be parsed as ModuleName.(fun x -> x). Investigate. *)
       (i_scope_of_module, WithModule (modu, expr_in_scope_of_module), l_rem)
+    | Keyword TokOpenFstring -> parse_fstring l_rem
     | _ -> raise (ParsingError (Printf.sprintf "line %d: Malformed expression." i))
   end
 
@@ -215,8 +285,8 @@ and parse_global (l : token list) : parsed_let_expression =
     end
     | None | Some _ -> l, None
   in
-  match eat_token_opt [Keyword TokLet] l' with
-    | Some (i_let, let_, l_rem) (* TODO when type decl added, test if let_ is [Keyword TokLet] *) -> begin
+  match eat_token_opt [Keyword TokLet; Keyword TokType] l' with
+    | Some (i_let, Keyword TokLet, l_rem) -> begin
       let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: let-expression: variable expected after 'let'." i_let) in
       let i_eq, eq, l_rem = eat_token (Keyword TokEq) l_rem (fun _ -> Printf.sprintf "line %d: let-expression: '=' expected after 'let'." i_var) in
       let i_x_expr, x_expr, l_rem = parse_exp l_rem in
@@ -229,7 +299,26 @@ and parse_global (l : token list) : parsed_let_expression =
           end
       end 
     end
+    | Some (i_let, Keyword TokType, l_rem) -> begin
+      failwith "TODO"
+    end
     | None -> Nothing
+    | _ -> assert false
+
+(** [parse_fstring l] parses the content of a fstring (except the opening f+quote )*)
+and parse_fstring (l : token list) : int * expr * token list =
+  let rec parse_fstring_acc (l : token list) (acc : fstr_element list) : int * expr * token list = match l with
+    | (i, Keyword TokCloseFstring) :: lrem -> i, Fstring (List.rev acc), lrem
+    | (i, Lit (TokFstr s)) :: lrem -> parse_fstring_acc lrem (FstrString s :: acc)
+    | (i, Keyword TokOpenFexpr) :: lrem -> let i_exp, e, lrem = parse_exp lrem in begin match lrem with
+      | (_, Keyword TokCloseFexpr) :: lrem -> parse_fstring_acc lrem (FstrExpr e :: acc)
+      | (i, tok) :: lrem -> raise (ParsingError (Printf.sprintf "line %d: %s, string or fstring open-ml bracket expected." i (string_of_raw_token tok)))
+      | [] -> raise (ParsingError "Malformed expression: unclosed fstring expression (unexpected end of document).")
+    end
+    | (i, tok) :: _ -> raise (ParsingError (Printf.sprintf "line %d: %s, string or fstring open-ml bracket expected." i (string_of_raw_token tok)))
+    | [] -> raise (ParsingError "Malformed expression: unclosed fstring (unexpected end of document).")
+  in
+  parse_fstring_acc l []
 
 (** [parse_globals l acc] parses a sequence of global declaration from [l], appended to [acc] *)
 and parse_globals (l : token list) (acc : global_declaration list) : int * global_declaration list * token list = match l with
@@ -267,6 +356,6 @@ let rec parser (lexed : token list) : dynml_webpage = let _, parsed, _ = parse_h
 
 (*
   TODO:
-  [] check if precedence of if is not under-evaluated : test if true then 1; 2 === (if true then 1); 2 or if true then (1; 2)
+  [] check if precedence of [if] is not under-evaluated : test if true then 1; 2 === (if true then 1); 2 or if true then (1; 2)
   [] parse () as a unit
 *)

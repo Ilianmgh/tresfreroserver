@@ -528,9 +528,9 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 
 = TODO
 
-#sym.ballot Implement escape characters in strings
+#sym.ballot.check Implement escape characters in strings
 
-#sym.ballot Implement fstrings
+#sym.ballot.check Implement fstrings
 
 #sym.ballot.check Implement percent-encoding 
 
@@ -540,7 +540,7 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 
 #sym.ballot.check Allow HTML brackets to contain any dynpage e.g. <[somehtml <{"coucou"}> somemorehtml]>
 
-#sym.ballot Add syntactic sugar for multiple variables functions.
+#sym.ballot.check Add syntactic sugar for multiple variables functions.
 
 #sym.ballot Add t-uples
 
@@ -561,3 +561,5 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 #sym.ballot Allow importing other ml files (as modules ?)
 
 #sym.ballot Keep line number information on parsed term for better typing error messages (?)
+
+#sym.ballot Allow relative path in redirection

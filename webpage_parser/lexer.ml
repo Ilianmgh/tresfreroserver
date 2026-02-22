@@ -104,6 +104,7 @@ let token_of_ml_pretoken (i_line : int) (s : string) : raw_token = match StringM
 let pre_token_lexer (pretok : pre_token) : token = match pretok with
   | PretokHtml (i_line, s) -> (i_line, TokHtml s)
   | PretokMl (i_line, s) -> (i_line, token_of_ml_pretoken i_line s)
+  | PretokFstr (i_line, s) -> (i_line, Lit (TokFstr s))
 
 let pre_tokens_lexer (l : pre_token list) : token list = List.map pre_token_lexer l
 

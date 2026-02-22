@@ -8,9 +8,15 @@ let close_ml_bracket = "}>"
 let open_html_bracket = "<["
 let close_html_bracket = "]>"
 
+let open_fstring = "f\""
+
+let open_ml_fstr_bracket = "%{"
+let close_ml_fstr_bracket = "}%"
+
 let len_open_ml_bracket = String.length open_ml_bracket
 
 let len_open_html_bracket = String.length open_html_bracket
+
 let len_close_html_bracket = String.length close_html_bracket
 
 type keyword =
@@ -26,8 +32,15 @@ type keyword =
   | TokOpenML | TokCloseML (* ML-opening/closing brackets *)
   | TokOpenHTML | TokCloseHTML (* HTML-opening/closing brackets *)
   | TokDot (* Dots (for namespacing) *)
+  | TokType | TokPipe (* for type declarations *)
+  | TokLBracket | TokRBracket (* for record types *)
+  | TokSingleQuote
+  | TokOpenFstring | TokCloseFstring
+  | TokOpenFexpr | TokCloseFexpr
 
-type literal = TokTrue | TokFalse | TokInt of int | TokStr of string | TokFstr of string
+(* type ml_char_type = Uchar.t *)
+
+type literal = TokTrue | TokFalse | TokInt of int | (* TokChar of ml_char_type | *) TokStr of string | TokFstr of string
 
 (** tokens without line numbering *)
 type raw_token = MId of string (* ids of modules (starting with a capital)*)| Id of string | Lit of literal | Keyword of keyword | TokHtml of string
@@ -57,12 +70,21 @@ let symbols_tokens : (string * raw_token) list = [
   (close_html_bracket, Keyword TokCloseHTML);
   ("(", Keyword TokLpar);
   (")", Keyword TokRpar);
+  ("{", Keyword TokLBracket);
+  ("}", Keyword TokRBracket);
   (";", Keyword TokSeq);
   (",", Keyword TokComma);
   (".", Keyword TokDot);
+  ("|", Keyword TokPipe);
+  ("'", Keyword TokSingleQuote);
+  ("f\"", Keyword TokOpenFstring);
+  ("\"", Keyword TokCloseFstring);
+  (open_ml_fstr_bracket, Keyword TokOpenFexpr);
+  (close_ml_fstr_bracket, Keyword TokCloseFexpr);
   ("++", Keyword TokStrConcat)]
 
 let keywords_tokens : (string * raw_token) list = [
+  ("type", Keyword TokType);
   ("let", Keyword TokLet);
   ("fun", Keyword TokFun);
   ("fixfun", Keyword TokFix);
@@ -86,6 +108,11 @@ let keywords_map : raw_token StringMap.t =
 (** Pretty-printing *)
 
 let string_of_keyword (k : keyword) : string = match k with
+  | TokType -> "type"
+  | TokPipe -> "|"
+  | TokSingleQuote -> "'"
+  | TokLBracket -> "{"
+  | TokRBracket -> "}"
   | TokLet -> "let"
   | TokEq -> "=" 
   | TokArr -> "->" 
@@ -114,10 +141,14 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokDot -> "."
   | TokLpar -> "("
   | TokRpar -> ")"
-  | TokOpenML -> "<{"
-  | TokCloseML -> "}>"
-  | TokOpenHTML -> "<["
-  | TokCloseHTML -> "]>"
+  | TokOpenML -> open_ml_bracket
+  | TokCloseML -> close_ml_bracket
+  | TokOpenHTML -> open_html_bracket
+  | TokCloseHTML -> close_html_bracket
+  | TokOpenFexpr -> open_ml_fstr_bracket
+  | TokCloseFexpr -> close_ml_fstr_bracket
+  | TokOpenFstring -> open_fstring
+  | TokCloseFstring -> "\""
 
 let string_of_raw_token (tok : raw_token) : string = match tok with
   | MId s -> Printf.sprintf "MId:%s" s
@@ -126,6 +157,7 @@ let string_of_raw_token (tok : raw_token) : string = match tok with
   | Lit TokFalse -> "Lit:false"
   | Lit TokTrue -> "Lit:true"
   | Lit (TokInt n) -> Printf.sprintf "Lit:%d" n
+  (* | Lit (TokChar c) -> Printf.sprintf "Lit:%s" s *)
   | Lit (TokStr s) -> Printf.sprintf "Lit:%s" s
   | Lit (TokFstr s) -> Printf.sprintf "Lit(f):%s" s
   | TokHtml s -> Printf.sprintf "Html:%s" s

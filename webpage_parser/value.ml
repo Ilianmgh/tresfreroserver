@@ -14,6 +14,7 @@ and value =
   | VInt of int
   | VBool of bool
   | VString of string
+  | VUnit
   | VPure of string
   | VContent of value list
   | VCouple of value * value
@@ -73,6 +74,7 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
     fprintf_value out ~escape_html:escape_html v';
     Printf.fprintf out ")"
   end
+  | VUnit -> Printf.fprintf out "()"
   | Clos (_, VExternFunction (name, _)) -> Printf.fprintf out "%s" name
   | Clos (env, VFun (x, e)) -> begin
     Printf.fprintf out "⟨";
@@ -103,6 +105,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `produce_page` *)
   | VContent l -> List.fold_left (fun acc v -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:escape_html v)) "" l
   | VCouple (v, v') -> Printf.sprintf "(%s, %s)" (string_of_value ~escape_html:escape_html v) (string_of_value ~escape_html:escape_html v')
+  | VUnit -> "()"
   | Clos (_, VExternFunction (name, _)) -> name
   | Clos (env, VFun (x, e)) -> Printf.sprintf "⟨%s, fun %s -> %s⟩" (string_of_env ~escape_html:escape_html env) x (string_of_expr e)
   | Clos (env, VFix (f, x, e)) -> Printf.sprintf "⟨%s, fixfun %s %s -> %s⟩" (string_of_env ~escape_html:escape_html env) f x (string_of_expr e)

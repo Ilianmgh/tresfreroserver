@@ -43,7 +43,8 @@ let predefined_symbols = [
     ; {namespaces = [] ; name = "fst" ; v = Args1 ml_fst ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst")))}
     ; {namespaces = [] ; name = "snd" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
     ; {namespaces = ["String"] ; name = "replace" ; v = Args3 ml_string_replace ; tau = Arr (TypeString, Arr (TypeString, Arr (TypeString, TypeString)))}
-    ; {namespaces = ["Http"] ; name = "redirect" ; v = Args1 ml_redirect ; tau = Arr (TypeString, TypeUnit)} (* FIXME GIVE AN ACTUAL TYPE !!!! *)
+    ; {namespaces = ["String"] ; name = "get" ; v = Args2 ml_string_get ; tau = Arr (TypeString, Arr (TypeInt, TypeString))} (* FIXME add char type *)
+    ; {namespaces = ["Http"] ; name = "redirect" ; v = Args1 ml_redirect ; tau = Arr (TypeString, TypeUnit)} (* FIXME GIVE AN ACTUAL TYPE TO LOCATIONS !!!! *)
   ]
 
 let pre_included_environment : environment =

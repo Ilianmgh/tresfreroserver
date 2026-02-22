@@ -11,11 +11,12 @@ let symbols_trie = List.fold_left (fun tr keyword -> Trie.add_word tr keyword) T
 let whitespaces : char list = ['\r'; '\n'; ' '; '\t']
 
 (** A pretoken is either some html code and a line number or a ml code pretoken and a line number *)
-type pre_token = PretokHtml of int * string | PretokMl of int * string
+type pre_token = PretokHtml of int * string | PretokMl of int * string | PretokFstr of int * string
 
 let string_of_pre_token (pretok : pre_token) : string = match pretok with
   | PretokHtml (i, s) -> Printf.sprintf "l.%d Html:%s" i s
   | PretokMl (i, s) -> Printf.sprintf "l.%d Ml:%s" i s
+  | PretokFstr (i, s) -> Printf.sprintf "l.%d Fstr:%s" i s
 
 (** Returns the line number and the next non white space index *)
 let rec next_non_white_space_idx (s : string) (i : int) (n : int) (line_number : int) : int * int =
@@ -51,7 +52,7 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
     let rec split_string (s : string) (acc : char list) (line_number : int) (i : int) (n : int) : int * int * string =
       assert (i <= n);
       if i = n then begin
-        raise (PrelexingError "Expected end of string.")
+        raise (PrelexingError "End of string expected.")
       end else begin
         let next_line_number = if s.[i] = '\n' then line_number + 1 else line_number in
         if (s.[i] = '"' && not(0 < i && s.[i - 1] = '\\')) then
@@ -60,11 +61,25 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
           split_string s (s.[i] :: acc) line_number (i + 1) n
       end
     in
-    let rec split_fstring (s : string) (fstring_acc : char list) (lexed_acc : pre_token list) (orig_lex : trie) (line_number : int) (i : int) (n : int) (split_html_rec : string -> char list -> pre_token list -> int -> int -> int -> int * int * pre_token list) : int * int * pre_token list =
-      let next_i, next_line_number, str_lit = split_string s fstring_acc line_number i n in
-      let lexed_acc_with_string = update_word_list_pretok ((0, ""), (line_number, str_lit)) lexed_acc in
-      split_ml_symbols_whitespace s [] [] lexed_acc_with_string next_i n orig_lex orig_lex next_line_number split_html_rec
-    and split_ml_symbols_whitespace (* FIXME should not skip whitespaces _after_ a ml closing bracket *)
+    let rec split_fstring
+      (s : string)
+      (fstring_acc : char list) (lexed_acc : pre_token list)
+      (orig_lex : trie)
+      (line_number : int) (i : int) (n : int)
+      (split_html_rec : string -> char list -> pre_token list -> int -> int -> int -> int * int * pre_token list) : int * int * pre_token list =
+      assert (i <= n);
+      if i = n then begin
+        raise (PrelexingError "End of fstring expected.")
+      end else begin
+        let next_line_number = if s.[i] = '\n' then line_number + 1 else line_number in
+        if (s.[i] = '"' && not(0 < i && s.[i - 1] = '\\')) then
+          split_ml_symbols_whitespace s [] [] ((PretokMl (next_line_number, "\"")) :: (PretokFstr (next_line_number, string_of_char_list (List.rev fstring_acc))) :: lexed_acc) (i+1) n orig_lex orig_lex next_line_number split_html_rec
+        else if s.[i] = '%' && (i+1 < n && s.[i + 1] = '{') then
+          split_ml_symbols_whitespace s [] [] ((PretokMl (next_line_number, "%{")) :: (PretokFstr (next_line_number, string_of_char_list (List.rev fstring_acc))) :: lexed_acc) (i+2) n orig_lex orig_lex next_line_number split_html_rec
+        else
+          split_fstring s (s.[i] :: fstring_acc) lexed_acc orig_lex line_number (i + 1) n split_html_rec
+      end
+    and split_ml_symbols_whitespace
       (s : string)
       (cur_word_acc : char list) (cur_symbol_acc : char list)
       (lexed_acc : pre_token list)
@@ -77,10 +92,8 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
       if cur_word_acc = [] && i_nonwhitespace < n && s.[i_nonwhitespace] = '"' then begin
         (* we stop lexing keywords, lexing a string *)
         let next_i, str_line_number, str_lit = split_string s ['"'] next_line_number (i_nonwhitespace + 1) n in
-        let lexed_acc_with_string = update_word_list_pretok ((0, ""), (str_line_number, str_lit)) lexed_acc in (* TODO check if line numbers are correct *)
+        let lexed_acc_with_string = update_word_list_pretok ((0, ""), (str_line_number, str_lit)) lexed_acc in
         split_ml_symbols_whitespace s [] [] lexed_acc_with_string next_i n orig_lex orig_lex next_line_number split_html_rec
-      end else if cur_word_acc = [] && i_nonwhitespace + 1 < n && s.[i_nonwhitespace] = 'f' && s.[i_nonwhitespace + 1] = '"' then begin
-        split_fstring s ['"'; 'f'] lexed_acc orig_lex next_line_number (i_nonwhitespace + 1) n split_html_rec
       end else begin
         let next_lex_state, next_symbol_acc = if i < n then match eat_letter_opt lex_state s.[i] with
             | Some tr -> tr, s.[i] :: cur_symbol_acc
@@ -92,13 +105,21 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
           (* we have to output a pretoken now *)
           let sym_lexed, word_lexed = lex_now cur_word_acc cur_symbol_acc lex_state line_number in
           let new_lexed_acc : pre_token list = update_word_list_pretok (sym_lexed, word_lexed) lexed_acc in
+          (* either we detect the beginning of html code, we lex html from now on... *)
           if (snd sym_lexed) = close_ml_bracket then
             split_html_rec s [] new_lexed_acc i n line_number
           else if (snd sym_lexed) = open_html_bracket then
             split_html_rec s [] new_lexed_acc i n line_number
+          (* ... either we detect the beginning of fstring... *)
+          else if (snd sym_lexed) = close_ml_fstr_bracket then
+            split_fstring s [] new_lexed_acc orig_lex line_number i n split_html_rec
+          else if (snd sym_lexed) = open_fstring then
+            split_fstring s [] new_lexed_acc orig_lex line_number i n split_html_rec
           else
+            (* ... either there is nothing more to lex... *)
             if i_nonwhitespace = n then
               (n, line_number, new_lexed_acc)
+            (* ... or we continue lexing ml *)
             else begin
               split_ml_symbols_whitespace s [] [] new_lexed_acc i_nonwhitespace n orig_lex orig_lex next_line_number split_html_rec
             end

@@ -164,11 +164,18 @@ let rec eval_expr (env : environment) (e1 : expr) : (string option) * value = ma
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: Strings expected." (string_of_expr (Concat (e, e')))))
   end
   | String s -> None, VString s
-  | Fstring s -> raise (UnsupportedError "FString are not supported by now")
+  | Fstring lst -> None, VString begin
+    List.fold_left begin fun acc -> function
+      | FstrExpr e -> Printf.sprintf "%s%s" acc (string_of_value (snd (eval_expr env e)))
+      | FstrString s -> Printf.sprintf "%s%s" acc s
+    end "" lst
+  end
+  | Unit -> None, VUnit
   | WithModule (module_name, e) -> begin match Environment.submap_opt module_name env with (* FIXME like in typechecker *)
     | None -> raise (InterpreterError (Printf.sprintf "%s: undefined module." module_name))
     | Some sub_env -> eval_expr sub_env e 
   end
+
 (** [eval env page = (env', location, res)] where [res] is the evaluation of [page] following the program semantics (cf. documentation). [env'] is the resulting environment ([env] + declared globals, etc) and [session_vars] is the list of globally-declared session variable (at top-level only). FIXME at some point, add a function to Session module to do that instead. See what to change. Should we authorize effect in expression or rather add another global declaration ? *)
 and eval (env : environment) (page : dynml_webpage) : environment * string option * value list =
   (* Actually evaluating [page] *)
@@ -231,5 +238,20 @@ let ml_string_replace = fun template replacement s ->  begin match template, rep
 let ml_redirect (v : value) : value = match v with
   | VString path -> VLocation path
   | _ -> raise (InterpreterError (Printf.sprintf "%s: string expected" (string_of_value v)))
+
+(** If [i] is nonnegative and [len_s] is less than the length of [s], [ustring_get s from i = c] where [c] is a string representing the [i]-th utf-8 character of [s[from..len_s]]. *)
+let rec ustring_get (s : string) (len_s : int) (i : int) (j : int) : string =
+  if i > len_s then
+    let length_jth_uchar = Uchar.utf_decode_length (String.get_utf_8_uchar s i) in
+    if i = 0 then
+      String.sub s i length_jth_uchar
+    else
+      ustring_get s len_s (i + length_jth_uchar) (j - 1)
+  else
+    raise (InterpreterError (Printf.sprintf "%s: get out of bounds." s))
+
+let ml_string_get (v_s : value) (v_i : value) : value = match v_s, v_i with
+  | VString s, VInt i -> VString (ustring_get s (String.length s) 0 i)
+  | _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s: string and integer expected." (string_of_value v_s) (string_of_value v_i)))
 
 (* TODO add "garbage-collection" *)

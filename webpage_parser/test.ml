@@ -8,7 +8,7 @@ open TypeSyntax
 open Typechecker
 open Interpreter
 
-let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
+let displayed = ["raw"; "prelexed"; "lexed"; "parsed"; "typed"; "eval'd"]
 
 let test (i, code : int * string) : unit =
   begin if i < 0 then
