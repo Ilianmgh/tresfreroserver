@@ -2,7 +2,7 @@ open Lexer
 open Utils
 open Syntax
 
-let debug = false
+let debug = true
 
 (** Result of attempt to parse a global declaration *)
 type parsed_let_expression =
@@ -114,11 +114,11 @@ let eat_parameters (i : int) (l : token list) (error_message : int -> string) : 
   eat_parameters_acc i l []
 
 (** Returns [(last_line, remaining, e)]: [last_line] the number of the last line from which we parsed something; [remaining] the list of tokens that remained to be parsed; [e] the parsed expression *)
-let rec parse_exp (l : token list) : int * expr * token list = if debug then Printf.printf "PARSING: %s\n" (string_of_list string_of_token l); parse_sequence l
+let rec parse_exp (l : token list) : int * expr * token list = if debug then Printf.fprintf stderr "PARSING: %s\n" (string_of_list string_of_token l); parse_sequence l
 and parse_sequence (l : token list) : int * expr * token list =
   (if debug then Printf.fprintf stderr "PARSE SEQ\n%!");
   let i_lhs, lhs, l_rem = parse_if l in
-  (if debug then Printf.fprintf stderr "PARSE SEQ OK\n%!");
+  (if debug then Printf.fprintf stderr "PARSE SEQ OK: lrem: %s\n%!" (string_of_list string_of_token l_rem));
   match eat_token_opt [(Keyword TokSeq)] l_rem with
     | Some (i_seq, seq, l_rem) ->
       let i_rhs, rhs, l_rem = parse_sequence l_rem in (i_rhs, Seq (lhs, rhs), l_rem)
@@ -129,12 +129,12 @@ and parse_if (l : token list) : int * expr * token list =
   | [] -> raise (ParsingError "Unexpected end of document")
   | (i, tok) :: l_rem -> begin match tok with
     | Keyword TokIf -> begin
-      let i_condition, condition, l_rem = parse_tuple l_rem in
+      let i_condition, condition, l_rem = parse_if l_rem in
       let i_then, tok_then, l_rem = eat_token (Keyword TokThen) l_rem (fun _ -> Printf.sprintf "line %d: if-expression: `then` expected after 'if <condition>'." i_condition) in
-      let i_then_body, then_body, l_rem = parse_tuple l_rem in
+      let i_then_body, then_body, l_rem = parse_if l_rem in
       begin match eat_token_opt [Keyword TokElse] l_rem with
         | None -> (i_then_body, If (condition, then_body, Unit), l_rem)
-        | Some (i_else, tok_else, l_rem) -> let i_else_body, else_body, l_rem = parse_tuple l_rem in
+        | Some (i_else, tok_else, l_rem) -> let i_else_body, else_body, l_rem = parse_if l_rem in
           (i_else_body, If (condition, then_body, else_body), l_rem)
       end
     end
