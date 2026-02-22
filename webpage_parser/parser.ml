@@ -346,7 +346,7 @@ and parse_html_unit (lexed : token list) (is_root : bool) : int * dynml_webpage 
     | i_line, Global globals, (_, Keyword TokCloseML) :: l_rem' ->
       let final_line, final_parsed, final_lrem = parse_html_unit l_rem' is_root in
       (final_line, (Pure s) :: (List.map (fun x -> Decl x) globals) @ final_parsed, final_lrem)
-    | i_line, _, tok :: _ -> raise (ParsingError (Printf.sprintf "line %d: %s, HTML-closing bracket %s expected" i_line (string_of_token tok) (string_of_raw_token (Keyword TokCloseML))))
+    | i_line, _, tok :: _ -> raise (ParsingError (Printf.sprintf "line %d: %s, ML-closing bracket %s expected" i_line (string_of_token tok) (string_of_raw_token (Keyword TokCloseML))))
     | i_line, _, [] -> raise (ParsingError (Printf.sprintf "line %d: ML-closing bracket %s expected" i_line (string_of_raw_token (Keyword TokCloseML))))
   end
   | _ -> Printf.fprintf stderr "%s\n" (string_of_list string_of_token lexed); raise (ParsingError "Unexpected error")
