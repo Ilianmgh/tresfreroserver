@@ -14,7 +14,7 @@ Supports POST and GET requests.
 
 # Dynamic webpages with TresML language
 
-This server has support for a TresML, a ML-like functional language within webpages with extension `.tml`. See `TresML/Documentation/documentation.pdf` for more information.
+This server has support for TresML, a ML-like functional language within webpages with extension `.tml`. See `TresML/Documentation/documentation.pdf` for more information.
 
 For instance, this language supports the following web features:
 - Access to GET and POST parameters as global variables ;
