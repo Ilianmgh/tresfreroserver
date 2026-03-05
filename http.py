@@ -39,8 +39,8 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
   extension : str = path_split[-1]
   location : str | None = None
   evald_page : bytes
-  if extension == "htmlml" :
-    produce_page_command_line : list[str] = ["./webpage_parser/produce_page.x", path, "-stdout"]
+  if extension == "tml" :
+    produce_page_command_line : list[str] = ["./TresML/produce_page.x", path, "-stdout"]
     if arguments is not None :
       produce_page_command_line.append("-argstr")
       produce_page_command_line.append(f"{arguments}")
@@ -68,7 +68,7 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
     # Extracting useful information from first line
     split_first_line = first_line.split(';')
     print("DOFSOIFHSDJFLKSJFLKDSF:", split_first_line)
-    assert (len(split_first_line) == 2)
+    # assert (len(split_first_line) == 2) # FIXME ACUTALLY CAN BE different than two now
     raw_session_variables = split_first_line[0]
     raw_location = split_first_line[1]
     location_prefix = "redirect="
@@ -92,7 +92,7 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
 def get_content_type(path : str) -> tuple[int, str] :
   """ Returns (error code, the content type of the file designated by [path]) by examining the extension.
       error code is 0 if OK, 1 if the path is not well formatted, 2 if the format is not supported.
-      Format supported : htmlml, html, css, js, png, svg, webp, avif, ico """
+      Format supported : tml, html, css, js, png, svg, webp, avif, ico """
   if path[0] == "." :
     path = path[1:]
   file_info = path.split(".")
@@ -113,7 +113,7 @@ def get_content_type(path : str) -> tuple[int, str] :
       extension = "png"
     if extension in ["png", "svg", "webp", "avif"] :
       return (0, "image/" + extension)
-    if extension == "html" or extension == "htmlml":
+    if extension == "html" or extension == "tml":
       return (0, config.contenttypeofhtmlfiles)
     if extension == "js" :
       return (0, config.contenttypeofjsscripts)
@@ -234,8 +234,8 @@ def make_body(status : int, generate_session_id_mut : Lock, path : str = "", add
       arguments = f"SERVER&status={status}&text={config.get_status_message(status)}&additional={additional_message}"
     else :
       arguments = f"SERVER&status={status}&text={config.get_status_message(status)}&additional=" # FIXME Ugly fix for now, change when able to check for defined variables in ML
-    return (status, get_webpage(f"./error.htmlml", generate_session_id_mut, arguments))
-  return (500, get_webpage(f"./error.htmlml", generate_session_id_mut, f"SERVER&status={status}&text=bonjour&additional={additional_message}"))
+    return (status, get_webpage(f"./error.tml", generate_session_id_mut, arguments))
+  return (500, get_webpage(f"./error.tml", generate_session_id_mut, f"SERVER&status={status}&text=bonjour&additional={additional_message}"))
 
 def make_header(status : int, contenttype : str, language : str | None, contentlength : int, cookies : dict[str, tuple[str, dict[str, str]]], location : str | None = None) -> str :
   """ Produces the HTTP header according to the informations passed as argument.

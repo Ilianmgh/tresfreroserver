@@ -29,7 +29,7 @@
     }
   }
 
-#let mllike = smallcaps[Ml-Like for the web]
+#let mllike = smallcaps[TresML]
 #let temp = text.with(fill:rgb(100,100,100))
 
 #align(center + horizon)[The #mllike Documentation & Manual]
@@ -565,3 +565,7 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 #sym.ballot Allow relative path in redirection
 
 #sym.ballot Properly implement utf-8 strings + see if it's not too restrictive to only consider utf-8 (must be ascii-compatible though (web standard))
+
+#sym.ballot Enrich the representation function (to represent as a string any #mllike value)
+
+#sym.ballot Separate begin/end and (/) : currently, `begin )` parses as a unit but shouldn't

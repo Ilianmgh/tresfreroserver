@@ -2,5 +2,5 @@
   let db = Sqlite.opendb "messagerie.db"
   let dump = Sqlite.exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>) "DELETE FROM Message"
   let dump = Sqlite.closedb db
-  let dump = Http.redirect "/test_ml/messages/messagerie.htmlml"
+  let dump = Http.redirect "/test_ml/messages/messagerie.tml"
 }>

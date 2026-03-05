@@ -7,14 +7,11 @@
 </head>
 <body>
   <h1>Site de test tresfreroserver</h1>
-  <h2>Setting a Session-global variable...</h2>
   <p>
-    ... before<{Session.let x = 1}>... after.
-  </p>
-  <h2>Getting...</h2>
-  <p>
-    Here it is: <{Session.x}><br/>
-    <a href="session2.htmlml">Go see it somewhere else</a>
+    <li>
+      <ol><a href="./get.tml?x=cecifonctionne!">GET</a></ol>
+      <ol><a href="./session.tml">SESSION</a></ol>
+    </li>
   </p>
 </body>
 </html>

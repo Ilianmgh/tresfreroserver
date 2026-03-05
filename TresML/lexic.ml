@@ -32,7 +32,7 @@ type keyword =
   | TokOpenML | TokCloseML (* ML-opening/closing brackets *)
   | TokOpenHTML | TokCloseHTML (* HTML-opening/closing brackets *)
   | TokDot (* Dots (for namespacing) *)
-  | TokType | TokPipe (* for type declarations *)
+  | TokType | TokPipe | TokOf (* for type declarations *)
   | TokLBracket | TokRBracket (* for record types *)
   | TokSingleQuote
   | TokOpenFstring | TokCloseFstring
@@ -85,6 +85,7 @@ let symbols_tokens : (string * raw_token) list = [
 
 let keywords_tokens : (string * raw_token) list = [
   ("type", Keyword TokType);
+  ("of", Keyword TokOf);
   ("let", Keyword TokLet);
   ("fun", Keyword TokFun);
   ("fixfun", Keyword TokFix);
@@ -109,6 +110,7 @@ let keywords_map : raw_token StringMap.t =
 
 let string_of_keyword (k : keyword) : string = match k with
   | TokType -> "type"
+  | TokOf -> "of"
   | TokPipe -> "|"
   | TokSingleQuote -> "'"
   | TokLBracket -> "{"

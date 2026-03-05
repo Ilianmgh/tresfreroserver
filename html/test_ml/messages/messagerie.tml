@@ -38,11 +38,11 @@
       }>
     </div>
     <div id="messageInput">
-      <form method="POST" action="./message.htmlml">
+      <form method="POST" action="./message.tml">
         <input type="text" id="messageBox" name="contenue">
         <input type="submit" id="sendButton" name="Envoyer" value="Envoyer">
       </form>
-      <a id="resetButton" href="reset_messages.htmlml">Réinitialiser</a>
+      <a id="resetButton" href="reset_messages.tml">Réinitialiser</a>
     </div>
   </div>
 </body>

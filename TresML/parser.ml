@@ -38,10 +38,10 @@ let eat_token_opt (toks : raw_token list) (l : token list) : (int * raw_token * 
 let parse_type_identifier (l : token list) : int * type_name * token list = eat_variable l "type name expected."
 
 let parse_type_param (l : token list) : int * variable * token list = 
-  let _, _, l_rem = eat_token (Keyword TokLpar) l (fun t -> match t with | None -> "" | Some tok -> Printf.sprintf "%s: quote expected." (string_of_raw_token tok)) in
-  eat_variable l_rem "type name expected."
+  let _, _, l_rem = eat_token (Keyword TokLpar) l (fun t -> match t with | None -> "quote expected." | Some tok -> Printf.sprintf "%s: quote expected." (string_of_raw_token tok)) in
+  parse_type_identifier l_rem
 
-(** [parse_type_params l = (i, [var1, ..., varn], l_rem)] parses type parameters [('var1, ..., 'varn)] from the beginning of [l]. Can be 'a or ('a1, ..., 'an) *)
+(** [parse_type_params l = (i, [var1, ..., varn], l_rem)] parses type parameters [('var1, ..., 'varn)] from the beginning of [l]. Can be 'a or ('a1, ..., 'an). *)
 let parse_type_params (l : token list) : int * variable list * token list =
   (** parses ['var1, 'var2, ..., 'varn)]*)
   let rec parse_type_params_until_close_par (l : token list) (acc : variable list) : int * variable list * token list = match eat_token_opt [Keyword TokRpar] l with
@@ -64,7 +64,14 @@ let parse_type_expr (l : token list) : int * expr * token list = failwith "TODO"
 
 let parse_type_constrargs (l : token list) : int * expr * token list = failwith "TODO"
 
-let parse_type_constrdecl (l : token list) : int * expr * token list = failwith "TODO"
+let parse_type_constrdecl (l : token list) : int * expr * token list =
+  let i, constr_name, lrem = eat_token (MId "") l (fun t -> match t with | None -> "constructor name expected." | Some tok -> Printf.sprintf "%s: constructor name expected." (string_of_raw_token tok)) in
+  match constr_name with
+    | MId constrname -> begin match eat_token_opt [Keyword TokOf] lrem with
+      | Some (i, tok_of, lrem) -> failwith "TODO"
+      | None -> failwith "TODO"
+    end
+    | _ -> assert false
 
 let parse_type_sum (l : token list) : int * expr * token list = failwith "TODO"
 

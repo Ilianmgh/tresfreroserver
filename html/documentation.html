@@ -65,7 +65,7 @@
       </ol>
     </nav>
     <h2 id="loc-1">Introduction</h2>
-    <p><span style="font-variant-caps: small-caps">Ml-Like for the web</span> is a functional language for writing dynamic webpages, evaluated on the server side.</p>
+    <p><span style="font-variant-caps: small-caps">TresML</span> is a functional language for writing dynamic webpages, evaluated on the server side.</p>
     <h2 id="loc-2">Language Syntax</h2>
     <h3 id="loc-3">Webpage</h3>
     <p>A <em>dynamic webpage</em> (i.e. the programs we evaluate) consists of a list of <em>elements</em>.</p>
@@ -73,7 +73,7 @@
     <ul>
       <li>pure HTML code ; or</li>
       <li>
-        <p><span style="font-variant-caps: small-caps">Ml-Like for the web</span> code, which can be either:</p>
+        <p><span style="font-variant-caps: small-caps">TresML</span> code, which can be either:</p>
         <ul>
           <li>a list of <em>global declarations</em> ; or</li>
           <li>an expression.</li>
@@ -95,7 +95,7 @@
     <p>HTML:</p>
     <p>html: &lt;[ anyHtmlCode ]></p>
     <h3 id="loc-6">Identifiers</h3>
-    <p>In <span style="font-variant-caps: small-caps">Ml-Like for the web</span>, identifers are <em>namespaced</em>. An identifier is a sequence of namespace and the actual variable name.</p>
+    <p>In <span style="font-variant-caps: small-caps">TresML</span>, identifers are <em>namespaced</em>. An identifier is a sequence of namespace and the actual variable name.</p>
     <p>value_name: (_|[a-z])(_|‘|[0-9]|[a-z]|[A-Z])*</p>
     <p>Whereas a path is a sequence of modules name separated by a dot:</p>
     <p>module_name : [A-Z](_|‘|[0-9]|[a-z]|[A-Z])*</p>
@@ -129,18 +129,18 @@
     <h4 id="loc-10">Booleans</h4>
     <p>bool_literal: true, false</p>
     <h2 id="loc-11">Type system</h2>
-    <p><span style="font-variant-caps: small-caps">Ml-Like for the web</span> is strongly, statistically typed. For now, user type annotation are not allowed.</p>
+    <p><span style="font-variant-caps: small-caps">TresML</span> is strongly, statistically typed. For now, user type annotation are not allowed.</p>
     <h3 id="loc-12">Types</h3>
     <p>The only atomic native types represent integers, booleans, strings, unit, html code and databases. They can be combined with type constructors → for functions and × for tuples. For now, sum types are not implemented, but should be with user-defined types.</p>
     <p>tlit: int | bool | string | unit | html | db</p>
-    <p>α, β, … ::= α -> β | α times β</p>
+    <p>α, β, … ::= α -> β | α * β</p>
     <h3 id="loc-13">Typing rules</h3>
     <p>The only lax rule is the typing rule of sequences: if the left handside of the ; is not of type unit, it will only raise a warning.</p>
     <h2 id="loc-14">Program semantics</h2>
     <h3 id="loc-15">Values</h3>
     <p>values: v, v’, … ::= ⟨E, function⟩ | n | true | false | string_literal | (v, v’) | | pure_html_code | <span style="display: inline-block">evald_page</span></p>
     <p>function: fun x -> e | fixfun x -> e</p>
-    <p>evald_page: [v1; v2; …; vn] ⚠️ it’s <em>not</em> <span style="font-variant-caps: small-caps">Ml-Like for the web</span> list.</p>
+    <p>evald_page: [v1; v2; …; vn] ⚠️ it’s <em>not</em> <span style="font-variant-caps: small-caps">TresML</span> list.</p>
     <p>vdb: a value representing a database in the language</p>
     <p>An evaluated webpage can be injected in a value (via the frame).</p>
     <p><strong>Example.</strong> This happens when we evaluate &lt;{ &lt;[htmlcode &lt;{let x = 1 in x}> somemorehtmlcode]> }></p>
@@ -162,7 +162,7 @@
     <pre><code>let fact = fixfun fact n -> if n = 0 then 1 else n * fact (n-1)<br>let fact = fixfun f n -> if n = 0 then 1 else n * f (n-1)</code></pre>
     <p>both defines <code>fact</code> as the factorial function. Although:</p>
     <pre><code>let fact = fixfun f n -> if n = 0 then 1 else n * fact (n-1)</code></pre>
-    <p>is incorrect, and will raised an error because <code>fact</code> is not defined when used here.</p>
+    <p>is incorrect, and will raise an error because <code>fact</code> is not defined when used here.</p>
     <p>There is currently no support for mutually recursive functions.</p>
     <h5 id="loc-19">Declarations</h5>
     <p>A declaration can either be <em>global</em> i.e. its scope is the remainder of the file or <em>local</em> i.e. its scope is restricted to the expression after the <code>in</code> keyword.</p>
@@ -176,7 +176,7 @@
     <ul>
       <li>And/or/not on booleans: <code>&amp;&amp;</code>, <code>||</code>, <code>not</code>.</li>
       <li>Addition, multiplication, substraction, division, exponentiaion: <code>+</code>, <code>*</code>, <code>-</code> ,<code>/</code> ,<code>^</code>. The unary version of <code>-</code> is also available.</li>
-      <li>comparison operators less than, greater than, less or equal than, greater or equal than, equal, not equal: <code>&lt;</code>, <code>></code>, <code>&lt;=</code>, <code>>=</code>, <code>=</code>, <code>&lt;></code>. These are <em>polymorphic</em> i.e. they typecheck for any two expressions, provided that they are of the same type. It will fail at execution and raise an error on types for which it’s not implemented. Comparison is currently implemented only for basic types: integers, booleans, strings and <em>content</em> i.e. <span style="font-variant-caps: small-caps">Ml-Like for the web</span> code evaluated to HTML.</li>
+      <li>comparison operators less than, greater than, less or equal than, greater or equal than, equal, not equal: <code>&lt;</code>, <code>></code>, <code>&lt;=</code>, <code>>=</code>, <code>=</code>, <code>&lt;></code>. These are <em>polymorphic</em> i.e. they typecheck for any two expressions, provided that they are of the same type. It will fail at execution and raise an error on types for which it’s not implemented. Comparison is currently implemented only for basic types: integers, booleans, strings and <em>content</em> i.e. <span style="font-variant-caps: small-caps">TresML</span> code evaluated to HTML.</li>
       <li>Concatenation of two strings: <code>++</code>.</li>
     </ul>
     <h5 id="loc-21">Predefined functions</h5>
@@ -205,13 +205,13 @@
     <p>For instance, if module A contains module B which itself contains a record <code>r : {r' : rec'}</code> where <code>rec'</code> itself is a record with a field <code>x</code>, then <code>A.B.r.r'.x</code> designates the field <code>x</code> of the farthest nested record.</p>
     <p>A modular typing (resp. evaluation) environment therefore becomes a tree, where each edge is labelled with a module name, and each node is labelled with a typing (resp. evaluation) environment.</p>
     <h2 id="loc-26">TODO</h2>
-    <p>☐ Implement escape characters in strings</p>
-    <p>☐ Implement fstrings</p>
+    <p>☑︎ Implement escape characters in strings</p>
+    <p>☑︎ Implement fstrings</p>
     <p>☑︎ Implement percent-encoding</p>
     <p>☐ Don’t lex ml located in html comment</p>
     <p>☐ Add comments within ML</p>
     <p>☑︎ Allow HTML brackets to contain any dynpage e.g. &lt;[somehtml &lt;{“coucou”}> somemorehtml]></p>
-    <p>☐ Add syntactic sugar for multiple variables functions.</p>
+    <p>☑︎ Add syntactic sugar for multiple variables functions.</p>
     <p>☐ Add t-uples</p>
     <p>☐ Add pattern-matching</p>
     <p>☑︎ Add superglobal variables</p>
@@ -222,5 +222,7 @@
     <p>☐ Allow type annotations from the user</p>
     <p>☐ Allow importing other ml files (as modules ?)</p>
     <p>☐ Keep line number information on parsed term for better typing error messages (?)</p>
+    <p>☐ Allow relative path in redirection</p>
+    <p>☐ Properly implement utf-8 strings + see if it’s not too restrictive to only consider utf-8 (must be ascii-compatible though (web standard))</p>
   </body>
 </html>

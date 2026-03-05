@@ -79,7 +79,7 @@ let produce_page (arguments : environment) (source : in_channel) (dest : out_cha
     let final_env, location, values = eval eval_env parsed in
     let f_out = dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
-    (* slight optimization: do not re-send session variables that were not modified; but simply mention to the server to keep them *)
+    (* TODO slight optimization: do not re-send session variables that were not modified; but simply mention to the server to keep them *)
     let session_bindings = match Environment.submap_opt session_module_name final_env with
       | None -> ""
       | Some session_env -> Environment.fold

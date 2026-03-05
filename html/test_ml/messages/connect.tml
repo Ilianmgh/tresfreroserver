@@ -8,7 +8,7 @@
 </head>
 <body>
   <p>
-    <form method="POST" action="./post_connect.htmlml">
+    <form method="POST" action="./post_connect.tml">
       <input type="text" name="pseudo">
       <input type="submit" name="Se connecter" value="Se connecter">
     </form>
