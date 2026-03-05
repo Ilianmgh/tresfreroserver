@@ -169,7 +169,7 @@
     <p>Furthermore, global session declarations have a specific semantics: <code>Session.let x = e</code> will firstly have the same effect as <code>let x = e</code>, except:</p>
     <ul>
       <li>the bound variable is stored within the <code>Session</code> module i.e. to access it somewhere else, we need to write <code>Session.x</code>;</li>
-      <li>it defines a <em>session variables</em> i.e. it will be accessible across all the pages from now on, for the duration of the session <span style="text-decoration: underline"><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies">(see bullet point Session Cookie)</a></span>.</li>
+      <li>it defines a <em>session variable</em> i.e. it will be accessible across all the pages from now on, for the duration of the session <span style="text-decoration: underline"><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies">(see bullet point Session Cookie)</a></span>.</li>
     </ul>
     <h5 id="loc-20">Operators</h5>
     <p>The language provides some operators on basic datatypes:</p>
@@ -224,5 +224,7 @@
     <p>☐ Keep line number information on parsed term for better typing error messages (?)</p>
     <p>☐ Allow relative path in redirection</p>
     <p>☐ Properly implement utf-8 strings + see if it’s not too restrictive to only consider utf-8 (must be ascii-compatible though (web standard))</p>
+    <p>☐ Enrich the representation function (to represent as a string any <span style="font-variant-caps: small-caps">TresML</span> value)</p>
+    <p>☐ Separate begin/end and (/) : currently, <code>begin )</code> parses as a unit but shouldn’t</p>
   </body>
 </html>

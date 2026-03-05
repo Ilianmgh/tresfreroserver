@@ -390,7 +390,7 @@ A declaration can either be _global_ i.e. its scope is the remainder of the file
 
 Furthermore, global session declarations have a specific semantics: `Session.let x = e` will firstly have the same effect as `let x = e`, except:
 - the bound variable is stored within the `Session` module i.e. to access it somewhere else, we need to write `Session.x`;
-- it defines a _session variables_ i.e. it will be accessible across all the pages from now on, for the duration of the session #link("https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies")[(see bullet point Session Cookie)].
+- it defines a _session variable_ i.e. it will be accessible across all the pages from now on, for the duration of the session #link("https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies")[(see bullet point Session Cookie)].
 
 ==== Operators
 
