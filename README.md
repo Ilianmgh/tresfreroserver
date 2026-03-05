@@ -12,14 +12,15 @@ You can parametrize the server via [config.py].
 
 Supports POST and GET requests.
 
-# Dynamic webpages with a ML-like language
+# Dynamic webpages with TresML language
 
-This server has support for a ML-like language within html webpages. See `webpage_parser/documentation.pdf` for more information.
+This server has support for a TresML, a ML-like functional language within webpages with extension `.tml`. See `TresML/documentation.pdf` for more information.
 
-This language supports the following web features:
+For instance, this language supports the following web features:
 - Access to GET and POST parameters as global variables ;
 - access to session variables ;
-- SQL requests via sqlite3.
+- SQL requests via sqlite3 ;
+- HTTP redirection.
 
 # Dependencies
 
@@ -27,8 +28,8 @@ This language supports the following web features:
 
 A python interpreter is needed to run the server.
 
-## ML-like intepreter
+## TresML intepreter
 
 `ocaml`, `ocamlfind`, `sqlite3-ocaml`
 
-The interpreter of the ML-like language is compiled using `ocamlc` with `ocamlfind`. The implementation of SQL request uses the ocaml package [sqlite3](https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/).
+The interpreter of the ML-like language is compiled using `ocamlc` with `ocamlfind`. The implementation of SQL requests uses the ocaml package [sqlite3](https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/).
