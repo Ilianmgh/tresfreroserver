@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>TresML webpage example</title>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <h1>Simple code within HTML</h1>
+    <{
+      let myName = "Janet"
+      let mySurname = "Doe"
+    }>
+    <p>My name is <{myName}> <{mySurname}>.</p>
+    <h1>SQL request with TresML</h1>
+    <{ let test_db = Sqlite.opendb "./test.db" }>
+    <p>
+      Adding our identity to a database...
+      <{
+        Sqlite.exec test_db (fun acc newline -> <[]>) (fun acc hd content -> <[]>)
+          f"INSERT INTO People(name, surname) VALUES ('%{myName}%', '%{mySurname}%')"
+      }>
+    </p>
+    <h1>Displaying a table from a database as a HTML table</h1>
+    <p>
+      <table>
+        <{
+          Sqlite.exec test_db
+            (fun acc new_line -> <[ <tr> <{new_line}> </tr> ]>)
+            begin fun acc hd content ->
+              <[ <{ acc }> <th> <{ hd }> </th> ]>
+            end "SELECT * FROM People"
+        }>
+        <{
+          Sqlite.exec test_db
+            (fun acc new_line -> <[ <{acc}> <tr> <{new_line}> </tr> ]>)
+            begin fun acc hd content ->
+              <[ <{ acc }> <td> <{content}> </td> ]>
+            end "SELECT * FROM People"
+        }>
+      </table>
+    </p>
+    <{
+      if not (Sqlite.closedb test_db) then
+        <[
+          <script type="text/javascript">
+            alert("Error while closing database");
+          </script>
+        ]>
+      else
+        <[]>
+    }>
+  </body>
+</html>
