@@ -526,7 +526,7 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 
 #pagebreak()
 
-= TODO
+= TODO/Known Issues
 
 #sym.ballot.check Implement escape characters in strings
 
@@ -537,6 +537,10 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 #sym.ballot Don't lex ml located in html comment
 
 #sym.ballot Add comments within ML
+
+#sym.ballot Path to databases (in `Sqlite.open`) should be considered relatively to the .tml file's position or maybe a pre-defined path in `config.py`, but not the root of the server.
+
+#sym.ballot For now, to display a database's relation as a HTML table, we must use two SQL requests (two different calls to `Sqlite.exec`) we should be able to do this in one request. See if sqlite3 ocaml module allows to do that; and if so, implement it in tresml.
 
 #sym.ballot.check Allow HTML brackets to contain any dynpage e.g. <[somehtml <{"coucou"}> somemorehtml]>
 
