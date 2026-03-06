@@ -22,7 +22,7 @@ let len_close_html_bracket = String.length close_html_bracket
 type keyword =
   | TokLet | TokFun | TokArr | TokFix | TokIn (* declarations & functions *)
   | TokIf | TokThen | TokElse (* conditions *)
-  | TokAnd | TokOr | TokNot (* boolean operators *)
+  | TokAnd | TokOr (* boolean operators *)
   | TokGt | TokLt | TokGeq | TokLeq | TokNeq | TokEq (* comparison operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
   | TokPlus | TokMinus | TokTimes | TokDiv | TokExp (* arithmetic operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
   | TokStrConcat (* strings, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
@@ -95,7 +95,6 @@ let keywords_tokens : (string * raw_token) list = [
   ("else", Keyword TokElse);
   ("begin", Keyword TokLpar);
   ("end", Keyword TokRpar);
-  ("not", Keyword TokNot);
   ("true", Lit TokTrue);
   ("false", Lit TokFalse)]
 
@@ -126,7 +125,6 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokElse -> "else"
   | TokAnd -> "&&"
   | TokOr -> "||"
-  | TokNot -> "not"
   | TokGt -> ">"
   | TokLt -> "<"
   | TokGeq -> ">="

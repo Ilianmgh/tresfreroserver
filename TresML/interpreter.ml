@@ -254,4 +254,17 @@ let ml_string_get (v_s : value) (v_i : value) : value = match v_s, v_i with
   | VString s, VInt i -> VString (ustring_get s (String.length s) 0 i i)
   | _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s: string and integer expected." (string_of_value v_s) (string_of_value v_i)))
 
+let ml_fst (v : value) : value = match v with
+  | VCouple (v1, v2) -> v1
+  | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a pair." (string_of_value v)))
+
+let ml_snd (v : value) : value = match v with
+  | VCouple (v1, v2) -> v2
+  | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a pair." (string_of_value v)))
+
+let ml_not (v : value) : value = match v with
+  | VBool true -> VBool false
+  | VBool false -> VBool true
+  | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a boolean." (string_of_value v)))
+
 (* TODO add "garbage-collection" *)

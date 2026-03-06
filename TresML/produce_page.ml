@@ -28,20 +28,14 @@ let ml_type_of_sqlite_exec =
 let straigthforward_ml_function (name : string) (f : extern_function) : value =
   Clos (Environment.empty, VExternFunction (name, f))
 
-let ml_fst (v : value) : value = match v with
-  | VCouple (v1, v2) -> v1
-  | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a pair." (string_of_value v)))
-let ml_snd (v : value) : value = match v with
-  | VCouple (v1, v2) -> v2
-  | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a pair." (string_of_value v)))
-
 (** List of predefined symbols, pre-loaded in the environment at execution. *)
 let predefined_symbols = [
       {namespaces = [sqlite_module_name] ; name = "exec"    ; v = Args4 extern_sqlite_exec ; tau = ml_type_of_sqlite_exec}
     ; {namespaces = [sqlite_module_name] ; name = "opendb"  ; v = Args1 extern_sqlite_open_db ; tau = Arr (TypeString, TypeDb)}
-    ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = Args1 extern_sqlite_close_db ; tau = Arr (TypeDb, TypeString)}
+    ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = Args1 extern_sqlite_close_db ; tau = Arr (TypeDb, TypeBool)}
     ; {namespaces = [] ; name = "fst" ; v = Args1 ml_fst ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst")))}
     ; {namespaces = [] ; name = "snd" ; v = Args1 ml_snd ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
+    ; {namespaces = [] ; name = "not" ; v = Args1 ml_not ; tau = Arr (TypeBool, TypeBool)}
     ; {namespaces = ["String"] ; name = "replace" ; v = Args3 ml_string_replace ; tau = Arr (TypeString, Arr (TypeString, Arr (TypeString, TypeString)))}
     ; {namespaces = ["String"] ; name = "get" ; v = Args2 ml_string_get ; tau = Arr (TypeString, Arr (TypeInt, TypeString))} (* FIXME add char type *)
     ; {namespaces = ["Http"] ; name = "redirect" ; v = Args1 ml_redirect ; tau = Arr (TypeString, TypeUnit)} (* FIXME GIVE AN ACTUAL TYPE TO LOCATIONS !!!! *)
