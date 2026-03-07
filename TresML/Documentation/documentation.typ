@@ -7,6 +7,14 @@
 #let embed_page(body) = box.with(baseline:30%,stroke:stroke(thickness:.1em), inset:.3em)(body)
 // #let embed_page_math(body) = box.with(baseline:25%,stroke:stroke(thickness:.1em), inset:.7em)(align(center + horizon, body))
 
+#let html_pdf_alt(body_html, body_pdf) = context{
+  if target() == "html" {
+    body_html
+  } else {
+    body_pdf
+  }
+}
+
 #show link: it => text(blue, underline(it))
 
 #let remark(..args) = {
@@ -218,7 +226,9 @@ They can be combined with type constructors #sym.arrow for functions and #sym.ti
 
 The only lax rule is the typing rule of sequences: if the left handside of the #grammar[;] is not of type unit, it will only raise a warning.
 
-#align(center, stack(spacing: 1em,
+
+#html.frame(
+align(center, stack(spacing: 1em,
     stack(dir:ltr, spacing: 1em,
       prooftree(rule(
         $Gamma tack #grammar[e] : alpha$,
@@ -322,6 +332,7 @@ The only lax rule is the typing rule of sequences: if the left handside of the #
       )),
     ),
   )
+)
 )
 
 = Program semantics
@@ -439,30 +450,56 @@ All these functions are available in the module `Sqlite`.
 `Sqlite.exec vdb fl fc query = processed_table` where `vdb` is a value obtained from `open`.
 `query` is a string corresponding to a SQL query, which is executed on the database `vdb`.
 If it has query statements, then `sqlite_exec` allow to process the resulting table with a double _left-folding_ function applied on the resulting table i.e. let the resulting table be:
-#table(stroke: none, columns:(1fr,.1fr,1fr,.1fr,1fr),
-  table(columns:3,
-    [header_1], [...], [header_n],
-    table.hline(stroke: 2pt),
-    [data_1_1], [...], [data_1_n],  
-    sym.dots.v, sym.dots.v, sym.dots.v,  
-    [data_n_1], [...], [data_n_n],  
-  ),
-  sym.arrow.squiggly,
-  table(columns:1,
-    [headers],
-    table.hline(stroke: 2pt),
-    [processed_line_1],  
-    sym.dots.v,
-    [processed_line_n],
-  ),
-  sym.arrow.squiggly,
-  table(columns:1,
-    [headers],
-    table.hline(stroke: 2pt),
-    [processed_table],
-  ),
-)
 
+#html_pdf_alt(
+  table(stroke: none, columns:(1fr,.1fr,1fr,.1fr,1fr),
+    table(columns:3,
+      [header_1], [...], [header_n],
+      table.hline(stroke: 2pt),
+      [data_1_1], [...], [data_1_n],  
+      sym.dots.v, sym.dots.v, sym.dots.v,  
+      [data_n_1], [...], [data_n_n],  
+    ),
+    sym.arrow.squiggly,
+    table(columns:1,
+      [headers],
+      table.hline(stroke: 2pt),
+      [processed_line_1],  
+      sym.dots.v,
+      [processed_line_n],
+    ),
+    sym.arrow.squiggly,
+    table(columns:1,
+      [headers],
+      table.hline(stroke: 2pt),
+      [processed_table],
+    ),
+  ),
+  align(center + horizon, grid(stroke: none, columns:(1fr,.1fr,1fr,.1fr,1fr),
+      table(columns:3,
+        [header_1], [...], [header_n],
+        table.hline(stroke: 2pt),
+        [data_1_1], [...], [data_1_n],  
+        sym.dots.v, sym.dots.v, sym.dots.v,  
+        [data_n_1], [...], [data_n_n],  
+      ),
+      sym.arrow.squiggly,
+      table(columns:1,
+        [headers],
+        table.hline(stroke: 2pt),
+        [processed_line_1],  
+        sym.dots.v,
+        [processed_line_n],
+      ),
+      sym.arrow.squiggly,
+      table(columns:1,
+        [headers],
+        table.hline(stroke: 2pt),
+        [processed_table],
+      ),
+    )
+  )
+)
 Firstly, `fc` is used to _fold_ each line into a single HTML value `processed_line_i`. More precisely,
 
 `processed_line_i = fc (... (fc EmptyHtmlCode header_1 data_i_1) ...) header_n data_i_n`.
@@ -499,25 +536,27 @@ For instance, if module A contains module B which itself contains a record `r : 
 
 A modular typing (resp. evaluation) environment therefore becomes a tree, where each edge is labelled with a module name, and each node is labelled with a typing (resp. evaluation) environment.
 
-#table(columns:(1fr, 1fr), stroke: none,
-  tidy-tree-graph(compact: true)[
-    - `x : int, y : string`
-      + `Sqlite`
-      - `open_db : string -> db, ...`
-      + `A`
-      - `x : string * int`
-        + `B`
-        - `y : string * string * string`
-  ],
-  tidy-tree-graph(compact: true)[
-    - `x` #sym.mapsto `1`, `y` #sym.mapsto `"hey"`
-      + `Sqlite`
-      - `open_db` #sym.mapsto `something_outside_tresml`
-      + `A`
-      - `x` #sym.mapsto `("in A", 3)`
-        + `B`
-        - `x` #sym.mapsto `("in B", " and ", "fine")`
-  ]
+#html.frame(
+  table(columns:(1fr, 1fr), stroke: none,
+    tidy-tree-graph(compact: true)[
+      - `x : int, y : string`
+        + `Sqlite`
+        - `open_db : string -> db, ...`
+        + `A`
+        - `x : string * int`
+          + `B`
+          - `y : string * string * string`
+    ],
+    tidy-tree-graph(compact: true)[
+      - `x` #sym.mapsto `1`, `y` #sym.mapsto `"hey"`
+        + `Sqlite`
+        - `open_db` #sym.mapsto `something_outside_tresml`
+        + `A`
+        - `x` #sym.mapsto `("in A", 3)`
+          + `B`
+          - `x` #sym.mapsto `("in B", " and ", "fine")`
+    ]
+  )
 )
 
 == Note on Unicode support
