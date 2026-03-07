@@ -5,7 +5,7 @@
 #set text(font:"Libertinus Sans")
 #set page(margin:2em)
 #let embed_page(body) = box.with(baseline:30%,stroke:stroke(thickness:.1em), inset:.3em)(body)
-#let embed_page_math(body) = box.with(baseline:25%,stroke:stroke(thickness:.1em), inset:.7em)(align(center + horizon, body))
+// #let embed_page_math(body) = box.with(baseline:25%,stroke:stroke(thickness:.1em), inset:.7em)(align(center + horizon, body))
 
 #show link: it => text(blue, underline(it))
 
@@ -29,10 +29,10 @@
     }
   }
 
-#let mllike = smallcaps[TresML]
+#let tresml = smallcaps[TresML]
 #let temp = text.with(fill:rgb(100,100,100))
 
-#align(center + horizon)[The #mllike Documentation & Manual]
+#align(center + horizon)[*The #tresml Documentation & Manual*]
 
 #pagebreak()
 
@@ -42,7 +42,7 @@
 
 = Introduction
 
-#mllike is a functional language for writing dynamic webpages, evaluated on the server side.
+#tresml is a functional language for writing dynamic webpages, evaluated on the server side.
 
 = Language Syntax
 
@@ -55,7 +55,7 @@ A _dynamic webpage_ (i.e. the programs we evaluate) consists of a list of _eleme
 
 Each element can be of three sorts:
 - pure HTML code ; or
-- #mllike code, which can be either:
+- #tresml code, which can be either:
   - a list of _global declarations_ ; or
   - an expression.
 
@@ -75,7 +75,7 @@ A global declaration declares and defines a variable, whose scope is (the remain
 
 == Expressions
 
-#columns(3)[
+#table(columns:(1fr, 1fr, 1fr), stroke: none)[
   === General expressions:
 
   #grammar[
@@ -94,8 +94,7 @@ A global declaration declares and defines a variable, whose scope is (the remain
       #tab | (e)\
       #tab | begin e end
   ]
-
-  #colbreak()
+][
 
   === Arithmetic expressions:
 
@@ -108,8 +107,7 @@ A global declaration declares and defines a variable, whose scope is (the remain
       #tab | #extern_word[exp] ^ #extern_word[exp]\
       #tab | #extern_word[int_literal]
   ]
-
-  #colbreak()
+][
 
   === Boolean expressions:
 
@@ -149,7 +147,7 @@ HTML:
 
 == Identifiers
 
-In #mllike, identifers are _namespaced_. An identifier is a sequence of namespace and the actual variable name.
+In #tresml, identifers are _namespaced_. An identifier is a sequence of namespace and the actual variable name.
 
 #grammar[
 value_name: (\_|[a-z])(\_|'|[0-9]|[a-z]|[A-Z])\*
@@ -205,7 +203,7 @@ For better readability for the programmer, we allow underscores in numbers.
 
 = Type system
 
-#mllike is strongly, statistically typed. #temp[For now, user type annotation are not allowed.]
+#tresml is strongly, statistically typed. #temp[For now, user type annotation are not allowed.]
 
 == Types
 
@@ -336,7 +334,7 @@ values: v, v', ... ::= #sym.chevron.l\E, #extern_word[function]#sym.chevron.r | 
 
 #grammar[function: fun x -> e | fixfun x -> e]
 
-#grammar[evald_page: [v1; v2; ...; vn]] #emoji.warning it's _not_ #mllike list.
+#grammar[evald_page: [v1; v2; ...; vn]] #emoji.warning it's _not_ #tresml list.
 
 #grammar[vdb: a value representing a database in the language]
 
@@ -397,7 +395,7 @@ Furthermore, global session declarations have a specific semantics: `Session.let
 The language provides some operators on basic datatypes:
 - And/or/not on booleans: `&&`, `||`, `not`.
 - Addition, multiplication, substraction, division, exponentiaion: `+`, `*`, `-` ,`/` ,`^`. The unary version of `-` is also available.
-- comparison operators less than, greater than, less or equal than, greater or equal than, equal, not equal: `<`, `>`, `<=`, `>=`, `=`, `<>`. These are _polymorphic_ i.e. they typecheck for any two expressions, provided that they are of the same type. It will fail at execution and raise an error on types for which it's not implemented. Comparison is currently implemented only for basic types: integers, booleans, strings and _content_ i.e. #mllike code evaluated to HTML.
+- comparison operators less than, greater than, less or equal than, greater or equal than, equal, not equal: `<`, `>`, `<=`, `>=`, `=`, `<>`. These are _polymorphic_ i.e. they typecheck for any two expressions, provided that they are of the same type. It will fail at execution and raise an error on types for which it's not implemented. Comparison is currently implemented only for basic types: integers, booleans, strings and _content_ i.e. #tresml code evaluated to HTML.
 - Concatenation of two strings: `++`.
 
 ==== Predefined functions
@@ -441,30 +439,28 @@ All these functions are available in the module `Sqlite`.
 `Sqlite.exec vdb fl fc query = processed_table` where `vdb` is a value obtained from `open`.
 `query` is a string corresponding to a SQL query, which is executed on the database `vdb`.
 If it has query statements, then `sqlite_exec` allow to process the resulting table with a double _left-folding_ function applied on the resulting table i.e. let the resulting table be:
-#align(center,
-  grid(columns:(1fr,.1fr,1fr,.1fr,1fr),
-    table(columns:3,
-      [header_1], [...], [header_n],
-      table.hline(stroke: 2pt),
-      [data_1_1], [...], [data_1_n],  
-      align(center, sym.dots.v), align(center, sym.dots.v), align(center, sym.dots.v),  
-      [data_n_1], [...], [data_n_n],  
-    ),
-    align(center + horizon, sym.arrow.squiggly),
-    table(columns:1,
-      [headers],
-      table.hline(stroke: 2pt),
-      [processed_line_1],  
-      align(center, sym.dots.v),
-      [processed_line_n],
-    ),
-    align(center + horizon, sym.arrow.squiggly),
-    table(columns:1,
-      [headers],
-      table.hline(stroke: 2pt),
-      [processed_table],
-    ),
-  )
+#table(stroke: none, columns:(1fr,.1fr,1fr,.1fr,1fr),
+  table(columns:3,
+    [header_1], [...], [header_n],
+    table.hline(stroke: 2pt),
+    [data_1_1], [...], [data_1_n],  
+    sym.dots.v, sym.dots.v, sym.dots.v,  
+    [data_n_1], [...], [data_n_n],  
+  ),
+  sym.arrow.squiggly,
+  table(columns:1,
+    [headers],
+    table.hline(stroke: 2pt),
+    [processed_line_1],  
+    sym.dots.v,
+    [processed_line_n],
+  ),
+  sym.arrow.squiggly,
+  table(columns:1,
+    [headers],
+    table.hline(stroke: 2pt),
+    [processed_table],
+  ),
 )
 
 Firstly, `fc` is used to _fold_ each line into a single HTML value `processed_line_i`. More precisely,
@@ -503,7 +499,7 @@ For instance, if module A contains module B which itself contains a record `r : 
 
 A modular typing (resp. evaluation) environment therefore becomes a tree, where each edge is labelled with a module name, and each node is labelled with a typing (resp. evaluation) environment.
 
-#grid(columns:2,
+#table(columns:(1fr, 1fr), stroke: none,
   tidy-tree-graph(compact: true)[
     - `x : int, y : string`
       + `Sqlite`
@@ -516,13 +512,18 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
   tidy-tree-graph(compact: true)[
     - `x` #sym.mapsto `1`, `y` #sym.mapsto `"hey"`
       + `Sqlite`
-      - `open_db` #sym.mapsto `something_outside_mllike`
+      - `open_db` #sym.mapsto `something_outside_tresml`
       + `A`
       - `x` #sym.mapsto `("in A", 3)`
         + `B`
         - `x` #sym.mapsto `("in B", " and ", "fine")`
   ]
 )
+
+== Note on Unicode support
+
+#tresml supports unicode characters e.g. you cannot access each byte of a string but each unicode character of a string.
+Considering that every value of the language is intended to be written in an HTML file in the end, to comply with HTML standards #sym.dash.em which recommends the UTF-8 character encoding #sym.dash.em only UTF-8 encoding is supported.
 
 #pagebreak()
 
@@ -570,6 +571,6 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 
 #sym.ballot Properly implement utf-8 strings + see if it's not too restrictive to only consider utf-8 (must be ascii-compatible though (web standard))
 
-#sym.ballot Enrich the representation function (to represent as a string any #mllike value)
+#sym.ballot Enrich the representation function (to represent as a string any #tresml value)
 
 #sym.ballot Separate begin/end and (/) : currently, `begin )` parses as a unit but shouldn't

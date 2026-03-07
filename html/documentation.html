@@ -14,54 +14,62 @@
           <ol style="list-style-type: none">
             <li><span style="text-decoration: underline"><a href="#loc-3">Webpage</a></span></li>
             <li><span style="text-decoration: underline"><a href="#loc-4">Global declaration</a></span></li>
-            <li><span style="text-decoration: underline"><a href="#loc-5">Expressions</a></span></li>
-            <li><span style="text-decoration: underline"><a href="#loc-6">Identifiers</a></span></li>
             <li>
-              <div><span style="text-decoration: underline"><a href="#loc-7">Literals</a></span></div>
+              <div><span style="text-decoration: underline"><a href="#loc-5">Expressions</a></span></div>
               <ol style="list-style-type: none">
-                <li><span style="text-decoration: underline"><a href="#loc-8">Integers</a></span></li>
-                <li><span style="text-decoration: underline"><a href="#loc-9">Strings</a></span></li>
-                <li><span style="text-decoration: underline"><a href="#loc-10">Booleans</a></span></li>
+                <li><span style="text-decoration: underline"><a href="#loc-6">General expressions:</a></span></li>
+                <li><span style="text-decoration: underline"><a href="#loc-7">Arithmetic expressions:</a></span></li>
+                <li><span style="text-decoration: underline"><a href="#loc-8">Boolean expressions:</a></span></li>
+              </ol>
+            </li>
+            <li><span style="text-decoration: underline"><a href="#loc-9">Identifiers</a></span></li>
+            <li>
+              <div><span style="text-decoration: underline"><a href="#loc-10">Literals</a></span></div>
+              <ol style="list-style-type: none">
+                <li><span style="text-decoration: underline"><a href="#loc-11">Integers</a></span></li>
+                <li><span style="text-decoration: underline"><a href="#loc-12">Strings</a></span></li>
+                <li><span style="text-decoration: underline"><a href="#loc-13">Booleans</a></span></li>
               </ol>
             </li>
           </ol>
         </li>
         <li>
-          <div><span style="text-decoration: underline"><a href="#loc-11">Type system</a></span></div>
+          <div><span style="text-decoration: underline"><a href="#loc-14">Type system</a></span></div>
           <ol style="list-style-type: none">
-            <li><span style="text-decoration: underline"><a href="#loc-12">Types</a></span></li>
-            <li><span style="text-decoration: underline"><a href="#loc-13">Typing rules</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-15">Types</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-16">Typing rules</a></span></li>
           </ol>
         </li>
         <li>
-          <div><span style="text-decoration: underline"><a href="#loc-14">Program semantics</a></span></div>
+          <div><span style="text-decoration: underline"><a href="#loc-17">Program semantics</a></span></div>
           <ol style="list-style-type: none">
-            <li><span style="text-decoration: underline"><a href="#loc-15">Values</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-18">Values</a></span></li>
             <li>
-              <div><span style="text-decoration: underline"><a href="#loc-16">Evaluation rules</a></span></div>
+              <div><span style="text-decoration: underline"><a href="#loc-19">Evaluation rules</a></span></div>
               <ol style="list-style-type: none">
                 <li>
-                  <div><span style="text-decoration: underline"><a href="#loc-17">Expression</a></span></div>
+                  <div><span style="text-decoration: underline"><a href="#loc-20">Expression</a></span></div>
                   <ol style="list-style-type: none">
-                    <li><span style="text-decoration: underline"><a href="#loc-18">Functions</a></span></li>
-                    <li><span style="text-decoration: underline"><a href="#loc-19">Declarations</a></span></li>
-                    <li><span style="text-decoration: underline"><a href="#loc-20">Operators</a></span></li>
+                    <li><span style="text-decoration: underline"><a href="#loc-21">Functions</a></span></li>
+                    <li><span style="text-decoration: underline"><a href="#loc-22">Declarations</a></span></li>
+                    <li><span style="text-decoration: underline"><a href="#loc-23">Operators</a></span></li>
                     <li>
-                      <div><span style="text-decoration: underline"><a href="#loc-21">Predefined functions</a></span></div>
+                      <div><span style="text-decoration: underline"><a href="#loc-24">Predefined functions</a></span></div>
                       <ol style="list-style-type: none">
-                        <li><span style="text-decoration: underline"><a href="#loc-22">Projections</a></span></li>
-                        <li><span style="text-decoration: underline"><a href="#loc-23">Arguments from the command line</a></span></li>
-                        <li><span style="text-decoration: underline"><a href="#loc-24">Database operations</a></span></li>
+                        <li><span style="text-decoration: underline"><a href="#loc-25">Projections</a></span></li>
+                        <li><span style="text-decoration: underline"><a href="#loc-26">Arguments from the command line</a></span></li>
+                        <li><span style="text-decoration: underline"><a href="#loc-27">Database operations</a></span></li>
                       </ol>
                     </li>
                   </ol>
                 </li>
               </ol>
             </li>
-            <li><span style="text-decoration: underline"><a href="#loc-25">Namespacing, modules and session variables</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-28">Namespacing, modules and session variables</a></span></li>
+            <li><span style="text-decoration: underline"><a href="#loc-29">Note on Unicode support</a></span></li>
           </ol>
         </li>
-        <li><span style="text-decoration: underline"><a href="#loc-26">TODO</a></span></li>
+        <li><span style="text-decoration: underline"><a href="#loc-30">TODO/Known Issues</a></span></li>
       </ol>
     </nav>
     <h2 id="loc-1">Introduction</h2>
@@ -87,6 +95,22 @@
     <p>global_declaration: declarator id = exp</p>
     <p>For now, only expressions can be declared by the user. At some point, we would like to allow user-defined types and modules.</p>
     <h3 id="loc-5">Expressions</h3>
+    <table>
+      <tr>
+        <td>
+          <h4 id="loc-6">General expressions:</h4>
+          <p>exp: e, e’, e’‘, … ::=<br>| let id = e in e’<br>| fun id -> e<br>| fixfun id id -> e<br>| e e’<br>| if e then e’ else e’‘<br>| e;e’<br>| id<br>| aexp | bexp | sexp<br>| texp<br>| uexp<br>| html | dbexp<br>| (e)<br>| begin e end</p>
+        </td>
+        <td>
+          <h4 id="loc-7">Arithmetic expressions:</h4>
+          <p>aexp:<br>| exp + exp<br>| exp - exp<br>| exp * exp<br>| exp / exp<br>| exp ^ exp<br>| int_literal</p>
+        </td>
+        <td>
+          <h4 id="loc-8">Boolean expressions:</h4>
+          <p>bexp:<br>| exp &lt; exp<br>| exp > exp<br>| exp &lt;= exp<br>| exp >= exp<br>| exp = exp<br>| exp &lt;> exp<br>| exp &amp;&amp; exp<br>| exp || exp<br>| not exp<br>| bool_literal</p>
+        </td>
+      </tr>
+    </table>
     <p>String expressions:</p>
     <p>sexp: exp ++ exp | string_literal</p>
     <p>Tuple expressions:</p>
@@ -94,7 +118,7 @@
     <p>For now, only couples are allowed, and <code>(x1, x2, x3, x4)</code> is parsed as <code>(x1, (x2, (x3, x4)))</code>.</p>
     <p>HTML:</p>
     <p>html: &lt;[ anyHtmlCode ]></p>
-    <h3 id="loc-6">Identifiers</h3>
+    <h3 id="loc-9">Identifiers</h3>
     <p>In <span style="font-variant-caps: small-caps">TresML</span>, identifers are <em>namespaced</em>. An identifier is a sequence of namespace and the actual variable name.</p>
     <p>value_name: (_|[a-z])(_|‘|[0-9]|[a-z]|[A-Z])*</p>
     <p>Whereas a path is a sequence of modules name separated by a dot:</p>
@@ -114,8 +138,8 @@
       <li>MyFunction</li>
       <li>SomeModule.01var</li>
     </ul>
-    <h3 id="loc-7">Literals</h3>
-    <h4 id="loc-8">Integers</h4>
+    <h3 id="loc-10">Literals</h3>
+    <h4 id="loc-11">Integers</h4>
     <p>For better readability for the programmer, we allow underscores in numbers.</p>
     <p>int_literal: [0-9]([0-9]|_)*</p>
     <p><strong>Example.</strong></p>
@@ -124,27 +148,27 @@
       <li>100_000</li>
       <li>1_2_____3____</li>
     </ul>
-    <h4 id="loc-9">Strings</h4>
+    <h4 id="loc-12">Strings</h4>
     <p>string_literal: “…”</p>
-    <h4 id="loc-10">Booleans</h4>
+    <h4 id="loc-13">Booleans</h4>
     <p>bool_literal: true, false</p>
-    <h2 id="loc-11">Type system</h2>
+    <h2 id="loc-14">Type system</h2>
     <p><span style="font-variant-caps: small-caps">TresML</span> is strongly, statistically typed. For now, user type annotation are not allowed.</p>
-    <h3 id="loc-12">Types</h3>
+    <h3 id="loc-15">Types</h3>
     <p>The only atomic native types represent integers, booleans, strings, unit, html code and databases. They can be combined with type constructors → for functions and × for tuples. For now, sum types are not implemented, but should be with user-defined types.</p>
     <p>tlit: int | bool | string | unit | html | db</p>
     <p>α, β, … ::= α -> β | α * β</p>
-    <h3 id="loc-13">Typing rules</h3>
+    <h3 id="loc-16">Typing rules</h3>
     <p>The only lax rule is the typing rule of sequences: if the left handside of the ; is not of type unit, it will only raise a warning.</p>
-    <h2 id="loc-14">Program semantics</h2>
-    <h3 id="loc-15">Values</h3>
+    <h2 id="loc-17">Program semantics</h2>
+    <h3 id="loc-18">Values</h3>
     <p>values: v, v’, … ::= ⟨E, function⟩ | n | true | false | string_literal | (v, v’) | | pure_html_code | <span style="display: inline-block">evald_page</span></p>
     <p>function: fun x -> e | fixfun x -> e</p>
     <p>evald_page: [v1; v2; …; vn] ⚠️ it’s <em>not</em> <span style="font-variant-caps: small-caps">TresML</span> list.</p>
     <p>vdb: a value representing a database in the language</p>
     <p>An evaluated webpage can be injected in a value (via the frame).</p>
     <p><strong>Example.</strong> This happens when we evaluate &lt;{ &lt;[htmlcode &lt;{let x = 1 in x}> somemorehtmlcode]> }></p>
-    <h3 id="loc-16">Evaluation rules</h3>
+    <h3 id="loc-19">Evaluation rules</h3>
     <p>A dynamic webpage to evaluate is seen as a list of either:</p>
     <ul>
       <li>Pure html code ;</li>
@@ -152,8 +176,8 @@
       <li>A global declaration.</li>
     </ul>
     <p>The interpreter evaluates following a big-step call-by-value semantics.</p>
-    <h4 id="loc-17">Expression</h4>
-    <h5 id="loc-18">Functions</h5>
+    <h4 id="loc-20">Expression</h4>
+    <h5 id="loc-21">Functions</h5>
     <p>Functions are values; when they evaluate the variables needed to their evaluation are automatically captured. Functions can be passed as argument to other functions.</p>
     <p>To write recursive functions, you must use fixfun it binds two variables: the first one is the name of the function (for the recursive call), the second one is the name of the argument.</p>
     <p><strong>Example.</strong> The following code represents the factorial function:</p>
@@ -164,14 +188,14 @@
     <pre><code>let fact = fixfun f n -> if n = 0 then 1 else n * fact (n-1)</code></pre>
     <p>is incorrect, and will raise an error because <code>fact</code> is not defined when used here.</p>
     <p>There is currently no support for mutually recursive functions.</p>
-    <h5 id="loc-19">Declarations</h5>
+    <h5 id="loc-22">Declarations</h5>
     <p>A declaration can either be <em>global</em> i.e. its scope is the remainder of the file or <em>local</em> i.e. its scope is restricted to the expression after the <code>in</code> keyword.</p>
     <p>Furthermore, global session declarations have a specific semantics: <code>Session.let x = e</code> will firstly have the same effect as <code>let x = e</code>, except:</p>
     <ul>
       <li>the bound variable is stored within the <code>Session</code> module i.e. to access it somewhere else, we need to write <code>Session.x</code>;</li>
       <li>it defines a <em>session variable</em> i.e. it will be accessible across all the pages from now on, for the duration of the session <span style="text-decoration: underline"><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies">(see bullet point Session Cookie)</a></span>.</li>
     </ul>
-    <h5 id="loc-20">Operators</h5>
+    <h5 id="loc-23">Operators</h5>
     <p>The language provides some operators on basic datatypes:</p>
     <ul>
       <li>And/or/not on booleans: <code>&amp;&amp;</code>, <code>||</code>, <code>not</code>.</li>
@@ -179,20 +203,76 @@
       <li>comparison operators less than, greater than, less or equal than, greater or equal than, equal, not equal: <code>&lt;</code>, <code>></code>, <code>&lt;=</code>, <code>>=</code>, <code>=</code>, <code>&lt;></code>. These are <em>polymorphic</em> i.e. they typecheck for any two expressions, provided that they are of the same type. It will fail at execution and raise an error on types for which it’s not implemented. Comparison is currently implemented only for basic types: integers, booleans, strings and <em>content</em> i.e. <span style="font-variant-caps: small-caps">TresML</span> code evaluated to HTML.</li>
       <li>Concatenation of two strings: <code>++</code>.</li>
     </ul>
-    <h5 id="loc-21">Predefined functions</h5>
-    <h6 id="loc-22">Projections</h6>
+    <h5 id="loc-24">Predefined functions</h5>
+    <h6 id="loc-25">Projections</h6>
     <p>To get the first or the second element of a <em>pair</em>, <code>fst</code> and <code>snd</code> are pre-defined.</p>
-    <h6 id="loc-23">Arguments from the command line</h6>
+    <h6 id="loc-26">Arguments from the command line</h6>
     <p>You can have pre-defined values before even starting to evaluate the page.</p>
     <p>To do that, you can pass them directly in the command line:</p>
     <pre><code>Usage: &lt;program> &lt;source> &lt;dest> [&lt;argoption> &lt;arguments>]*<br>  &lt;source>: can either be a path to a file, or -stdin.<br>  &lt;dest>: can either be a path to a file, or -stdout.<br>  You can pass argument to the program to pre-load a variable environment before evaluating the dynamic webpage.<br>  &lt;argoption>: the way the program should interpret the arguments immediatly following this flag. Can be any of the following options:<br>    -argrepr: interpret each value following the built-in repr function. This allows to pass argument of any type.<br>    -argstr: interpret each value as a string. <br>  &lt;arguments>: A list of bindings, of th following form: METHOD&amp;name1=arg1&amp;...&amp;namen=argn.<br>    These variable will be available in the dynamic webpage within the namespace Method.</code></pre>
     <p>This will create a module containing all the defined variables.</p>
     <p><strong>Example.</strong> <code>&lt;program> file -stdout -argstr MODULE&amp;x=astring&amp;y=anotherstring</code> will evaluate <code>file</code>, but if <code>file</code> uses variable <code>Module.x</code> (resp. <code>Module.y</code>), it will be globally defined and its value will be <code>"astring"</code> (resp. <code>"anotherstring"</code>).</p>
-    <h6 id="loc-24">Database operations</h6>
+    <h6 id="loc-27">Database operations</h6>
     <p>Three built-in functions are provided to interact with databases using <span style="text-decoration: underline"><a href="https://sqlite.org/">SQLite</a></span> via the <span style="text-decoration: underline"><a href="https://mmottl.github.io/sqlite3-ocaml/">sqlite3 ocaml library</a></span>.</p>
     <p>One function opens a database, one to close one and one to perform SQL on them. All these functions are available in the module <code>Sqlite</code>.</p>
     <p><code>Sqlite.open "path/to/adb"</code> evaluates to a value representing the database at path <code>path/to/db</code>, with which we can now interact using <code>exec</code>.</p>
     <p><code>Sqlite.exec vdb fl fc query = processed_table</code> where <code>vdb</code> is a value obtained from <code>open</code>. <code>query</code> is a string corresponding to a SQL query, which is executed on the database <code>vdb</code>. If it has query statements, then <code>sqlite_exec</code> allow to process the resulting table with a double <em>left-folding</em> function applied on the resulting table i.e. let the resulting table be:</p>
+    <table>
+      <tr>
+        <td>
+          <table>
+            <tr>
+              <td>header_1</td>
+              <td>…</td>
+              <td>header_n</td>
+            </tr>
+            <tr>
+              <td>data_1_1</td>
+              <td>…</td>
+              <td>data_1_n</td>
+            </tr>
+            <tr>
+              <td>⋮</td>
+              <td>⋮</td>
+              <td>⋮</td>
+            </tr>
+            <tr>
+              <td>data_n_1</td>
+              <td>…</td>
+              <td>data_n_n</td>
+            </tr>
+          </table>
+        </td>
+        <td>⇝</td>
+        <td>
+          <table>
+            <tr>
+              <td>headers</td>
+            </tr>
+            <tr>
+              <td>processed_line_1</td>
+            </tr>
+            <tr>
+              <td>⋮</td>
+            </tr>
+            <tr>
+              <td>processed_line_n</td>
+            </tr>
+          </table>
+        </td>
+        <td>⇝</td>
+        <td>
+          <table>
+            <tr>
+              <td>headers</td>
+            </tr>
+            <tr>
+              <td>processed_table</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
     <p>Firstly, <code>fc</code> is used to <em>fold</em> each line into a single HTML value <code>processed_line_i</code>. More precisely,</p>
     <p><code>processed_line_i = fc (... (fc EmptyHtmlCode header_1 data_i_1) ...) header_n data_i_n</code>.</p>
     <p>And now, we then again fold the resulting column into a single HTML value, using the <code>fl</code> function:</p>
@@ -200,16 +280,26 @@
     <p><strong>Example.</strong> If you want to get the resulting relation of SQL query <code>query</code> on <code>vdb</code> as a HTML table, you can write the following code:</p>
     <pre><code>&lt;table><br>&lt;{<br>  Sqlite.exec vdb<br>    (fun acc -> fun new_line -> &lt;[ &lt;{acc}> &lt;tr> &lt;{new_line}> &lt;/tr> ]>)<br>    begin fun acc -> fun hd -> fun content -><br>      &lt;[<br>        &lt;{ acc }><br>        &lt;td> &lt;{content}> &lt;/td><br>      ]><br>    end query<br>}><br>&lt;/table></code></pre>
     <p><code>Sqlite.close vdb</code> closes the databases <code>vdb</code>. Returns a boolean telling whether the database could be closed. If <code>false</code>, the the database <em>remains open</em>. See <span style="text-decoration: underline"><a href="https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/Sqlite3/index.html#general-database-operations">here</a></span> for reason the database couldn’t be closed, and more specifications of the sqlite functions.</p>
-    <h3 id="loc-25">Namespacing, modules and session variables</h3>
+    <h3 id="loc-28">Namespacing, modules and session variables</h3>
     <p>At some point, we would like to implement modules contained inside another module, maybe even functors if possible, and records types. When this is done, a full variable name will be <code>((modulevar.)*(expr.)*varname)</code> where each <code>expr</code> must be of type record.</p>
     <p>For instance, if module A contains module B which itself contains a record <code>r : {r' : rec'}</code> where <code>rec'</code> itself is a record with a field <code>x</code>, then <code>A.B.r.r'.x</code> designates the field <code>x</code> of the farthest nested record.</p>
     <p>A modular typing (resp. evaluation) environment therefore becomes a tree, where each edge is labelled with a module name, and each node is labelled with a typing (resp. evaluation) environment.</p>
-    <h2 id="loc-26">TODO</h2>
+    <table>
+      <tr>
+        <td><span style="display: inline-block"></span></td>
+        <td><span style="display: inline-block"></span></td>
+      </tr>
+    </table>
+    <h3 id="loc-29">Note on Unicode support</h3>
+    <p><span style="font-variant-caps: small-caps">TresML</span> supports unicode characters e.g. you cannot access each byte of a string but each unicode character of a string. Considering that every value of the language is intended to be written in an HTML file in the end, to comply with HTML standards — which recommends the UTF-8 character encoding — only UTF-8 encoding is supported.</p>
+    <h2 id="loc-30">TODO/Known Issues</h2>
     <p>☑︎ Implement escape characters in strings</p>
     <p>☑︎ Implement fstrings</p>
     <p>☑︎ Implement percent-encoding</p>
     <p>☐ Don’t lex ml located in html comment</p>
     <p>☐ Add comments within ML</p>
+    <p>☐ Path to databases (in <code>Sqlite.open</code>) should be considered relatively to the .tml file’s position or maybe a pre-defined path in <code>config.py</code>, but not the root of the server.</p>
+    <p>☐ For now, to display a database’s relation as a HTML table, we must use two SQL requests (two different calls to <code>Sqlite.exec</code>) we should be able to do this in one request. See if sqlite3 ocaml module allows to do that; and if so, implement it in tresml.</p>
     <p>☑︎ Allow HTML brackets to contain any dynpage e.g. &lt;[somehtml &lt;{“coucou”}> somemorehtml]></p>
     <p>☑︎ Add syntactic sugar for multiple variables functions.</p>
     <p>☐ Add t-uples</p>
