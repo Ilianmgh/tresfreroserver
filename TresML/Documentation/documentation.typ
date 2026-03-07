@@ -536,8 +536,28 @@ For instance, if module A contains module B which itself contains a record `r : 
 
 A modular typing (resp. evaluation) environment therefore becomes a tree, where each edge is labelled with a module name, and each node is labelled with a typing (resp. evaluation) environment.
 
-#html.frame(
-  table(columns:(1fr, 1fr), stroke: none,
+#html_pdf_alt(
+  html.frame[
+    #tidy-tree-graph(compact: true)[
+      - `x : int, y : string`
+        + `Sqlite`
+        - `open_db : string -> db, ...`
+        + `A`
+        - `x : string * int`
+          + `B`
+          - `y : string * string * string`
+    ]
+    #tidy-tree-graph(compact: true)[
+      - `x` #sym.mapsto `1`, `y` #sym.mapsto `"hey"`
+        + `Sqlite`
+        - `open_db` #sym.mapsto `something_outside_tresml`
+        + `A`
+        - `x` #sym.mapsto `("in A", 3)`
+          + `B`
+          - `x` #sym.mapsto `("in B", " and ", "fine")`
+    ]
+  ],
+  grid(columns: (1fr, 1fr),
     tidy-tree-graph(compact: true)[
       - `x : int, y : string`
         + `Sqlite`
