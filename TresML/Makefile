@@ -1,3 +1,9 @@
+# To compile the project with the native compiler, the two following lines should be:
+# 	CC = ocamlfind ocamlopt
+# 	OBJ_EXT = cmx
+# Otherwise, to compile with the bytecode compiler:
+# 	CC = ocamlfind ocamlc
+# 	OBJ_EXT = cmo
 CC = ocamlfind ocamlc
 OBJ_EXT = cmo
 CFLAGS =

@@ -32,4 +32,4 @@ A python interpreter is needed to run the server.
 
 `ocaml`, `ocamlfind`, `sqlite3-ocaml`
 
-The interpreter of the ML-like language is compiled using `ocamlc` with `ocamlfind`. The implementation of SQL requests uses the ocaml package [sqlite3](https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/).
+The interpreter of TresML requires an ocaml compiler and `ocamlfind`. The implementation of SQL requests uses the ocaml package [sqlite3](https://mmottl.github.io/sqlite3-ocaml/api/sqlite3/).
