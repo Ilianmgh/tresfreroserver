@@ -67,18 +67,18 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
       get_webpage.session[session_id] = {}
     # Extracting useful information from first line
     split_first_line = first_line.split(';')
-    print("DOFSOIFHSDJFLKSJFLKDSF:", split_first_line)
-    # assert (len(split_first_line) == 2) # FIXME ACUTALLY CAN BE different than two now
-    raw_session_variables = split_first_line[0]
-    raw_location = split_first_line[1]
-    location_prefix = "redirect="
-    location_prefix_len = 9 # len("redirect=")
-    if raw_location[:9] == location_prefix :
-      location = raw_location[9:]
-    utils.parse_url_dictionary(raw_session_variables, get_webpage.session[session_id]) # TODO add TTL to session-recorded values
-    if debug :
-      print(f"data received from ML page: {first_line}")
-      print(f"current session: {get_webpage.session[session_id]}")
+    print("FIRST LINE OF OUTPUT HTML:", split_first_line)
+    if len(split_first_line) >= 2 :
+      raw_session_variables = split_first_line[0]
+      raw_location = split_first_line[1]
+      location_prefix = "redirect="
+      location_prefix_len = 9 # len("redirect=")
+      if raw_location[:9] == location_prefix :
+        location = raw_location[9:]
+      utils.parse_url_dictionary(raw_session_variables, get_webpage.session[session_id]) # TODO add TTL to session-recorded values
+      if debug :
+        print(f"data received from ML page: {first_line}")
+        print(f"current session: {get_webpage.session[session_id]}")
   else :
     with open(path, mode = "rb") as f :
       evald_page = f.read()
