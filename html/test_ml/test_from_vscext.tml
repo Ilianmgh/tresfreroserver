@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  </head>
+  <body>
+    <{
+      let x = 5 in
+      f"cou%{let x = 5 in x}%cou"
+    }>
+    <{
+      Session.let x = 2
+    }>
+    <p>
+    coucou
+    </p>
+    <{ f"coucou%{let x = "coucou" in 5}%coucou"  }>
+  </body>
+</html>
