@@ -60,37 +60,44 @@ let debug = true
 let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 
 (** [produce_page source dest] reads a HTML/ML webpage from [source], computes the resulting html webpage and writes it in [dest] *)
-let produce_page (arguments : environment) (source : in_channel) (dest : out_channel) : unit =
+let produce_page (arguments : environment) (source : in_channel) (dest : out_channel) (output_first_line : bool) : unit =
   let f_in = source in
   let code : string = read_whole_file_str f_in in
   close_in f_in;
   try
     let lexed = lexer code in
     let parsed = parser lexed in
+    Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - A\n";
     let typ_env = Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env in
     let eval_env = Environment.disjoint_union arguments pre_included_environment in
+    Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - B\n";
     let _ = type_inferer typ_env parsed in
+    Printf.fprintf stderr "ENTERING EVALUATION\n";
     let final_env, location, values = eval eval_env parsed in
+    Printf.fprintf stderr "EXITING EVALUATION\n";
     let f_out = dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
-    (* TODO slight optimization: do not re-send session variables that were not modified; but simply mention to the server to keep them *)
-    let session_bindings = match Environment.submap_opt session_module_name final_env with
-      | None -> ""
-      | Some session_env -> Environment.fold
-        (fun prefixes x v acc ->
-          if List.is_empty prefixes then begin (* for now, only top-level within module Session, could change for further needs *)
-            Printf.fprintf stderr "trying to repr: %s" (string_of_value v);
-            Printf.sprintf "%s&%s=%s" acc x (repr_of_value v)
-          end else
-            acc
-        )
-        session_env ""
-    in
-    Printf.fprintf f_out "session%s;" session_bindings; (* FIXME may lead to issues if ';' occurs in a session variable *)
-    (match location with
-      | None -> ()
-      | Some target -> Printf.fprintf f_out "redirect=%s" target);
-    Printf.fprintf f_out "\n";
+    if output_first_line then begin
+      (* TODO slight optimization: do not re-send session variables that were not modified; but simply mention to the server to keep them *)
+      let session_bindings = match Environment.submap_opt session_module_name final_env with
+        | None -> ""
+        | Some session_env -> Environment.fold
+          (fun prefixes x v acc ->
+            if List.is_empty prefixes then begin (* for now, only top-level within module Session, could change for further needs *)
+              Printf.fprintf stderr "trying to repr: %s" (string_of_value v);
+              Printf.sprintf "%s&%s=%s" acc x (repr_of_value v)
+            end else
+              acc
+          )
+          session_env ""
+      in
+      Printf.fprintf f_out "session%s;" session_bindings; (* FIXME may lead to issues if ';' occurs in a session variable *)
+      begin match location with
+        | None -> ()
+        | Some target -> Printf.fprintf f_out "redirect=%s" target
+      end;
+      Printf.fprintf f_out "\n"
+    end;
     List.iter (fun v -> fprintf_value f_out v) values;
     close_out f_out
   with
@@ -111,9 +118,17 @@ let test_file (source : string) : unit =
 
 exception MalformedCommandLine
 
+(** Organized and named arguments obtained from the command line. *)
+type command_line_args = {
+    source : in_channel (* The source code *)
+  ; target : out_channel (* Where to output the resulting webpage *)
+  ; initial_environment : environment (* The environment initially obtained directly from the command line *)
+  ; output_first_line : bool (* Whether or not to output the first line, indicating information to the server e.g. session variables. *)
+}
+
 (** [parse_command_line command_line = (source, dest, env)] parses the command line and retrieves the path to the source file [source], the path to the destination [dest] and the environment passed in argument [env] e.g. Post/Get/Session variables.
   Raises [MalformedCommandLine] if [command_line] is ill-formed. *)
-let parse_command_line (command_line : string array) : in_channel * out_channel * environment =
+let parse_command_line (command_line : string array) : command_line_args =
   let n = Array.length command_line in
   if n > 2 then
     let source_path = command_line.(1) in
@@ -130,29 +145,35 @@ let parse_command_line (command_line : string array) : in_channel * out_channel 
       else
         open_out dest_path
     in
-    let rec parse_options (command_line : string array) (i : int) (env_acc : environment) : environment =
+    let rec parse_options (command_line : string array) (i : int) (env_acc : environment) (output_first_line_acc : bool) : environment * bool =
       if i < n then
-        if i + 1 >= n then (* options are, for now, all of the form [-options ARGUMENTS] *)
-          raise MalformedCommandLine
-        else begin
-          match String.lowercase_ascii command_line.(i) with
-            | "-argrepr" -> parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary value_of_repr command_line.(i + 1) env_acc)
-            | "-argstr" -> parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) command_line.(i + 1) env_acc)
-            | _ -> raise MalformedCommandLine
-        end
+        match String.lowercase_ascii command_line.(i) with
+          | "-argrepr" -> begin if i + 1 >= n then (* The remaining of the command line is supposed to be of the form `<argoption> <arguments> ...` *)
+              raise MalformedCommandLine
+            else
+              parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary value_of_repr command_line.(i + 1) env_acc) output_first_line_acc
+          end
+          | "-argstr" -> begin if i + 1 >= n then (* The remaining of the command line is supposed to be of the form `<argoption> <arguments> ...` *)
+              raise MalformedCommandLine
+            else
+              parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) command_line.(i + 1) env_acc) output_first_line_acc
+          end
+          | "-noserverdata" -> parse_options command_line (i + 1) env_acc false
+          | _ -> raise MalformedCommandLine
       else
-        env_acc
+        env_acc, output_first_line_acc
     in
-    (source_fd, dest_fd, parse_options command_line 3 Environment.empty)
+    let initial_env, output_first_line = parse_options command_line 3 Environment.empty true in
+    { source =  source_fd ; target = dest_fd ; initial_environment = initial_env ; output_first_line = output_first_line }
   else
     raise MalformedCommandLine
 
 let () =
   try
-    let source, dest, env_args = parse_command_line Sys.argv in
-    produce_page env_args source dest;
-    close_in source;
-    close_out dest
+    let cl_args = parse_command_line Sys.argv in
+    produce_page cl_args.initial_environment cl_args.source cl_args.target cl_args.output_first_line;
+    close_in cl_args.source;
+    close_out cl_args.target
   with
     MalformedCommandLine -> begin
       let help_message_path = "./help_message.txt" in

@@ -1,9 +1,11 @@
-# To compile the project with the native compiler, the two following lines should be:
-# 	CC = ocamlfind ocamlopt
+# To compile the project with the native compiler, the three following lines should be:
+# 	CC = ocamlfind ocamlopt # To explictly execute command within the opam switch, you can also replace by: CC = opam exec -- ocamlfind ocamlopt
 # 	OBJ_EXT = cmx
+# 	CFLAGS = -opaque
 # Otherwise, to compile with the bytecode compiler:
-# 	CC = ocamlfind ocamlc
+# 	CC = ocamlfind ocamlc # To explictly execute command within the opam switch, you can also replace by: CC = opam exec -- ocamlfind ocamlc
 # 	OBJ_EXT = cmo
+# 	CFLAGS =
 CC = ocamlfind ocamlc
 OBJ_EXT = cmo
 CFLAGS =
@@ -133,4 +135,4 @@ hierarchic.$(OBJ_EXT): hierarchic.cmi hierarchic.ml
 hierarchic.cmi: hierarchic.mli
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o hierarchic.cmi hierarchic.mli
 clean:
-	rm -rf *.$(OBJ_EXT) *.cmi *.x 
+	rm -rf *.$(OBJ_EXT) *.o *.cmi *.x 

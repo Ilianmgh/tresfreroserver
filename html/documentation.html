@@ -289,7 +289,9 @@
     <h3 id="loc-29">Note on Unicode support</h3>
     <p><span style="font-variant-caps: small-caps">TresML</span> supports unicode characters e.g. you cannot access each byte of a string but each unicode character of a string. Considering that every value of the language is intended to be written in an HTML file in the end, to comply with HTML standards — which recommends the UTF-8 character encoding — only UTF-8 encoding is supported.</p>
     <h2 id="loc-30">TODO/Known Issues</h2>
-    <p>☑︎ Implement escape characters in strings</p>
+    <p>☑︎ Weird parsing error messages on code <code>Session.let x = 1 in x</code>, fix/find out why.</p>
+    <p>☑︎ Weird typing error on file “test_from_vsext.tml”, fix.</p>
+    <p>☑︎ (Fully/Correctly) implement escape characters in strings</p>
     <p>☑︎ Implement fstrings</p>
     <p>☑︎ Implement percent-encoding</p>
     <p>☐ Don’t lex ml located in html comment</p>

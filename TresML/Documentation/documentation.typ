@@ -588,7 +588,11 @@ Considering that every value of the language is intended to be written in an HTM
 
 = TODO/Known Issues
 
-#sym.ballot.check Implement escape characters in strings
+#sym.ballot.check Weird parsing error messages on code `Session.let x = 1 in x`, fix/find out why.
+
+#sym.ballot.check Weird typing error on file "test_from_vsext.tml", fix.
+
+#sym.ballot.check (Fully/Correctly) implement escape characters in strings
 
 #sym.ballot.check Implement fstrings
 
