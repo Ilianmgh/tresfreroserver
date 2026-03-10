@@ -1,0 +1,6 @@
+<{
+  let prenom = "Andrew"
+  let msg = f"Coucou commetn ça va %{prenom}%"
+}>
+
+Voici un message: <{msg}>

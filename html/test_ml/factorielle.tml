@@ -33,7 +33,7 @@
   <p>
     <{<[<i>yoyoyo</i>]>}>
 
-    <{"coucou" ++ "coucou"}>
+    <{"coucou" ++ "coucou" (* coucou *) }>
   </p>
   <!--
     <{"-->"}> hmm...
