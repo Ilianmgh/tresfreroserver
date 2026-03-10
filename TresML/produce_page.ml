@@ -59,22 +59,56 @@ let debug = true
 
 let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 
-(** [produce_page source dest] reads a HTML/ML webpage from [source], computes the resulting html webpage and writes it in [dest] *)
-let produce_page (arguments : environment) (source : in_channel) (dest : out_channel) (output_first_line : bool) : unit =
+(** [intepret_tml_page init_env source handle_output output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and progressively pass the resulting page to the function [handle_ouput]. A canonical use case is providing [Printf.fprintf a_channel] as [handle_ouput].
+  [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
+  [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
+let intepret_tml_page (arguments : environment) (source : in_channel) (handle_output : string -> unit) (output_first_line : bool) : unit =
+  failwith "TODO"
+
+(** [output_page init_env source dest output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and writes it in [dest].
+  [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
+  [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
+let rec output_page (arguments : environment) (source : in_channel) (dest : out_channel) (output_first_line : bool) : unit =
   let f_in = source in
   let code : string = read_whole_file_str f_in in
   close_in f_in;
   try
     let lexed = lexer code in
     let parsed = parser lexed in
-    Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - A\n";
-    let typ_env = Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env in
-    let eval_env = Environment.disjoint_union arguments pre_included_environment in
-    Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - B\n";
+    (* Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - A\n"; *)
+    (* {namespaces = [] ; name = "include" ; v = Args1 extern_include ; tau = Arr (TypeString, TypeHtml)} *)
+    let typ_env = Environment.add "include" (Arr (TypeString, TypeHtml)) (Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env) in
+    let eval_env = Environment.add "include" begin
+        straigthforward_ml_function "include"
+        (Args1 begin
+          fun v -> match v with
+            | VString path -> begin
+              (if not (try Sys.is_directory ".tresml_cache" with Sys_error _ -> false) then
+                Sys.mkdir ".tresml_cache" 0b111_000_000);
+              let included_channel_in = open_in path in
+              let included_channel_out = open_out ".tresml_cache/tmp.html" in
+              output_page Environment.empty included_channel_in included_channel_out false;(* for now, Environment.empty is passed; see in uses cases if it should be given the same original pre-loaded environment*)
+              close_in included_channel_in;
+              close_out included_channel_out;
+              let included_res_in = open_in ".tresml_cache/tmp.html" in
+              let evald_included = read_whole_file_str included_res_in in
+              close_in included_res_in;
+              Sys.remove ".tresml_cache/tmp.html";
+              (try
+                Sys.remove ".tresml_cache"
+              with
+                Sys_error _ -> failwith "tried to delete .tresml_cache while it's not empty during execution of an include"
+              );
+              VPure evald_included
+            end
+            | _ -> raise (InvalidMlArgument (Printf.sprintf "%s: string expected." (string_of_value v)))
+        end) 
+      end (Environment.disjoint_union arguments pre_included_environment) in
+    (* Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - B\n"; *)
     let _ = type_inferer typ_env parsed in
-    Printf.fprintf stderr "ENTERING EVALUATION\n";
+    (* Printf.fprintf stderr "ENTERING EVALUATION\n"; *)
     let final_env, location, values = eval eval_env parsed in
-    Printf.fprintf stderr "EXITING EVALUATION\n";
+    (* Printf.fprintf stderr "EXITING EVALUATION\n"; *)
     let f_out = dest in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
     if output_first_line then begin
@@ -84,7 +118,7 @@ let produce_page (arguments : environment) (source : in_channel) (dest : out_cha
         | Some session_env -> Environment.fold
           (fun prefixes x v acc ->
             if List.is_empty prefixes then begin (* for now, only top-level within module Session, could change for further needs *)
-              Printf.fprintf stderr "trying to repr: %s" (string_of_value v);
+              (if debug then Printf.fprintf stderr "trying to repr: %s" (string_of_value v));
               Printf.sprintf "%s&%s=%s" acc x (repr_of_value v)
             end else
               acc
@@ -171,7 +205,7 @@ let parse_command_line (command_line : string array) : command_line_args =
 let () =
   try
     let cl_args = parse_command_line Sys.argv in
-    produce_page cl_args.initial_environment cl_args.source cl_args.target cl_args.output_first_line;
+    output_page cl_args.initial_environment cl_args.source cl_args.target cl_args.output_first_line;
     close_in cl_args.source;
     close_out cl_args.target
   with

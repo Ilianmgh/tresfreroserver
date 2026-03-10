@@ -53,52 +53,28 @@ let test (i, code : int * string) : unit =
 
 let test_input () =
   let tests = [
-      "<{}>" (* parsing error *)
-      ;"something%else<{begin fun x -> y end}>some%more%<{let fun fun ^ \"coucou\"}>%and%finally%" (* lex but parsing error *)
-      ;"<{let x = 5 in x}>" (* ok *)
-      ;"<{let x = 5 in % x}>" (* ok *)
-      ;"<{f\"coucou\"}>" (* FIXME lexing error + not implemented *)
-      ;"<{let x = 5, 2 in fst x}>" (* ok *)
-      ;"<h1>Example</h1>%<{% let x = 1 in% if x + 1 = 2 then%<[% 2%]>% else %<[% DEADCODE%]>}>" (* ok *)
-      ;"<{2 + 1 = 3}>" (* ok *)
-      ;"<{1-1}>" (* ok *)
-      ;"<{let y = 3 in let x = 4 in (fun x -> y) 5}>" (* ok *)
-      ;"<{ let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12 }>" (* ok *)
-      ;"<{let f = fun x -> fun y -> x in let x = 1 in let y = 2 in f x y}>" (* ok *)
-      ;"<{if true then 1 else 2; 3}>" (* FIXME is parsed [if true then 1 else (2; 3)] and not as it should [(if true then 1 else 2); 3] *)
-      ;"<{let f = fun x -> x in (f (1))}>" (* ok *)
-      ;"<{f\"cou#\"cou\"}>" (* FIXME lexing error *)
-      ;"<{\"cou<cou\"}>" (* ok *)
-      ;"<{\"co<i>\\\"uc</i>ou\"}>" (* ok *)
-      ; "<{ (fun x -> x) = (fun x -> 1) }>" (* interpreter error *)
-      ;
-"<{
-let db = Sqlite.opendb \"test.db\"
-}>
-<{
-Sqlite.exec db
-(fun acc -> fun new_line -> <[ <{acc}> <{new_line}> ]>) (fun acc -> fun hd -> fun content -> <[ <{ acc }> <{hd}>: <{content}> <br/> ]>)
-\"SELECT * FROM Test\"
-}>
-<{
-Sqlite.closedb db
-}>" (* ko, Sqlite module is not included on its own, only in produce_page, to test use server. *)
+        "<{}>" (* parsing error *)
+      ; "<{let x = 5 in x}>" (* ok *)
+      ; "<{let x = 5 in x}>" (* ok *)
+      ; "<{ f\"cou %{let x = 5 in x}% cou\" }>" (* kok? weird eval'd result even though it works outside of tests.  *)
+      ; "<{let x = 5, 2 in fst x}>" (* ok *)
+      ; "<h1>Example</h1>%<{% let x = 1 in% if x + 1 = 2 then%<[% 2%]>% else %<[% DEADCODE%]>}>" (* ok *)
+      ; "<{2 + 1 = 3}>" (* ok *)
+      ; "<{1-1}>" (* ok *)
+      ; "<{let y = 3 in let x = 4 in (fun x -> y) 5}>" (* ok *)
+      ; "<{ let f = fun a -> fun b -> if (a > b) then 5 else 3 in f 12 }>" (* ok *)
+      ; "<{let f = fun x -> fun y -> x in let x = 1 in let y = 2 in f x y}>" (* ok *)
+      ; "<{if true then 1 else 2; 3}>" (* ok *)
+      ; "<{let f = fun x -> x in (f (1))}>" (* ok *)
+      ; "<{f\"cou#\"cou\"}>" (* ok *)
+      ; "<{\"cou<cou\"}>" (* ok *)
+      ; "<{\"co<i>\\\"uc</i>ou\"}>" (* ok *)
+      ; "<{ (fun x -> x) = (fun x -> 1) }>" (* ko, interpreter error *)
       ; "<{let f = fun x -> fun y -> x}> <{f (fun x -> x) 2}>" (* ok *)
-      ; "<{ Test.x }>" (* should lex and parse *)
-      ;
-"
-<{
-  if Get.langage = \"zig\" then
-    Get.langage ++ \" même en version \" ++ Get.version ++ \" n'a toujours pas de borrow-checker\"
-  else
-    Get.langage ++ \" même en version \" ++ Get.version ++ \" n'a toujours pas d'argument defer\"
-}>
-<{
-  let n = 20
-}>" (* should lex and parse *)
-      (* ;"<{if true then () else (); 2}>" FIXME parse unit cf parser.ml *)
-      (* ;"<{if true then 1; 2}>" FIXME add this syntax sugar *)
-      ; "<{let _x = 5 in _x}>"
+      ; "<{ Test.x }>" (* should lex and parse, apart from that: ko *)
+      ;"<{if true then () else (); 2}>" (* ok *)
+      ;"<{if true then (); 2}>" (* ok *)
+      ; "<{let _x = 5 in _x}>" (* ok *)
     ]
   in
   if Array.length Sys.argv <= 1 then

@@ -1,7 +1,7 @@
 open Utils
 open Syntax
 
-(** For genericity, extern functino can accept any value. But a function expecting a int has to match said value with a VInt, and in other cases, raises this error. *)
+(** For genericity, extern function can accept any value. But a function expecting a int has to match said value with a VInt, and in other cases, raises this error. *)
 exception InvalidMlArgument of string
 
 type raw_function_value =
@@ -65,7 +65,7 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
   | VBool b -> if b then Printf.fprintf out "true" else Printf.fprintf out "false"
   | VString s -> Printf.fprintf out "%s" (web_of_string s)
   | VLocation s -> Printf.fprintf out "to:%s" (web_of_string s)
-  | VPure h -> if escape_html then Printf.fprintf out "%s" (web_of_string h) else Printf.fprintf out "%s" h (* FIXME not sure if useful since bypassed in `produce_page` *)
+  | VPure h -> if escape_html then Printf.fprintf out "%s" (web_of_string h) else Printf.fprintf out "%s" h (* FIXME not sure if useful since bypassed in `output_page` *)
   | VContent l -> List.iter (fun v -> fprintf_value out ~escape_html:escape_html v) l
   | VCouple (v, v') -> begin
     Printf.fprintf out "(";
@@ -102,7 +102,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VBool b -> if b then "true" else "false"
   | VString f -> f
   | VLocation s -> Printf.sprintf "to:%s" (web_of_string s)
-  | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `produce_page` *)
+  | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `output_page` *)
   | VContent l -> List.fold_left (fun acc v -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:escape_html v)) "" l
   | VCouple (v, v') -> Printf.sprintf "(%s, %s)" (string_of_value ~escape_html:escape_html v) (string_of_value ~escape_html:escape_html v')
   | VUnit -> "()"
@@ -131,7 +131,7 @@ and string_of_env ?(escape_html : bool = false) (env : environment) : string = i
 let repr_of_value (v1 : value) : string = match v1 with
   | VInt n -> Printf.sprintf "int:%d" n
   | VString s -> Printf.sprintf "string:%s" s
-  | _ -> failwith "TODO implement repr_of_value for the remaining of the possible values"
+  | _ -> failwith "TODO repr_of_value: Implement repr_of_value for the remaining of the possible values"
 (** [value_of_repr sv] decodes the string-encoded value [sv] : [value_of_repr (repr_of_value v) = v] *)
 let value_of_repr (sv : string) : value =
   let new_str = List.hd (List.rev (String.split_on_char ':' sv)) in

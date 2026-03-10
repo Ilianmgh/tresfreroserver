@@ -45,9 +45,21 @@ let update_word_list_pretok ((w1, w2) : (int * string) * (int * string)) (lexed 
   | (i, w), (_, "") | (_, ""), (i, w) -> (PretokMl (i, w)) :: lexed
   | (i1, w1), (i2, w2) -> (PretokMl (i1, w1)) :: (PretokMl (i2, w2)) :: lexed
 
-(** splits [s] on tokens-to-be from [i] (inclusive) to [n] (exclusive) *)
+(** [split_comment s line_number i n = (after_comment_line_number, after_comment_i)] reads from [s] until a closing TresML comment bracket is found.
+  [after_comment_line_number] is the line number of the closing comment bracket.
+  [after_comment_i] is the index of the first character after the closing comment bracket. *)
+let rec split_comment (s : string) (line_number : int) (i : int) (n : int) : int * int =
+  if i + len_close_ml_comment - 1 < n && String.sub s i len_close_ml_comment = close_ml_comment then
+    (line_number, i + len_close_ml_comment)
+  else if i + 1 < n && s.[i] = '\\' && s.[i + 1] = 'n' then
+    split_comment s (line_number + 1) (i + 2) n
+  else
+    split_comment s line_number (i + 1) n
+
+(** splits [s] on tokens-to-be from [i] (inclusive) to [n] (exclusive).
+  This function is built from a function per kinds of language (strings, comment, html, ML, ...) that are mutually recursive. *)
 let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
-    (** returns [(i, line_number, lst)] with [i] the next character from which to lex, [line_number] the current line number at the [i]-th character and [lst] the list of pretoken found so far *)
+  (** returns [(i, line_number, lst)] with [i] the next character from which to lex, [line_number] the current line number at the [i]-th character and [lst] the list of pretoken found so far *)
   let rec split_ml (s : string) (prelex_acc : pre_token list) (i : int) (n : int) (line_number : int) : int * int * pre_token list =
     let rec split_string (s : string) (acc : char list) (line_number : int) (i : int) (n : int) : int * int * string =
       assert (i <= n);
@@ -74,7 +86,7 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
         let next_line_number = if s.[i] = '\n' then line_number + 1 else line_number in
         if (s.[i] = '"' && not(0 < i && s.[i - 1] = '\\')) then
           split_ml_symbols_whitespace s [] [] ((PretokMl (next_line_number, "\"")) :: (PretokFstr (next_line_number, string_of_char_list (List.rev fstring_acc))) :: lexed_acc) (i+1) n orig_lex orig_lex next_line_number split_html_rec
-        else if s.[i] = '%' && (i+1 < n && s.[i + 1] = '{') then
+        else if s.[i] = '%' && (i+1 < n && s.[i + 1] = '{') then (* TODO change this in a similar way as detection of comments. *)
           split_ml_symbols_whitespace s [] [] ((PretokMl (next_line_number, "%{")) :: (PretokFstr (next_line_number, string_of_char_list (List.rev fstring_acc))) :: lexed_acc) (i+2) n orig_lex orig_lex next_line_number split_html_rec
         else
           split_fstring s (s.[i] :: fstring_acc) lexed_acc orig_lex line_number (i + 1) n split_html_rec
@@ -94,6 +106,10 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
         let next_i, str_line_number, str_lit = split_string s ['"'] next_line_number (i_nonwhitespace + 1) n in
         let lexed_acc_with_string = update_word_list_pretok ((0, ""), (str_line_number, str_lit)) lexed_acc in
         split_ml_symbols_whitespace s [] [] lexed_acc_with_string next_i n orig_lex orig_lex next_line_number split_html_rec
+      end else if cur_word_acc = [] && i_nonwhitespace + len_open_ml_comment - 1 < n && String.sub s i len_open_ml_comment = open_ml_comment then begin
+        (* we stop lexing keywords, lexing a comment *)
+        let after_comment_line_number, next_i = split_comment s next_line_number (i_nonwhitespace + len_open_ml_comment) n in
+        split_ml_symbols_whitespace s [] [] lexed_acc next_i n orig_lex orig_lex after_comment_line_number split_html_rec
       end else begin
         let next_lex_state, next_symbol_acc = if i < n then match eat_letter_opt lex_state s.[i] with
             | Some tr -> tr, s.[i] :: cur_symbol_acc
@@ -148,7 +164,7 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
       split_html s (s.[i] :: cur_html_acc) prelex_acc (i + 1) n next_line_number
     end
   in
-  let last_idx, last_line_number, toklst =  split_html s [] [] i n 1 in
+  let last_idx, last_line_number, toklst = split_html s [] [] i n 1 in
   if last_idx != String.length s then
     raise (PrelexingError "Unexpected end of HTML.")
   else

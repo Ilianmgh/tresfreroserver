@@ -3,24 +3,27 @@ include Utils
 (** Lexic definition *)
 
 let open_ml_bracket = "<{"
+let len_open_ml_bracket = String.length open_ml_bracket
 let close_ml_bracket = "}>"
 
 let open_html_bracket = "<["
+let len_open_html_bracket = String.length open_html_bracket
 let close_html_bracket = "]>"
+let len_close_html_bracket = String.length close_html_bracket
 
 let open_fstring = "f\""
 
 let open_ml_fstr_bracket = "%{"
 let close_ml_fstr_bracket = "}%"
 
-let len_open_ml_bracket = String.length open_ml_bracket
+let open_ml_comment = "(*"
+let len_open_ml_comment = String.length open_ml_comment
+let close_ml_comment = "*)"
+let len_close_ml_comment = String.length close_ml_comment
 
-let len_open_html_bracket = String.length open_html_bracket
-
-let len_close_html_bracket = String.length close_html_bracket
 
 type keyword =
-  | TokLet | TokFun | TokArr | TokFix | TokIn (* declarations & functions *)
+  | TokLet | TokFun | TokArr | TokFix | TokIn | TokOpen (* declarations & functions TODO open ...... *)
   | TokIf | TokThen | TokElse (* conditions *)
   | TokAnd | TokOr (* boolean operators *)
   | TokGt | TokLt | TokGeq | TokLeq | TokNeq | TokEq (* comparison operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
@@ -90,6 +93,7 @@ let keywords_tokens : (string * raw_token) list = [
   ("fun", Keyword TokFun);
   ("fixfun", Keyword TokFix);
   ("in", Keyword TokIn);
+  ("open", Keyword TokOpen);
   ("if", Keyword TokIf);
   ("then", Keyword TokThen);
   ("else", Keyword TokElse);
@@ -120,6 +124,7 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokFun -> "fun"
   | TokFix -> "fixfun"
   | TokIn -> "in"
+  | TokOpen -> "open"
   | TokIf -> "if"
   | TokThen -> "then"
   | TokElse -> "else"
