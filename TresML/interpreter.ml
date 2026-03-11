@@ -47,13 +47,22 @@ let rec eval_expr (orig_env : environment) (env : environment) (e1 : expr) : (st
   | Fun (x, e) -> None, Clos (env, VFun (x, e))
   | Fix (f, x, e) -> None, Clos (env, VFix (f, x, e))
   | App (e, e') -> begin match eval_expr orig_env env e with
-    | location, Clos (_, VExternFunction (_, Args1 f)) -> let location', v_arg1 = eval_expr orig_env env e' in begin match f v_arg1 with
-      | VLocation path -> Some path, f v_arg1 (* If a function returns a location, we indicate to redirect to the pointed page. *)
-      | v -> (location', v)
-    end
-    | location, Clos (_, VExternFunction (name, Args2 f)) -> let location', v_arg1 = eval_expr orig_env env e' in location', Clos (Environment.empty, VExternFunction (name, Args1 (f v_arg1)))
-    | location, Clos (_, VExternFunction (name, Args3 f)) -> let location', v_arg1 = eval_expr orig_env env e' in location', Clos (Environment.empty, VExternFunction (name, Args2 (f v_arg1)))
-    | location, Clos (_, VExternFunction (name, Args4 f)) -> let location', v_arg1 = eval_expr orig_env env e' in location', Clos (Environment.empty, VExternFunction (name, Args3 (f v_arg1)))
+    | location, Clos (_, VExternFunction (_, Args1 f)) ->
+      let location', v_arg1 = eval_expr orig_env env e' in
+      let applied_extern_f = f orig_env v_arg1 in
+      begin match applied_extern_f with
+        | VLocation path -> Some path, applied_extern_f (* If a function returns a location, we indicate to redirect to the pointed page. *)
+        | v -> (location', v)
+      end
+    | location, Clos (_, VExternFunction (name, Args2 f)) ->
+      let location', v_arg1 = eval_expr orig_env env e' in
+      location', Clos (Environment.empty, VExternFunction (name, Args1 (straightforward_fun_dropping_reset_env (f orig_env v_arg1))))
+    | location, Clos (_, VExternFunction (name, Args3 f)) ->
+      let location', v_arg1 = eval_expr orig_env env e' in
+      location', Clos (Environment.empty, VExternFunction (name, Args2 (straightforward_fun_dropping_reset_env (f orig_env v_arg1))))
+    | location, Clos (_, VExternFunction (name, Args4 f)) ->
+      let location', v_arg1 = eval_expr orig_env env e' in
+      location', Clos (Environment.empty, VExternFunction (name, Args3 (straightforward_fun_dropping_reset_env (f orig_env v_arg1))))
     | location, Clos (env', VFun (x, e_f)) -> let location', v = eval_expr orig_env env e' in eval_expr orig_env (Environment.add x v env') e_f
     | location, Clos (env', VFix (f, x, e_f)) -> let location', v = eval_expr orig_env env e' in
       let env'_x = Environment.add x v env' in
@@ -243,11 +252,11 @@ and eval_page (orig_env : environment) (env : environment) (page : dynml_webpage
   in
   (final_env, final_location, List.map snd values_and_env)
 
-and extern_sqlite_exec = fun db fold_lines fold_cells str_query -> match db, fold_lines, fold_cells, str_query with
+and extern_sqlite_exec_with_reset_env = fun (orig_env : environment) db fold_lines fold_cells str_query -> match db, fold_lines, fold_cells, str_query with
   | VDb db, Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline)), Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content)), VString query ->
     (value_of_query db
       (fun v1 v2 -> snd (eval_expr (Environment.empty) captured_combine_lines (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2))))
-      (fun line_acc hd content -> snd (eval_expr (Environment.empty)(* TODO fix to put actual orig_env, maybe actually complet extern_sqlite only in produce_page to get orig_env this way, would duplicate and break DRY SPOT but hey*) captured_combine_cells (App (App ((App ((Fun (acc, body_function_of_hs_and_content)), expr_of_value line_acc)), String hd), String content))))
+      (fun line_acc hd content -> snd (eval_expr orig_env captured_combine_cells (App (App ((App ((Fun (acc, body_function_of_hs_and_content)), expr_of_value line_acc)), String hd), String content))))
       query)
   | _, _, _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s, %s, %s: Expected a database, a line folding function, a cell folding function and a SQL query (as a string)." (string_of_value db) (string_of_value fold_lines) (string_of_value fold_cells) (string_of_value str_query))) (* TODO maybe refine this bit *)
 
@@ -296,7 +305,7 @@ let ml_not (v : value) : value = match v with
   | VBool false -> VBool true
   | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a boolean." (string_of_value v)))
 
-(** [eval env page = (env', location, res)] where [res] is the evaluation of [page] following the program semantics (cf. documentation). [env'] is the resulting environment ([env] + declared globals, etc) and [session_vars] is the list of globally-declared session variable (at top-level only). FIXME at some point, add a function to Session module to do that instead. See what to change. Should we authorize effect in expression or rather add another global declaration ? *)
-and eval (env : environment) (page : dynml_webpage) : environment * string option * value list = eval_page env env page
+(** [eval env page = (env', location, res)] where [res] is the evaluation of [page] following the program semantics (cf. documentation). [env'] is the resulting environment ([env] + declared globals, etc) and [session_vars] is the list of globally-declared session variable (at top-level only). *)
+let eval (env : environment) (page : dynml_webpage) : environment * string option * value list = eval_page env env page
 
 (* TODO add "garbage-collection" *)

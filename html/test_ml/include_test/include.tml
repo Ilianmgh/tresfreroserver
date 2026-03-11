@@ -8,7 +8,8 @@
 <body>
   <h1>Include test</h1>
   <p>
-    <{ include "/home/zach/Documents/tresfreros/tresfreroserver/html/test_ml/include_test/included.tml" }>
+    <{ import "./included.tml" }>
+    <{ Included.Import.content }>
   </p>
 </body>
 </html>

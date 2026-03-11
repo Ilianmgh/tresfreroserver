@@ -20,12 +20,16 @@ and value =
   | VCouple of value * value
   | VLocation of string
 and environment = value Environment.t
-(** A pre-defined symbol is either a value, or a function from values to value with 1, 2, 3 or 4 arguments. *)
+(** A pre-defined function is a function from values to value with 1, 2, 3 or 4 arguments.
+  The first argument is an reset environment: for instance if the evaluation of the function
+  necessitate to evaluate an inserted page, this environment is passed if this inserted page
+  requires a reset environment. Can happend for instance if the extern function is higher-order
+  (takes a function in argument). *)
 and extern_function =
-    Args1 of (value -> value)
-  | Args2 of (value -> value -> value)
-  | Args3 of (value -> value -> value -> value)
-  | Args4 of (value -> value -> value -> value -> value)
+    Args1 of (environment -> value -> value)
+  | Args2 of (environment -> value -> value -> value)
+  | Args3 of (environment -> value -> value -> value -> value)
+  | Args4 of (environment -> value -> value -> value -> value -> value)
 
 (** [eval_expr anyEnv (expr_of_value v) = v].
   [expr_of_value v] tries to be as simple as possible for a lightweight re-evaluation. *)
@@ -42,6 +46,12 @@ let rec expr_of_value (v1 : value) : expr = match v1 with
   | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | _ -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
+
+(** If [f] is a function, [straightforward_fun_dropping_reset_env f] is the function that takes the same argument + a reset environment
+  and makes no use of this environment, otherwise has the same semantic as [f].
+  Is used to construct extern_function that does not require a reset environment e.g. first-order function. *)
+let straightforward_fun_dropping_reset_env (f : 'a) : environment -> 'a =
+  fun (_ : environment) -> f
 
 (** Pretty-printing *)
 

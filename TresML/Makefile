@@ -12,7 +12,7 @@ CFLAGS =
 EXE_EXT = x
 LDFLAGS = -package sqlite3 -package str -linkpkg
 
-all: produce_page.$(EXE_EXT) parse_url_dictionary.$(EXE_EXT) test.$(EXE_EXT)
+all: produce_page.$(EXE_EXT) test.$(EXE_EXT)
 
 .PHONY: clean
 # See if ocaml-deps can reduce this horrible makefile

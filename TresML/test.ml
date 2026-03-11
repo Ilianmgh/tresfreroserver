@@ -25,7 +25,8 @@ let test (i, code : int * string) : unit =
     if List.mem "lexed" displayed then Printf.printf "lexed: %s\n%!" (string_of_list string_of_token lexed);
     let parsed = parser lexed in
     if List.mem "parsed" displayed then Printf.printf "parsed: %s\n%!" (string_of_dynpage parsed);
-    let linked = linker parsed in
+    Printf.printf "WARNING: each test case has access to every file in a subfolder of the executable.";
+    let linked = linker "./" parsed in
     if List.mem "linked" displayed then Printf.printf "linked: %s\n%!" (string_of_dynpage linked);
     let types_infered = type_inferer Environment.empty linked in
     if List.mem "typed" displayed then List.iter (fun (gamma, tau) -> Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_modular_typing_environment gamma)) types_infered;
@@ -35,6 +36,7 @@ let test (i, code : int * string) : unit =
     | PrelexingError s -> Printf.fprintf stderr "PrelexingError: %s\n%!" s
     | LexingError s -> Printf.fprintf stderr "LexingError: %s\n%!" s
     | ParsingError s -> Printf.fprintf stderr "ParsingError: %s\n%!" s
+    | LinkingError s -> Printf.fprintf stderr "LinkingError: %s\n%!" s
     | TypingError s -> Printf.fprintf stderr "TypingError: %s\n%!" s
     | UnificationError (alpha, beta, Recursive) -> Printf.fprintf stderr "UnificationError: %s and %s recursive.\n%!" (string_of_ml_type alpha) (string_of_ml_type beta)
     | UnificationError (alpha, beta, Incompatible) -> Printf.fprintf stderr "UnificationError: %s and %s incompatible.\n%!" (string_of_ml_type alpha) (string_of_ml_type beta)

@@ -2,6 +2,7 @@
 #import "@preview/tdtr:0.5.0" : *
 #let todo = highlight[TODO]
 
+#set heading(numbering: "I.1.A.a.")
 #set text(font:"Libertinus Sans")
 #set page(margin:2em)
 #let embed_page(body) = box.with(baseline:30%,stroke:stroke(thickness:.1em), inset:.3em)(body)
@@ -197,11 +198,19 @@ For better readability for the programmer, we allow underscores in numbers.
 ]
 === Strings
 
-#grammar[string_literal: "..."]
+#grammar[
+  string_literal: "#extern_word[string_content]"\
+  string_content: any sequence of characters except non-escaped `"`
+]
 
-// === Format strings
+=== Format strings
 
-// Format strings are delimited by: `f"..."`. A formatter can be inserted in a format string with `%(value)` #todo not implemented _yet_.
+Format strings are delimited by: `f"..."`. A formatter can be inserted in a format string with `%{value}%`
+
+#grammar[
+  fstring: f"(#extern_word[string_content]%{#extern_word()[exp]}%)\*#extern_word[string_content]"\
+  fstring_content: any sequence of characters except non-escaped `"`
+]
 
 === Booleans
 
@@ -419,18 +428,7 @@ To get the first or the second element of a _pair_, `fst` and `snd` are pre-defi
 
 You can have pre-defined values before even starting to evaluate the page.
 
-To do that, you can pass them directly in the command line:
-```
-Usage: <program> <source> <dest> [<argoption> <arguments>]*
-  <source>: can either be a path to a file, or -stdin.
-  <dest>: can either be a path to a file, or -stdout.
-  You can pass argument to the program to pre-load a variable environment before evaluating the dynamic webpage.
-  <argoption>: the way the program should interpret the arguments immediatly following this flag. Can be any of the following options:
-    -argrepr: interpret each value following the built-in repr function. This allows to pass argument of any type.
-    -argstr: interpret each value as a string. 
-  <arguments>: A list of bindings, of th following form: METHOD&name1=arg1&...&namen=argn.
-    These variable will be available in the dynamic webpage within the namespace Method.
-```
+To do that, you can pass them directly in the command line, see @CLI for full documentation of the command line interface.
 
 This will create a module containing all the defined variables.
 
@@ -579,6 +577,10 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
   )
 )
 
+== Command line interface <CLI>
+
+#raw(read("help_message.txt"))
+
 == Note on Unicode support
 
 #tresml supports unicode characters e.g. you cannot access each byte of a string but each unicode character of a string.
@@ -588,19 +590,21 @@ Considering that every value of the language is intended to be written in an HTM
 
 = TODO/Known Issues
 
-#sym.ballot.check Weird parsing error messages on code `Session.let x = 1 in x`, fix/find out why.
+#sym.ballot Weird parsing error messages on code `Session.let x = 1 in x`, fix/find out why.
 
-#sym.ballot.check Weird typing error on file "test_from_vsext.tml", fix.
+#sym.ballot Weird typing error on file "test_from_vsext.tml", fix.
 
-#sym.ballot.check (Fully/Correctly) implement escape characters in strings
+#sym.ballot (Fully/Correctly) implement escape characters in strings
 
 #sym.ballot.check Implement fstrings
+
+#sym.ballot Allow escaping % or %{/}% in fstrings
 
 #sym.ballot.check Implement percent-encoding 
 
 #sym.ballot Don't lex ml located in html comment
 
-#sym.ballot Add comments within ML
+#sym.ballot.check Add comments within ML
 
 #sym.ballot Path to databases (in `Sqlite.open`) should be considered relatively to the .tml file's position or maybe a pre-defined path in `config.py`, but not the root of the server.
 
@@ -626,7 +630,7 @@ Considering that every value of the language is intended to be written in an HTM
 
 #sym.ballot Allow type annotations from the user
 
-#sym.ballot Allow importing other ml files (as modules ?)
+#sym.ballot.check Allow importing other ml files (as modules ?)
 
 #sym.ballot Keep line number information on parsed term for better typing error messages (?)
 
