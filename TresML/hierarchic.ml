@@ -18,6 +18,8 @@ module type S = sig
   val iter : (key list -> key -> 'a -> unit) -> 'a t -> unit
   val fold : (key list -> key -> 'a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc
   val disjoint_union : 'a t -> 'a t -> 'a t
+  (** [hoist_submap s subkey = s'] where [s'] is [s] except every binding from submap [subkey] of [s] is added to the root in [s'] *)
+  val hoist_submap : 'a t -> key -> 'a t
 end
 
 module Make = functor (M : Map.S) -> struct
@@ -38,7 +40,7 @@ module Make = functor (M : Map.S) -> struct
       | None -> { root = s.root ; sub = M.add toplevel_module (add_and_path prefix_rem k v empty) s.sub ; parent = s.parent }
       | Some s' -> { root = s.root ; sub = M.add toplevel_module (add_and_path prefix_rem k v s') s.sub ; parent = s.parent }
     end
-  let add_sub (k : key) (sub_s : 'a t)  (s : 'a t) : 'a t = { root = s.root ; sub = M.add k { root = sub_s.root ; sub = sub_s.sub ; parent = Some s } s.sub ; parent = s.parent } (* TODO double usage here: we set parents twice, once on add/map/... and once on access to the chils. See where we can afford to not care about parents; maybe we simply need to put them here *)
+  let add_sub (k : key) (sub_s : 'a t)  (s : 'a t) : 'a t = { root = s.root ; sub = M.add k { root = sub_s.root ; sub = sub_s.sub ; parent = Some s } s.sub ; parent = s.parent } (* TODO double usage here: we set parents twice, once on add/map/... and once on access to the child. See where we can afford to not care about parents; maybe we simply need to put them here *)
   let rec find (k : key) (s : 'a t) : 'a = match M.find_opt k s.root with
     | Some v -> v
     | None -> begin match s.parent with
@@ -88,4 +90,9 @@ module Make = functor (M : Map.S) -> struct
     { root = M.union (fun _ _ -> raise (Invalid_argument "Non-disjoint union")) s1.root s2.root
     ; sub = M.union (fun _ _ -> raise (Invalid_argument "Non-disjoint union")) s1.sub s2.sub
     ; parent = None}
+  let hoist_submap (s : 'a t) (subkey : key) : 'a t =
+    let sub_to_hoist = submap subkey s in
+    let new_root = M.union (fun k previous_v v_from_sub -> Some v_from_sub) s.root sub_to_hoist.root in
+    let new_subs = M.union (fun k previous_submap subsubmap_from_sub -> Some subsubmap_from_sub) s.sub sub_to_hoist.sub in
+    { root = new_root ; sub = new_subs ; parent = s.parent } (* TODO generalize to hoisting subsubsub...submap (at any depth), cf TODO in hierarchic Error: Looping recursion. *)
 end

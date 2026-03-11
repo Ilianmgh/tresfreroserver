@@ -1,4 +1,4 @@
-open Lexic (* TODO put StringMap in utils *)
+open Lexic
 open Syntax
 
 type type_variable = string

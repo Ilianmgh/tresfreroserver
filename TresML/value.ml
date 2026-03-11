@@ -20,7 +20,7 @@ and value =
   | VCouple of value * value
   | VLocation of string
 and environment = value Environment.t
-(** A pre-defined symbol is either a value, or a function from values to value with an arbitrary number of arguments. *)
+(** A pre-defined symbol is either a value, or a function from values to value with 1, 2, 3 or 4 arguments. *)
 and extern_function =
     Args1 of (value -> value)
   | Args2 of (value -> value -> value)
@@ -90,7 +90,7 @@ and fprintf_env (out : out_channel) ?(escape_html : bool = false) (env : environ
   if Environment.is_empty env then Printf.fprintf out "∅" else begin
     let fprintf_one_env_binding (prefix : string list) (x : variable) (v : value) : unit =
       (* Printf.fprintf out ", %s%s ↦ " prefix x; *)
-      Printf.fprintf out ", %s ↦ " x;
+      Printf.fprintf out ", %s%s ↦ " (if prefix = [] then "" else List.fold_left (fun acc modu -> Printf.sprintf "%s%s." acc modu) "" prefix) x; (* TODO fix!!!!!!! see string_of_env*)
       fprintf_value out ~escape_html:true v
     in
     Environment.iter fprintf_one_env_binding env
@@ -100,7 +100,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VDb db -> "adatabase" (* TODO !!!! *)
   | VInt n -> Printf.sprintf "%d" n
   | VBool b -> if b then "true" else "false"
-  | VString f -> f
+  | VString f -> web_of_string f
   | VLocation s -> Printf.sprintf "to:%s" (web_of_string s)
   | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `output_page` *)
   | VContent l -> List.fold_left (fun acc v -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:escape_html v)) "" l

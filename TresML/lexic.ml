@@ -23,7 +23,7 @@ let len_close_ml_comment = String.length close_ml_comment
 
 
 type keyword =
-  | TokLet | TokFun | TokArr | TokFix | TokIn | TokOpen (* declarations & functions TODO open ...... *)
+  | TokLet | TokFun | TokArr | TokFix | TokIn | TokOpen | TokImport (* declarations & functions TODO open ...... *)
   | TokIf | TokThen | TokElse (* conditions *)
   | TokAnd | TokOr (* boolean operators *)
   | TokGt | TokLt | TokGeq | TokLeq | TokNeq | TokEq (* comparison operators, if we allow user-defined infixed notation, should be defined just as Sqlite.opendb/... *)
@@ -94,6 +94,7 @@ let keywords_tokens : (string * raw_token) list = [
   ("fixfun", Keyword TokFix);
   ("in", Keyword TokIn);
   ("open", Keyword TokOpen);
+  ("import", Keyword TokImport);
   ("if", Keyword TokIf);
   ("then", Keyword TokThen);
   ("else", Keyword TokElse);
@@ -125,6 +126,7 @@ let string_of_keyword (k : keyword) : string = match k with
   | TokFix -> "fixfun"
   | TokIn -> "in"
   | TokOpen -> "open"
+  | TokImport -> "import"
   | TokIf -> "if"
   | TokThen -> "then"
   | TokElse -> "else"

@@ -1,6 +1,6 @@
 module StringMap = Map.Make(String)
 
-module Environment = Hierarchic.Make(StringMap)
+module Environment = Hierarchic.Make(StringMap) (* TODO For distinction open/include: add info to link between sub/supmap: a boolean indicating if the link is strong (survives to open) or weak (is broken when opened) *)
 
 exception UnsupportedError of string
 
@@ -42,3 +42,13 @@ let read_whole_file_str (f : in_channel) : string =
       End_of_file -> acc
   in
   String.concat "\n" (List.rev (read_all_lines_str f []))
+
+(** [split_on_last_char c s i = (s1, s2)] where [s1 ++ "c" ++ s2 = s] with the first occurence of ["c"] starting from [i] downto [0].
+  E.g. [split_on_last_char '/' "path/to/file" 9 = ("path/to", "file")] *)
+let rec split_on_last_char (c : char) (s : string) (i : int) =
+  if i = -1 then
+    ("", s)
+  else if s.[i] = c then
+    (String.sub s 0 i, String.sub s (i + 1) (String.length s - (i + 1)))
+  else
+    split_on_last_char c s (i - 1)

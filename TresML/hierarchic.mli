@@ -33,6 +33,15 @@ module type S = sig
   val fold : (key list -> key -> 'a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc
   (** [disjoint_union s1 s2]. For now only works on root; will erase parent + assumes not only the variables are disjoints, but also the namespaces. i.e. will fail if [s1] and [s2] has a submodule with same name [A]. *)
   val disjoint_union : 'a t -> 'a t -> 'a t
+  (** [hoist_submap s subkey = s'] where [s'] is [s] except every binding and submap from the submap [subkey] of [s] is added to the root in [s']
+    For example:
+                           root 
+                      /            \                           root : x |-> "a"
+    hoist_submap A : x |-> "a"    B : x |-> 1, y |-> 2  =          \
+                    /                                             B : x |-> 3
+                  B : x |->3
+  *)
+  val hoist_submap : 'a t -> key -> 'a t
 end
 
 module Make (M : Map.S) : S with type key = M.key

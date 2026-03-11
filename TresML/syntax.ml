@@ -12,10 +12,15 @@ type parameter = variable
 
 type type_expr = int * int * int array * float list * float (* TODO replace by string, just put some junk because my linter is driving me crazy *)
 
+type inserted_data = { module_name : string ; reset_environment : bool ; final_env_available : bool ; content_available : bool }
+
 type global_declaration =
   | TypeDecl of type_name * type_expr
   | ExprDecl of variable * expr
   | ModuleExprDecl of module_name * variable * expr (* TODO when adding module declarations: ModuleDecl of module_name * module_expr *)
+  | OpenModule of module_name (* hoist a module to the root of the environment *)
+  | ImportModule of string (* retrieves an external file as a module *)
+  | Inserted of inserted_data * dynml_webpage
 
 and dynml_element = Pure of string | Script of expr | Decl of global_declaration
 
@@ -29,7 +34,7 @@ and expr = (* TODO add match ... with, user-defined types *)
   | App of expr * expr
   | If of expr * expr * expr
   | Seq of expr * expr
-  | Html of dynml_webpage
+  | Html of dynml_webpage (* TODO maybe add a boolean indicating whether to reset the environment if includes is set to _not_ be a function but instead statically loading pages ? *)
   | Var of variable
   | WithModule of module_name * expr
   (* TODO
@@ -77,6 +82,9 @@ let rec string_of_global_declaration (global : global_declaration) : string = ma
   | TypeDecl (_, _) -> failwith "TODO"
   | ExprDecl (x, e) -> Printf.sprintf "let %s = %s" x (string_of_expr e)
   | ModuleExprDecl (modu, x, e) -> Printf.sprintf "%s.let %s = %s" modu x (string_of_expr e)
+  | OpenModule modu -> Printf.sprintf "open %s" modu
+  | ImportModule path -> Printf.sprintf "import \"%s\"" path
+  | Inserted (mode, h) -> Printf.sprintf "[%s[rst:%B;env:%B;ctt:%B[%s]]]" mode.module_name mode.reset_environment mode.final_env_available mode.content_available (string_of_dynpage h)
 
 and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasize the emph-th argument of the constructor by underlining it with \x1b[04mstufftobeunderlined\x1b[0m *)
   | Empty -> "<{}>"

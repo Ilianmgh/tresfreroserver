@@ -281,7 +281,7 @@ and parse_atom (l : token list) : int * expr * token list =
 
 (** [parse_global l] tries to parse a global from the token list [l], in the form of a [parsed_let_expression]; it can either be:
   - [DeclToBe] : parsed a global declaration;
-  - [LetInToBe] : we started to parse a let ... = ... in, but, as a  in follows, we return the variable name and the expression, and the remaining list of token starts after the in;
+  - [LetInToBe] : we started to parse a let ... = ... in, but, as a [in] follows, we return the variable name and the expression, and the remaining list of token starts after this [in];
   - [Nothing] : something else needs to be parsed. *)
 and parse_global (l : token list) : parsed_let_expression =
   (* We start by testing whether the code starts with a `ModuleName.` and if so, we store the module name. For now, only supports one-level module e.g. `ModuleName1.ModuleName2.let x = 5` can't be a valid global declaration *)
@@ -292,7 +292,7 @@ and parse_global (l : token list) : parsed_let_expression =
     end
     | None | Some _ -> l, None
   in
-  match eat_token_opt [Keyword TokLet; Keyword TokType] l' with
+  match eat_token_opt [Keyword TokLet; Keyword TokType; Keyword TokOpen; Keyword TokImport] l' with
     | Some (i_let, Keyword TokLet, l_rem) -> begin
       let i_var, var, l_rem = eat_variable l_rem (Printf.sprintf "line %d: let-expression: variable expected after 'let'." i_let) in
       let i_eq, eq, l_rem = eat_token (Keyword TokEq) l_rem (fun _ -> Printf.sprintf "line %d: let-expression: '=' expected after 'let'." i_var) in
@@ -305,6 +305,16 @@ and parse_global (l : token list) : parsed_let_expression =
             | Some mod_name -> DeclToBe (i_x_expr, ModuleExprDecl (mod_name, var, x_expr), l_rem)
           end
       end 
+    end
+    | Some (i_let, Keyword TokImport, l_rem) -> begin match l_rem with
+      | (line, Lit (TokStr path)) :: l_rem -> DeclToBe (line, ImportModule path, l_rem)
+      | [] -> raise (ParsingError "Unexpected end of document.")
+      | _ :: _ -> raise (ParsingError "Path to .tml file expected after `import`")
+    end
+    | Some (i_let, Keyword TokOpen, l_rem) -> begin match l_rem with (* TODO generalize to hoisting subsubsub...submodule (at any depth), cf TODO in hierarchic *)
+      | (line, MId module_name) :: l_rem -> DeclToBe (line, OpenModule module_name, l_rem)
+      | [] -> raise (ParsingError "Unexpected end of document.")
+      | _ :: _ -> raise (ParsingError "Module expected after `open`")
     end
     | Some (i_let, Keyword TokType, l_rem) -> begin
       failwith "TODO"
@@ -360,9 +370,3 @@ and parse_html_unit (lexed : token list) (is_root : bool) : int * dynml_webpage 
 
 (** Parsing ml *)
 let rec parser (lexed : token list) : dynml_webpage = let _, parsed, _ = parse_html_unit lexed true in parsed
-
-(*
-  TODO:
-  [] check if precedence of [if] is not under-evaluated : test if true then 1; 2 === (if true then 1); 2 or if true then (1; 2)
-  [] parse () as a unit
-*)

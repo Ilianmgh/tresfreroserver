@@ -4,11 +4,12 @@ open Prelexer
 open Lexer
 open Syntax
 open Parser
+open Linker
 open TypeSyntax
 open Typechecker
 open Interpreter
 
-let displayed = ["raw"; "prelexed"; "lexed"; "parsed"; "typed"; "eval'd"]
+let displayed = ["lexed"; "parsed"; "linked"; "typed"; "eval'd"]
 
 let test (i, code : int * string) : unit =
   begin if i < 0 then
@@ -24,9 +25,11 @@ let test (i, code : int * string) : unit =
     if List.mem "lexed" displayed then Printf.printf "lexed: %s\n%!" (string_of_list string_of_token lexed);
     let parsed = parser lexed in
     if List.mem "parsed" displayed then Printf.printf "parsed: %s\n%!" (string_of_dynpage parsed);
-    let types_infered = type_inferer Environment.empty parsed in
+    let linked = linker parsed in
+    if List.mem "linked" displayed then Printf.printf "linked: %s\n%!" (string_of_dynpage linked);
+    let types_infered = type_inferer Environment.empty linked in
     if List.mem "typed" displayed then List.iter (fun (gamma, tau) -> Printf.printf "typed: %s\nIn env: %s\n%!" (string_of_ml_type tau) (string_of_modular_typing_environment gamma)) types_infered;
-    let _, _, values_evald = eval Environment.empty parsed in
+    let _, _, values_evald = eval Environment.empty linked in
     if List.mem "eval'd" displayed then List.iter (fun v -> Printf.printf "eval'd: %s\n%!" (string_of_value v)) values_evald
   with
     | PrelexingError s -> Printf.fprintf stderr "PrelexingError: %s\n%!" s
@@ -38,27 +41,14 @@ let test (i, code : int * string) : unit =
     | InterpreterError s -> Printf.fprintf stderr "InterpreterError: %s\n%!" s
     | UnsupportedError s -> Printf.fprintf stderr "UnsupportedError: %s\n%!" s
 
-(*
-
-<h1>Example</h1>
-<{
-  let x = 1 in
-  if x + 1 = 2 then <[
-    2
-  ]> else <[
-    DEADCODE
-  ]>
-}>
-*)
-
 let test_input () =
   let tests = [
         "<{}>" (* parsing error *)
       ; "<{let x = 5 in x}>" (* ok *)
       ; "<{let x = 5 in x}>" (* ok *)
-      ; "<{ f\"cou %{let x = 5 in x}% cou\" }>" (* kok? weird eval'd result even though it works outside of tests.  *)
+      ; "<{ f\"cou%{let x = 5 in x}%cou\" }>" (* ok  *)
       ; "<{let x = 5, 2 in fst x}>" (* ok *)
-      ; "<h1>Example</h1>%<{% let x = 1 in% if x + 1 = 2 then%<[% 2%]>% else %<[% DEADCODE%]>}>" (* ok *)
+      ; "<h1>Example</h1><{ let x = 1 in if x + 1 = 2 then<[ 2 ]> else <[ DEADCODE ]>}>" (* ok *)
       ; "<{2 + 1 = 3}>" (* ok *)
       ; "<{1-1}>" (* ok *)
       ; "<{let y = 3 in let x = 4 in (fun x -> y) 5}>" (* ok *)
@@ -80,7 +70,6 @@ let test_input () =
   if Array.length Sys.argv <= 1 then
     Printf.fprintf stderr "Usage: ./test.x <test>\n<test>\n\ti: the i-th hard-coded test, if negative, run all the tests\n\ta string of a code that will be tested."
   else begin
-    let tests = List.map (fun s -> String.map (fun c -> if c = '%' then '\n' else if c = '#' then '\\' else c) s) tests in
     let builtin_test, param = try
         (true, string_of_int (int_of_string Sys.argv.(1))) (* indicates one of the hard-coded example, if [< 0], then we test them all. *)
       with

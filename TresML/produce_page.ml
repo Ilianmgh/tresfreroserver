@@ -2,6 +2,7 @@ open Utils
 open Lexer
 open Syntax
 open Parser
+open Linker
 open TypeSyntax
 open Typechecker
 open Interpreter
@@ -59,22 +60,17 @@ let debug = true
 
 let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 
-(** [intepret_tml_page init_env source handle_output output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and progressively pass the resulting page to the function [handle_ouput]. A canonical use case is providing [Printf.fprintf a_channel] as [handle_ouput].
+(** [interpret_tml_page init_env source handle_output output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and progressively pass the resulting page to the function [handle_ouput]. A canonical use case is providing [Printf.fprintf a_channel] as [handle_ouput].
   [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
   [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
-let intepret_tml_page (arguments : environment) (source : in_channel) (handle_output : string -> unit) (output_first_line : bool) : unit =
-  failwith "TODO"
-
-(** [output_page init_env source dest output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and writes it in [dest].
-  [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
-  [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
-let rec output_page (arguments : environment) (source : in_channel) (dest : out_channel) (output_first_line : bool) : unit =
+let rec interpret_tml_page (arguments : environment) (source : in_channel) (handle_output : string -> unit) (output_first_line : bool) : unit =
   let f_in = source in
   let code : string = read_whole_file_str f_in in
   close_in f_in;
   try
     let lexed = lexer code in
     let parsed = parser lexed in
+    let linked = linker parsed in
     (* Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - A\n"; *)
     (* {namespaces = [] ; name = "include" ; v = Args1 extern_include ; tau = Arr (TypeString, TypeHtml)} *)
     let typ_env = Environment.add "include" (Arr (TypeString, TypeHtml)) (Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env) in
@@ -83,33 +79,19 @@ let rec output_page (arguments : environment) (source : in_channel) (dest : out_
         (Args1 begin
           fun v -> match v with
             | VString path -> begin
-              (if not (try Sys.is_directory ".tresml_cache" with Sys_error _ -> false) then
-                Sys.mkdir ".tresml_cache" 0b111_000_000);
               let included_channel_in = open_in path in
-              let included_channel_out = open_out ".tresml_cache/tmp.html" in
-              output_page Environment.empty included_channel_in included_channel_out false;(* for now, Environment.empty is passed; see in uses cases if it should be given the same original pre-loaded environment*)
+              let included_buf = Buffer.create 80 in
+              interpret_tml_page Environment.empty included_channel_in (fun s -> Buffer.add_string included_buf s) false;(* for now, Environment.empty is passed; see in uses cases if it should be given the same original pre-loaded environment*)
               close_in included_channel_in;
-              close_out included_channel_out;
-              let included_res_in = open_in ".tresml_cache/tmp.html" in
-              let evald_included = read_whole_file_str included_res_in in
-              close_in included_res_in;
-              Sys.remove ".tresml_cache/tmp.html";
-              (try
-                Sys.remove ".tresml_cache"
-              with
-                Sys_error _ -> failwith "tried to delete .tresml_cache while it's not empty during execution of an include"
-              );
+              let evald_included = Buffer.contents included_buf in
+              Buffer.clear included_buf;
               VPure evald_included
             end
             | _ -> raise (InvalidMlArgument (Printf.sprintf "%s: string expected." (string_of_value v)))
         end) 
       end (Environment.disjoint_union arguments pre_included_environment) in
-    (* Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - B\n"; *)
-    let _ = type_inferer typ_env parsed in
-    (* Printf.fprintf stderr "ENTERING EVALUATION\n"; *)
-    let final_env, location, values = eval eval_env parsed in
-    (* Printf.fprintf stderr "EXITING EVALUATION\n"; *)
-    let f_out = dest in
+    let _ = type_inferer typ_env linked in
+    let final_env, location, values = eval eval_env linked in
     (* The first line contains information we want to send to the server, but that won't be sent to the client. *)
     if output_first_line then begin
       (* TODO slight optimization: do not re-send session variables that were not modified; but simply mention to the server to keep them *)
@@ -125,26 +107,31 @@ let rec output_page (arguments : environment) (source : in_channel) (dest : out_
           )
           session_env ""
       in
-      Printf.fprintf f_out "session%s;" session_bindings; (* FIXME may lead to issues if ';' occurs in a session variable *)
+      handle_output (Printf.sprintf "session%s;" session_bindings); (* FIXME may lead to issues if ';' occurs in a session variable *)
       begin match location with
         | None -> ()
-        | Some target -> Printf.fprintf f_out "redirect=%s" target
+        | Some target -> handle_output (Printf.sprintf "redirect=%s" target)
       end;
-      Printf.fprintf f_out "\n"
+      handle_output "\n"
     end;
-    List.iter (fun v -> fprintf_value f_out v) values;
-    close_out f_out
+    List.iter (fun v -> handle_output (string_of_value v)) values
   with
-    | PrelexingError s -> let f_out = dest in Printf.fprintf f_out ";\nPrelexingError: %s\n" s; close_out f_out
-    | LexingError s -> let f_out = dest in Printf.fprintf f_out ";\nLexingError: %s\n" s; close_out f_out
-    | ParsingError s -> let f_out = dest in Printf.fprintf f_out ";\nParsingError: %s\n" s; close_out f_out
-    | TypingError s -> let f_out = dest in Printf.fprintf f_out ";\nTypingError: %s\n" s; close_out f_out
-    | UnificationError (alpha, beta, Recursive) -> let f_out = dest in Printf.fprintf f_out ";\nUnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
-    | UnificationError (alpha, beta, Incompatible) -> let f_out = dest in Printf.fprintf f_out ";\nUnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta); close_out f_out
-    | InterpreterError s -> let f_out = dest in Printf.fprintf f_out ";\nInterpreterError: %s\n" s; close_out f_out
-    | UnsupportedError s -> let f_out = dest in Printf.fprintf f_out ";\nUnsupportedError: %s\n" s; close_out f_out
-  
-let test_file (source : string) : unit =
+    | PrelexingError s -> handle_output (Printf.sprintf ";\nPrelexingError: %s\n" s)
+    | LexingError s -> handle_output (Printf.sprintf ";\nLexingError: %s\n" s)
+    | ParsingError s -> handle_output (Printf.sprintf ";\nParsingError: %s\n" s)
+    | TypingError s -> handle_output (Printf.sprintf ";\nTypingError: %s\n" s)
+    | UnificationError (alpha, beta, Recursive) -> handle_output (Printf.sprintf ";\nUnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
+    | UnificationError (alpha, beta, Incompatible) -> handle_output (Printf.sprintf ";\nUnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
+    | InterpreterError s -> handle_output (Printf.sprintf ";\nInterpreterError: %s\n" s)
+    | UnsupportedError s -> handle_output (Printf.sprintf ";\nUnsupportedError: %s\n" s)
+
+(** [output_page init_env source dest output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and writes it in [dest].
+  [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
+  [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
+let rec output_page (arguments : environment) (source : in_channel) (dest : out_channel) (output_first_line : bool) : unit =
+  interpret_tml_page arguments source (fun s -> Printf.fprintf dest "%s" s) output_first_line 
+
+  let test_file (source : string) : unit =
   let f_in = open_in source in
   let code : string = read_whole_file_str f_in in
   close_in f_in;
