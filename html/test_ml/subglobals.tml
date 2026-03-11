@@ -10,7 +10,7 @@
   <h1>Real globals</h1>
   <p>
     x: <{x}><br/>
-    f: <{f}>
+    f: <{f }>
   </p>
   <h1>Globals within HTML within ML</h1>
   <h2>Scoped:</h2>
@@ -22,7 +22,7 @@
           let f = fixfun g x -> g (x + 1)
         }>
         x: <{x}><br/>
-        f: <{f}>
+        f: <{f }>
         <{
           let x = 32 in
           <[coucouc <{x}> coucou]>
@@ -33,7 +33,7 @@
   <h2>But outside the outer ML brackets, it remains</h2>
   <p>
     x: <{x}><br/>
-    f: <{f}>
+    f: <{f }>
   </p>
 </body>
 </html>

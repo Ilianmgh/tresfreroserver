@@ -1,0 +1,7 @@
+<{
+  import "./included_depth2.tml"
+  let prenom = "Andrew"
+  let msg = f"Hello I'm %{prenom}%"
+}>
+
+Voici un message: <{msg}>
