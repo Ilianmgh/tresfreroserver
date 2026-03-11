@@ -77,7 +77,6 @@ and link_expr (root_path : string) (e : expr) : expr = match e with
 
 (** [linker root_path page = linked_page] links [page] with root directory of project [root_path].
   [linked_page] does not contain any [ImportModule] subexpression. *)
-let linker (root_path : string) (page : dynml_webpage) : dynml_webpage =
-  match separator_ended_dir_path_opt root_path with
-    | None -> raise (LinkingError (Printf.sprintf "%s: Root path is not a directory." root_path))
-    | Some dir_root_path -> link_dynpage dir_root_path page
+let linker (root_path : string) (page : dynml_webpage) : dynml_webpage = match separator_ended_dir_path_opt root_path with
+  | None -> raise (LinkingError (Printf.sprintf "%s: Root path is not a directory." root_path))
+  | Some dir_root_path -> link_dynpage dir_root_path page

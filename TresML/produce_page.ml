@@ -27,7 +27,7 @@ let ml_type_of_sqlite_exec =
 let straigthforward_ml_function (name : string) (f : extern_function) : value =
   Clos (Environment.empty, VExternFunction (name, f))
 
-(** To set pre-defined symbols in TresML, the below extern_symbol list is the only thing to modify.
+(** To set pre-defined symbols in TresML, the extern_symbol list [predefined_symbols] in [interpret_tml_page]'s body is the only thing to modify.
   You need to add a record to the list of type [extern_symbol] (see below, Error: looping recursion). We explain each field:
   - [namespaces]: a list of namespaces indicating on which submodule the symbol will be available.
   - [name]: the actual name of the symbol
@@ -52,31 +52,6 @@ let straigthforward_ml_function (name : string) (f : extern_function) : value =
   *)
 type extern_symbol = {namespaces : module_name list ; name : string ; v : extern_function ; tau : ml_type}
 
-(** List of predefined symbols, pre-loaded in the environment at execution. *)
-let predefined_symbols : extern_symbol list = [
-      {namespaces = [sqlite_module_name] ; name = "exec"    ; v = Args4 extern_sqlite_exec_with_reset_env ; tau = ml_type_of_sqlite_exec}
-    ; {namespaces = [sqlite_module_name] ; name = "opendb"  ; v = Args1 (straightforward_fun_dropping_reset_env extern_sqlite_open_db) ; tau = Arr (TypeString, TypeDb)}
-    ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = Args1 (straightforward_fun_dropping_reset_env extern_sqlite_close_db) ; tau = Arr (TypeDb, TypeBool)}
-    ; {namespaces = [] ; name = "fst" ; v = Args1 (straightforward_fun_dropping_reset_env ml_fst) ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst")))}
-    ; {namespaces = [] ; name = "snd" ; v = Args1 (straightforward_fun_dropping_reset_env ml_snd) ; tau = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd")))}
-    ; {namespaces = [] ; name = "not" ; v = Args1 (straightforward_fun_dropping_reset_env ml_not) ; tau = Arr (TypeBool, TypeBool)}
-    ; {namespaces = ["String"] ; name = "replace" ; v = Args3 (straightforward_fun_dropping_reset_env ml_string_replace) ; tau = Arr (TypeString, Arr (TypeString, Arr (TypeString, TypeString)))}
-    ; {namespaces = ["String"] ; name = "get" ; v = Args2 (straightforward_fun_dropping_reset_env ml_string_get) ; tau = Arr (TypeString, Arr (TypeInt, TypeString))} (* FIXME add char type *)
-    ; {namespaces = ["Http"] ; name = "redirect" ; v = Args1 (straightforward_fun_dropping_reset_env ml_redirect) ; tau = Arr (TypeString, TypeUnit)} (* FIXME GIVE AN ACTUAL TYPE TO LOCATIONS !!!! *)
-  ]
-
-let pre_included_environment : environment =
-  List.fold_left
-    (fun acc entry -> Environment.add_and_path entry.namespaces entry.name (straigthforward_ml_function entry.name entry.v) acc)
-    Environment.empty
-    predefined_symbols
-
-let pre_included_typing_env : modular_typing_environment =
-  List.fold_left
-    (fun acc entry -> Environment.add_and_path entry.namespaces entry.name entry.tau acc)
-    Environment.empty
-    predefined_symbols
-
 (** Producing a page *)
 
 let debug = true
@@ -86,7 +61,45 @@ let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 (** [interpret_tml_page init_env source handle_output output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and progressively pass the resulting page to the function [handle_ouput]. A canonical use case is providing [Printf.fprintf a_channel] as [handle_ouput].
   [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
   [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
-let rec interpret_tml_page (arguments : environment) (root_dir : string) (source : in_channel) (handle_output : string -> unit) (output_first_line : bool) : unit =
+let rec interpret_tml_page
+  (arguments : environment)
+  (root_dir : string)
+  (source : in_channel)
+  (handle_output : string -> unit)
+  (output_first_line : bool) : unit =
+  (** COMPUTING PRE-LOADED ENVIRONMENT *)
+  (** List of predefined symbols, pre-loaded in the environment at execution. *)
+  let full_extern_sqlite_open_db = straightforward_fun_dropping_reset_env (extern_sqlite_open_db_with_root_path root_dir) in
+  let ml_type_fst = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst"))) in
+  let ml_type_snd = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd"))) in
+  let ml_type_str_replace = Arr (TypeString, Arr (TypeString, Arr (TypeString, TypeString))) in
+  let predefined_symbols : extern_symbol list = [
+        {namespaces = [sqlite_module_name] ; name = "exec"    ; v = Args4 extern_sqlite_exec_with_reset_env ; tau = ml_type_of_sqlite_exec}
+      ; {namespaces = [sqlite_module_name] ; name = "opendb"  ; v = Args1 full_extern_sqlite_open_db ; tau = Arr (TypeString, TypeDb)}
+      ; {namespaces = [sqlite_module_name] ; name = "closedb" ; v = Args1 (straightforward_fun_dropping_reset_env extern_sqlite_close_db) ; tau = Arr (TypeDb, TypeBool)}
+      ; {namespaces = [] ; name = "fst" ; v = Args1 (straightforward_fun_dropping_reset_env ml_fst) ; tau = ml_type_fst}
+      ; {namespaces = [] ; name = "snd" ; v = Args1 (straightforward_fun_dropping_reset_env ml_snd) ; tau = ml_type_snd}
+      ; {namespaces = [] ; name = "not" ; v = Args1 (straightforward_fun_dropping_reset_env ml_not) ; tau = Arr (TypeBool, TypeBool)}
+      ; {namespaces = ["String"] ; name = "replace" ; v = Args3 (straightforward_fun_dropping_reset_env ml_string_replace) ; tau = ml_type_str_replace}
+      (* FIXME add char type *)
+      ; {namespaces = ["String"] ; name = "get" ; v = Args2 (straightforward_fun_dropping_reset_env ml_string_get) ; tau = Arr (TypeString, Arr (TypeInt, TypeString))}
+      (* FIXME give actual types to locations ? *)
+      ; {namespaces = ["Http"] ; name = "redirect" ; v = Args1 (straightforward_fun_dropping_reset_env ml_redirect) ; tau = Arr (TypeString, TypeUnit)}
+    ]
+  in
+  let pre_included_environment : environment =
+    List.fold_left
+      (fun acc entry -> Environment.add_and_path entry.namespaces entry.name (straigthforward_ml_function entry.name entry.v) acc)
+      Environment.empty
+      predefined_symbols
+  in
+  let pre_included_typing_env : modular_typing_environment =
+    List.fold_left
+      (fun acc entry -> Environment.add_and_path entry.namespaces entry.name entry.tau acc)
+      Environment.empty
+      predefined_symbols
+  in
+  (* EVALUATION *)
   let f_in = source in
   let code : string = read_whole_file_str f_in in
   close_in f_in;
@@ -94,8 +107,6 @@ let rec interpret_tml_page (arguments : environment) (root_dir : string) (source
     let lexed = lexer code in
     let parsed = parser lexed in
     let linked = linker root_dir parsed in
-    (* Printf.fprintf stderr "AAAAAAAAAHHHHHHHHH - A\n"; *)
-    (* {namespaces = [] ; name = "include" ; v = Args1 extern_include ; tau = Arr (TypeString, TypeHtml)} *)
     let typ_env = Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env in
     let eval_env = Environment.disjoint_union arguments pre_included_environment in
     let _ = type_inferer typ_env linked in
@@ -125,15 +136,42 @@ let rec interpret_tml_page (arguments : environment) (root_dir : string) (source
     end;
     List.iter (fun v -> handle_output (string_of_value v)) values
   with
-    | PrelexingError s -> handle_output (Printf.sprintf ";\nPrelexingError: %s\n" s)
-    | LexingError s -> handle_output (Printf.sprintf ";\nLexingError: %s\n" s)
-    | ParsingError s -> handle_output (Printf.sprintf ";\nParsingError: %s\n" s)
-    | LinkingError s -> handle_output (Printf.sprintf ";\nLinkingError: %s\n" s)
-    | TypingError s -> handle_output (Printf.sprintf ";\nTypingError: %s\n" s)
-    | UnificationError (alpha, beta, Recursive) -> handle_output (Printf.sprintf ";\nUnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
-    | UnificationError (alpha, beta, Incompatible) -> handle_output (Printf.sprintf ";\nUnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
-    | InterpreterError s -> handle_output (Printf.sprintf ";\nInterpreterError: %s\n" s)
-    | UnsupportedError s -> handle_output (Printf.sprintf ";\nUnsupportedError: %s\n" s)
+    | PrelexingError s -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf "PrelexingError: %s\n" s)
+    end
+    | LexingError s -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf "LexingError: %s\n" s)
+    end
+    | ParsingError s -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf "ParsingError: %s\n" s)
+    end
+    | LinkingError s -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf "LinkingError: %s\n" s)
+    end
+    | TypingError s -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf "TypingError: %s\n" s)
+    end
+    | UnificationError (alpha, beta, Recursive) -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf ";\nUnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
+    end
+    | UnificationError (alpha, beta, Incompatible) -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf ";\nUnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
+    end
+    | InterpreterError s -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf "InterpreterError: %s\n" s)
+    end
+    | UnsupportedError s -> begin
+      if output_first_line then handle_output ";\n";
+      handle_output (Printf.sprintf "UnsupportedError: %s\n" s)
+    end
 
 (** [output_page init_env root_dir source dest output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and writes it in [dest].
   [root_dir] is the root directory of the project. Included files have to be in subfolders of this one. 
@@ -141,12 +179,6 @@ let rec interpret_tml_page (arguments : environment) (root_dir : string) (source
   [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
 let rec output_page (arguments : environment) (root_dir : string) (source : in_channel) (dest : out_channel) (output_first_line : bool) : unit =
   interpret_tml_page arguments root_dir source (fun s -> Printf.fprintf dest "%s" s) output_first_line 
-
-let test_file (source : string) : unit =
-  let f_in = open_in source in
-  let code : string = read_whole_file_str f_in in
-  close_in f_in;
-  Test.test (-1, code)
 
 exception MalformedCommandLine of string
 

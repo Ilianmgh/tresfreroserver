@@ -16,12 +16,12 @@ all: produce_page.$(EXE_EXT) test.$(EXE_EXT)
 
 .PHONY: clean
 # See if ocaml-deps can reduce this horrible makefile
-produce_page.$(EXE_EXT): produce_page.$(OBJ_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT) test.$(OBJ_EXT)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.$(EXE_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) test.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT) produce_page.$(OBJ_EXT)
+produce_page.$(EXE_EXT): produce_page.$(OBJ_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.$(EXE_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT) produce_page.$(OBJ_EXT)
 
 produce_page.cmi: produce_page.$(OBJ_EXT)
 
-produce_page.$(OBJ_EXT): produce_page.ml hierarchic.cmi utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi linker.cmi typechecker.cmi typeSyntax.cmi value.cmi interpreter.cmi parse_url_dictionary.cmi test.cmi
+produce_page.$(OBJ_EXT): produce_page.ml hierarchic.cmi utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi linker.cmi typechecker.cmi typeSyntax.cmi value.cmi interpreter.cmi parse_url_dictionary.cmi 
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o produce_page.$(OBJ_EXT) produce_page.ml
 
 parse_url_dictionary.$(EXE_EXT): hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) syntax.$(OBJ_EXT) value.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT)

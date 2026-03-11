@@ -286,7 +286,8 @@ and parse_atom (l : token list) : int * expr * token list =
 and parse_global (l : token list) : parsed_let_expression =
   (* We start by testing whether the code starts with a `ModuleName.` and if so, we store the module name. For now, only supports one-level module e.g. `ModuleName1.ModuleName2.let x = 5` can't be a valid global declaration *)
   let l', module_declaration = match eat_token_opt [MId session_module_name] l with
-    | Some (i_session, MId module_name, l_rem) -> begin match eat_token_opt [Keyword TokDot] l_rem with
+    | Some (i_session, MId module_name, l_rem) when module_name = session_module_name ->
+    begin match eat_token_opt [Keyword TokDot] l_rem with
       | Some (i_dot, dot, l_rem') -> l_rem', (Some module_name)
       | None -> [], None
     end

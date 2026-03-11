@@ -230,7 +230,7 @@ and eval_page (orig_env : environment) (env : environment) (page : dynml_webpage
           (* adding the content of the page so it is accessible as ModuleName.Import.content iff mode.content_available = true *)
           let final_env_from_insd = begin
               if mode.content_available then
-                Environment.add_and_path ["Import"] "content" (VContent evald_insd_page)
+                Environment.add_and_path ["Meta"] "content" (VContent evald_insd_page)
               else
                 (fun x -> x)
             end env_after_evaluation 
@@ -260,9 +260,15 @@ and extern_sqlite_exec_with_reset_env = fun (orig_env : environment) db fold_lin
       query)
   | _, _, _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s, %s, %s: Expected a database, a line folding function, a cell folding function and a SQL query (as a string)." (string_of_value db) (string_of_value fold_lines) (string_of_value fold_cells) (string_of_value str_query))) (* TODO maybe refine this bit *)
 
-let extern_sqlite_open_db (db_path : value) : value = match db_path with
-  | VString s -> VDb (Sqlite3.db_open s)
-  | _ -> raise (InterpreterError (Printf.sprintf "%s: path to a database expected." (string_of_value db_path)))
+let extern_sqlite_open_db_with_root_path (root_path : string) (v : value) : value = match v with
+  | VString db_path -> begin Printf.fprintf stderr "root: %s\ndb: %s\n" root_path db_path; match separator_ended_dir_path_opt root_path with
+    | None -> raise (InterpreterError (Printf.sprintf "%s: Root path is not a directory." root_path))
+    | Some dir_root_path -> if is_subfolder db_path then
+        VDb (Sqlite3.db_open (dir_root_path ^ db_path))
+      else
+        raise (InterpreterError (Printf.sprintf "trying to open database %s: Access denied, cannot load file outside of project root. See --root option." db_path))
+  end
+  | _ -> raise (InterpreterError (Printf.sprintf "%s: path to a database expected." (string_of_value v)))
 let extern_sqlite_close_db (vdb : value) : value = begin match vdb with
     | VDb db -> VBool (Sqlite3.db_close db)
     | _ -> raise (InterpreterError (Printf.sprintf "%s: database expected." (string_of_value vdb)))

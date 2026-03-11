@@ -245,7 +245,7 @@ and type_inferer_page (orig_gamma : modular_typing_environment) (gamma : modular
               (* adding the content of the page so it is accessible as ModuleName.Import.content iff mode.content_available = true *)
               let final_env_from_insd = begin
                   if mode.content_available then
-                    Environment.add_and_path ["Import"] "content" TypeHtml
+                    Environment.add_and_path ["Meta"] "content" TypeHtml
                   else
                     (fun x -> x)
                 end env_after_typd
