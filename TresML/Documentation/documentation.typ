@@ -78,9 +78,15 @@ A global declaration declares and defines a variable, whose scope is (the remain
 
 #grammar[declarator: let | Session.let]
 
-#grammar[global_declaration: #extern_word[declarator] #extern_word[id] = #extern_word[exp]]
+#grammar[global_declaration:\
+#tab | #extern_word[declarator] #extern_word[id] = #extern_word[exp]\
+#tab | import "path/to/file.tml"\
+#tab | open #extern_word[module_name]
+]
 
 #temp[For now, only expressions can be declared by the user. At some point, we would like to allow user-defined types and modules.]
+
+#temp[For now, open can only open a top-level module, but open A.B.C is rejected.]
 
 == Expressions
 
@@ -374,6 +380,90 @@ A dynamic webpage to evaluate is seen as a list of either:
 
 The interpreter evaluates following a big-step call-by-value semantics.
 
+=== Global declaration
+
+Global expression declaration are discussed in @declarations due to their similarity to local expression decleration.
+
+==== import
+
+An #grammar[import] must be followed by a static string indicating a path to another file. This file will be loaded and interpreted as a #tresml file. As a result, in the rest of the page, are made available:
+- All globals declared in the imported page ;
+- the resulting evaluated page, accessible via `Filename.Meta.content`
+
+See @open for an example.
+
+==== open <open>
+
+An #grammar[open] must be followed by a module name. The effect is that the environment of the module is hoisted at the root.
+
+#example[
+  We give a simple import example that also allows to illustrate how `open` affects the environment. We assume the two following files are within the same folder.
+
+
+
+
+  #html_pdf_alt(
+    table(stroke: none, columns:(1fr,1fr,.1fr,1fr),
+      [File `to_import.tml`:
+      ```<{ let x = "I'm from A" }>
+      ```],
+      [File `main.tml`:
+      ```<{
+        import "./to_import.tml"
+        let x = "I'm at toplevel"
+      }>
+      A.x = <{ A.x }>
+      x = <{ A.x }>
+      After open: <{ open A }>
+      x = <{ x }>
+      ```],
+      sym.arrow.squiggly,
+      [Evaluated `main.tml` page:
+      ```
+
+
+
+
+      A.x = I'm from A
+      x = I'm at toplevel
+      After open:
+      x = I'm from A
+      ```]
+    ),
+    align(center + horizon,
+      grid(stroke: none, columns:(1fr,1fr,.1fr,1fr), 
+        table(stroke: none, columns:4,
+          [File `to_import.tml`:
+          ```<{ let x = "I'm from A" }>
+          ```],
+          [File `main.tml`:
+          ```<{
+            import "./to_import.tml"
+            let x = "I'm at toplevel"
+          }>
+          A.x = <{ A.x }>
+          x = <{ A.x }>
+          After open: <{ open A }>
+          x = <{ x }>
+          ```],
+          align(center + horizon, sym.arrow.squiggly),
+          [Evaluated `main.tml` page:
+          ```
+
+
+
+
+          A.x = I'm from A
+          x = I'm at toplevel
+          After open:
+          x = I'm from A
+          ```]
+        )
+      )
+    )
+  )
+]
+
 === Expression
 
 ==== Functions 
@@ -402,7 +492,7 @@ To write recursive functions, you must use #grammar[fixfun]; it binds two variab
 
 There is currently no support for mutually recursive functions.
 
-==== Declarations
+==== Declarations <declarations>
 
 A declaration can either be _global_ i.e. its scope is the remainder of the file or _local_ i.e. its scope is restricted to the expression after the `in` keyword.
 
@@ -590,7 +680,9 @@ Considering that every value of the language is intended to be written in an HTM
 
 = TODO/Known Issues
 
-#sym.ballot Weird parsing error messages on code `Session.let x = 1 in x`, fix/find out why.
+#sym.ballot Add links between tokens in documentation
+
+#sym.ballot Weird parsing error messages on code `Session.let x = 1 in x` --solutionIhope--> revisit position of let/fun/... in parser (should not be in parse_atom).
 
 #sym.ballot Weird typing error on file "test_from_vsext.tml", fix.
 
