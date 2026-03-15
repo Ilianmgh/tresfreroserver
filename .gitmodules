@@ -1,0 +1,3 @@
+[submodule "TresML/codex"]
+	path = TresML/codex
+	url = https://github.com/typst/codex.git
