@@ -1,6 +1,6 @@
 module StringMap = Map.Make(String)
 
-module Environment = Hierarchic.Make(StringMap) (* TODO For distinction open/include: add info to link between sub/supmap: a boolean indicating if the link is strong (survives to open) or weak (is broken when opened) *)
+module Environment = Hierarchic.Make(StringMap)
 
 exception UnsupportedError of string
 
@@ -28,6 +28,10 @@ let string_of_list (to_string : 'a -> string) (l : 'a list) : string =
 let rec string_of_char_list (l : char list) : string = match l with
   | [] -> ""
   | h :: t -> Printf.sprintf "%c%s" h (string_of_char_list t)
+
+(** Takes ["a string"] and returns [['a'; ' '; 's'; 't'; 'r'; 'i'; 'n'; 'g']]. *)
+let rec char_list_of_string (s : string) : char list =
+  String.fold_right (fun c acc -> c :: acc) s []
 
 let string_fold_lefti (f : 'a -> int * char -> 'a) (acc : 'a) (s : string) : 'a = List.fold_left f acc (List.mapi (fun i x -> (i, x)) (list_of_string s))
 

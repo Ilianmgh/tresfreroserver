@@ -308,7 +308,9 @@ and parse_global (l : token list) : parsed_let_expression =
       end 
     end
     | Some (i_let, Keyword TokImport, l_rem) -> begin match l_rem with
-      | (line, Lit (TokStr path)) :: l_rem -> DeclToBe (line, ImportModule path, l_rem)
+      | (line_path, Lit (TokStr path)) :: (line_as, Keyword TokAs) :: (line_module_name, MId module_name) :: l_rem ->
+        DeclToBe (line_as, ImportModule (path, Some module_name), l_rem)
+      | (line_path, Lit (TokStr path)) :: l_rem -> DeclToBe (line_path, ImportModule (path, None), l_rem)
       | [] -> raise (ParsingError "Unexpected end of document.")
       | _ :: _ -> raise (ParsingError "Path to .tml file expected after `import`")
     end

@@ -215,7 +215,7 @@ and eval_page (orig_env : environment) (env : environment) (page : dynml_webpage
           | Some modu_typenv -> location, (Environment.hoist_submap cur_env modu, v) :: already_evald' (* FIXME /!\ for now, open actually has the semantic of OCaml's include *)
             (* evaluating a global only enriches the environment, no value is added *)
         end
-        | Decl (ImportModule modu) -> failwith "Trying to type an unlinked page (here link in compilation, not link as in the Web)."
+        | Decl (ImportModule _) -> failwith "Trying to type an unlinked page (here link in compilation, not link as in the Web)."
         | Decl (Inserted (mode, insd_page)) -> begin
           let (final_env_insd_page, _, evald_insd_page) = if mode.reset_environment then
               eval_page orig_env orig_env insd_page

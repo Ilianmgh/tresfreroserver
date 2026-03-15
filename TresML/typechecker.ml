@@ -228,7 +228,7 @@ and type_inferer_page (orig_gamma : modular_typing_environment) (gamma : modular
           (Environment.add_to_sub [modu] x tau_e cur_gamma, gamma_e, (* this type is not relevant, a declaration has no type *)tau_e) ::
           (cur_gamma, gamma_after_typed, tau) ::
           already_typed'
-        | Decl (ImportModule path) -> failwith "Trying to type an unlinked page (here link in compilation, not link as in the Web)."
+        | Decl (ImportModule _) -> failwith "Trying to type an unlinked page (here link in compilation, not link as in the Web)."
         | Decl (Inserted (mode, insd_page)) -> begin
           let inserted_page_typed = if mode.reset_environment then
               type_inferer_page orig_gamma orig_gamma insd_page

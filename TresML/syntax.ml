@@ -19,7 +19,7 @@ type global_declaration =
   | ExprDecl of variable * expr
   | ModuleExprDecl of module_name * variable * expr (* TODO when adding module declarations: ModuleDecl of module_name * module_expr *)
   | OpenModule of module_name (* hoist a module to the root of the environment *)
-  | ImportModule of string (* retrieves an external file as a module *)
+  | ImportModule of string * string option (* the path to the file to import and the optional name for the resulting module *)
   | Inserted of inserted_data * dynml_webpage
 
 and dynml_element = Pure of string | Script of expr | Decl of global_declaration
@@ -83,7 +83,8 @@ let rec string_of_global_declaration (global : global_declaration) : string = ma
   | ExprDecl (x, e) -> Printf.sprintf "let %s = %s" x (string_of_expr e)
   | ModuleExprDecl (modu, x, e) -> Printf.sprintf "%s.let %s = %s" modu x (string_of_expr e)
   | OpenModule modu -> Printf.sprintf "open %s" modu
-  | ImportModule path -> Printf.sprintf "import \"%s\"" path
+  | ImportModule (path, None) -> Printf.sprintf "import \"%s\"" path
+  | ImportModule (path, Some modu) -> Printf.sprintf "import \"%s\" as %s" path modu
   | Inserted (mode, h) -> Printf.sprintf "[%s[rst:%B;env:%B;ctt:%B[%s]]]" mode.module_name mode.reset_environment mode.final_env_available mode.content_available (string_of_dynpage h)
 
 and string_of_expr ?(emph : int = 0) : expr -> string = function (* TODO emphasize the emph-th argument of the constructor by underlining it with \x1b[04mstufftobeunderlined\x1b[0m *)

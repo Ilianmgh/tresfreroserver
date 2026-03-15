@@ -60,13 +60,15 @@ let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
 
 (** [interpret_tml_page init_env source handle_output output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and progressively pass the resulting page to the function [handle_ouput]. A canonical use case is providing [Printf.fprintf a_channel] as [handle_ouput].
   [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
-  [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
+  [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...).
+  [os_type] is the OS's name, as given by [Sys.os_type] *)
 let rec interpret_tml_page
   (arguments : environment)
   (root_dir : string)
   (source : in_channel)
   (handle_output : string -> unit)
-  (output_first_line : bool) : unit =
+  (output_first_line : bool)
+  (os_type : string) : unit =
   (** COMPUTING PRE-LOADED ENVIRONMENT *)
   (** List of predefined symbols, pre-loaded in the environment at execution. *)
   let full_extern_sqlite_open_db = straightforward_fun_dropping_reset_env (extern_sqlite_open_db_with_root_path root_dir) in
@@ -176,9 +178,10 @@ let rec interpret_tml_page
 (** [output_page init_env root_dir source dest output_first_line] reads a TresML webpage from [source], computes the resulting html webpage and writes it in [dest].
   [root_dir] is the root directory of the project. Included files have to be in subfolders of this one. 
   [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
-  [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...). *)
-let rec output_page (arguments : environment) (root_dir : string) (source : in_channel) (dest : out_channel) (output_first_line : bool) : unit =
-  interpret_tml_page arguments root_dir source (fun s -> Printf.fprintf dest "%s" s) output_first_line 
+  [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...).
+  [os_type] is the OS's name, as given by [Sys.os_type] *)
+let rec output_page (arguments : environment) (root_dir : string) (source : in_channel) (dest : out_channel) (output_first_line : bool) (os_type : string) : unit =
+  interpret_tml_page arguments root_dir source (fun s -> Printf.fprintf dest "%s" s) output_first_line os_type
 
 exception MalformedCommandLine of string
 
@@ -245,7 +248,7 @@ let parse_command_line (command_line : string array) : command_line_args =
 let () =
   try
     let cl_args = parse_command_line Sys.argv in
-    output_page cl_args.initial_environment cl_args.root_dir cl_args.source cl_args.target cl_args.output_first_line;
+    output_page cl_args.initial_environment cl_args.root_dir cl_args.source cl_args.target cl_args.output_first_line Sys.os_type;
     close_in cl_args.source;
     close_out cl_args.target
   with

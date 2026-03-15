@@ -16,13 +16,17 @@ let rec link_dynpage (root_path : string) (page : dynml_webpage) : dynml_webpage
     | Pure s -> Pure s
     | Script e -> Script (link_expr root_path e)
     | Decl g -> begin match g with
-      | ImportModule path ->
+      | ImportModule (path, user_provided_module_name) ->
         if not (is_subfolder path) then
-          raise (LinkingError (Printf.sprintf "%s: Access denied, cannot load file outside of project root. See --root option." (string_of_global_declaration (ImportModule path))))
+          raise (LinkingError (Printf.sprintf "%s: Access denied, cannot load file outside of project root. See --root option." (string_of_global_declaration (ImportModule (path, user_provided_module_name)))))
         else begin
           let filename = filename_of_path path in
           let filename_without_ext = List.hd (String.split_on_char '.' filename) in
-          let file_module_name = String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) filename_without_ext in
+          let file_module_name = match user_provided_module_name with
+            (* If no module name is provided, defaulting to file's name, with theh first letter in uppercase. *)
+            | None -> String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) filename_without_ext
+            | Some module_name -> module_name
+          in
           let imported_in = open_in (root_path ^ path) in
           let loaded_raw_page = read_whole_file_str imported_in in
           close_in imported_in;

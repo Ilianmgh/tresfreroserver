@@ -16,12 +16,12 @@ all: produce_page.$(EXE_EXT) test.$(EXE_EXT)
 
 .PHONY: clean
 # See if ocaml-deps can reduce this horrible makefile
-produce_page.$(EXE_EXT): produce_page.$(OBJ_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.$(EXE_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT) produce_page.$(OBJ_EXT)
+produce_page.$(EXE_EXT): produce_page.$(OBJ_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) symbols.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o produce_page.$(EXE_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) symbols.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT) produce_page.$(OBJ_EXT)
 
 produce_page.cmi: produce_page.$(OBJ_EXT)
 
-produce_page.$(OBJ_EXT): produce_page.ml hierarchic.cmi utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi linker.cmi typechecker.cmi typeSyntax.cmi value.cmi interpreter.cmi parse_url_dictionary.cmi 
+produce_page.$(OBJ_EXT): produce_page.ml hierarchic.cmi utils.cmi symbols.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi linker.cmi typechecker.cmi typeSyntax.cmi value.cmi interpreter.cmi parse_url_dictionary.cmi 
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o produce_page.$(OBJ_EXT) produce_page.ml
 
 parse_url_dictionary.$(EXE_EXT): hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) syntax.$(OBJ_EXT) value.$(OBJ_EXT) parse_url_dictionary.$(OBJ_EXT)
@@ -32,12 +32,12 @@ parse_url_dictionary.cmi: parse_url_dictionary.$(OBJ_EXT)
 parse_url_dictionary.$(OBJ_EXT): hierarchic.cmi utils.cmi syntax.cmi value.cmi parse_url_dictionary.ml
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o parse_url_dictionary.$(OBJ_EXT) parse_url_dictionary.ml
 
-test.$(EXE_EXT): test.$(OBJ_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o test.$(EXE_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) test.$(OBJ_EXT)
+test.$(EXE_EXT): test.$(OBJ_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) symbols.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o test.$(EXE_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) symbols.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) parser.$(OBJ_EXT) linker.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) interpreter.$(OBJ_EXT) test.$(OBJ_EXT)
 
 test.cmi: test.$(OBJ_EXT)
 
-test.$(OBJ_EXT): test.ml hierarchic.cmi utils.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi linker.cmi typechecker.cmi typeSyntax.cmi value.cmi interpreter.cmi
+test.$(OBJ_EXT): test.ml hierarchic.cmi utils.cmi symbols.cmi lexic.cmi trie.cmi prelexer.cmi lexer.cmi syntax.cmi parser.cmi linker.cmi typechecker.cmi typeSyntax.cmi value.cmi interpreter.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o test.$(OBJ_EXT) test.ml
 
 interpreter.$(EXE_EXT): interpreter.$(OBJ_EXT) hierarchic.$(OBJ_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT) lexer.$(OBJ_EXT) syntax.$(OBJ_EXT) typeSyntax.$(OBJ_EXT) typechecker.$(OBJ_EXT) value.$(OBJ_EXT) utils.$(OBJ_EXT)
@@ -105,12 +105,12 @@ lexer.cmi: lexer.$(OBJ_EXT)
 lexer.$(OBJ_EXT): lexer.ml lexic.cmi prelexer.cmi trie.cmi utils.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o lexer.$(OBJ_EXT) lexer.ml
 
-prelexer.$(EXE_EXT): prelexer.$(OBJ_EXT) utils.$(OBJ_EXT) lexic.$(OBJ_EXT) trie.$(OBJ_EXT) utils.$(OBJ_EXT)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o prelexer.$(EXE_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) prelexer.$(OBJ_EXT)
+prelexer.$(EXE_EXT): prelexer.$(OBJ_EXT) utils.$(OBJ_EXT) lexic.$(OBJ_EXT) trie.$(OBJ_EXT) symbols.$(OBJ_EXT)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o prelexer.$(EXE_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT) lexic.$(OBJ_EXT) symbols.$(OBJ_EXT) prelexer.$(OBJ_EXT)
 
 prelexer.cmi: prelexer.$(OBJ_EXT)
 
-prelexer.$(OBJ_EXT): prelexer.ml utils.cmi lexic.cmi trie.cmi utils.cmi
+prelexer.$(OBJ_EXT): prelexer.ml utils.cmi lexic.cmi trie.cmi symbols.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o prelexer.$(OBJ_EXT) prelexer.ml
 
 lexic.$(EXE_EXT): lexic.$(OBJ_EXT) lexic.$(OBJ_EXT)
@@ -118,8 +118,16 @@ lexic.$(EXE_EXT): lexic.$(OBJ_EXT) lexic.$(OBJ_EXT)
 
 lexic.cmi: lexic.$(OBJ_EXT)
 
-lexic.$(OBJ_EXT): lexic.ml trie.cmi utils.cmi
+lexic.$(OBJ_EXT): lexic.ml trie.cmi utils.cmi symbols.cmi
 	$(CC) $(CFLAGS) $(LDFLAGS) -c -o lexic.$(OBJ_EXT) lexic.ml
+
+symbols.$(EXE_EXT): utils.$(OBJ_EXT) symbols.$(OBJ_EXT)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o symbols.$(EXE_EXT) utils.$(OBJ_EXT) symbols.$(OBJ_EXT)
+
+symbols.cmi: symbols.$(OBJ_EXT)
+
+symbols.$(OBJ_EXT): symbols.ml utils.cmi
+	$(CC) $(CFLAGS) $(LDFLAGS) -c -o symbols.$(OBJ_EXT) symbols.ml
 
 trie.$(EXE_EXT): trie.$(OBJ_EXT) utils.$(OBJ_EXT)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o trie.$(EXE_EXT) utils.$(OBJ_EXT) trie.$(OBJ_EXT)
