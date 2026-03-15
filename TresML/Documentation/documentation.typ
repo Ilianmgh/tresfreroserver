@@ -7,6 +7,8 @@
 #set page(margin:2em)
 #let embed_page(body) = box.with(baseline:30%,stroke:stroke(thickness:.1em), inset:.3em)(body)
 // #let embed_page_math(body) = box.with(baseline:25%,stroke:stroke(thickness:.1em), inset:.7em)(align(center + horizon, body))
+#let tresml = smallcaps[TresML]
+#set document(title: [*The #tresml Documentation & Manual*])
 
 #let html_pdf_alt(body_html, body_pdf) = context{
   if target() == "html" {
@@ -38,10 +40,11 @@
     }
   }
 
-#let tresml = smallcaps[TresML]
 #let temp = text.with(fill:rgb(100,100,100))
 
-#align(center + horizon)[*The #tresml Documentation & Manual*]
+#show title : it => align(center + horizon, it)
+
+#title()
 
 #pagebreak()
 
@@ -679,6 +682,10 @@ Considering that every value of the language is intended to be written in an HTM
 #pagebreak()
 
 = TODO/Known Issues
+
+#sym.ballot Add a optional 'as' clause to import to let the user name their imported modules.  
+
+#sym.ballot Replace `Sys.os_name` uses by a command line argument.
 
 #sym.ballot Add links between tokens in documentation
 

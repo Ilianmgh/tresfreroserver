@@ -8,11 +8,11 @@
 <body>
   <h1>Include test</h1>
   <p>
-    <{ import "./included_depth1.tml" }>
-    <{ Included_depth1.Meta.content }>
-    <{ Included_depth1.prenom }>
+    <{ import "./included_depth1.tml" as A }>
+    <{ A.Meta.content }>
+    <{ A.prenom }>
 
-    <{ Included_depth1.Included_depth2.prenom  }>
+    <{ A.B.prenom  }>
   </p>
 </body>
 </html>
