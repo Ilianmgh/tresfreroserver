@@ -47,6 +47,8 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
     if session_id is not None and session_id in get_webpage.session :
       produce_page_command_line.append("-argrepr")
       produce_page_command_line.append(f"{utils.url_encoding("SESSION", get_webpage.session[session_id])}")
+    produce_page_command_line.append("--root")
+    produce_page_command_line.append(config.to_send_content_folder)
     print("Executing...", produce_page_command_line)
     page_evaluation_res : subprocess.CompletedProcess[Any] = subprocess.run(produce_page_command_line, capture_output = True, text = True)
     if config.display_dynml_evaluation_error :
