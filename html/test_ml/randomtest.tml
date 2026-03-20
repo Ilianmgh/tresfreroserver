@@ -54,7 +54,7 @@
   <h2>Characters/Strings</h2>
   <p>
     <{
-      let s = "coucou : α"
+      let s = "coucou : #sym.alpha"
       let t = f"cou%{fun x -> x}%cou"
     }>
     s: <{s}><br/>
@@ -64,6 +64,13 @@
       let i = 3 in
       f"%{i}%-th char of t: %{String.get t i}%"
     }>
+  </p>
+  <h2>Codex</h2>
+  <p>
+    <{ let myArrow = <[ #sym.arrow.l.wave ]> }>
+    An arrow from tresml codeblock! : <{ "#sym.arrow.r.squiggly" }><br/>
+    Another directly in the toplevel HTML: #sym.emptyset.arrow.r <br/>
+    Another other from HTML block within tresml: <{ myArrow }> 
   </p>
 </body>
 </html>

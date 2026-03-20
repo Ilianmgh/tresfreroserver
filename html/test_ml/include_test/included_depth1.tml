@@ -1,5 +1,5 @@
 <{
-  import "./included_depth2.tml" as B
+  import "test_ml/include_test/included_depth2.tml" as B
   let prenom = "Andrew"
   let msg = f"Hello I'm %{prenom}%"
 }>

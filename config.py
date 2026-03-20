@@ -38,4 +38,4 @@ def get_status_message(status : int) -> str :
 
 ## Debugging
 
-display_dynml_evaluation_error : bool = False
+display_dynml_evaluation_error : bool = True

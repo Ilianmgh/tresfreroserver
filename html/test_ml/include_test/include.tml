@@ -8,7 +8,7 @@
 <body>
   <h1>Include test</h1>
   <p>
-    <{ import "./included_depth1.tml" as A }>
+    <{ import "test_ml/include_test/included_depth1.tml" as A }>
     <{ A.Meta.content }>
     <{ A.prenom }>
 
