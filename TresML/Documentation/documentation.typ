@@ -679,6 +679,12 @@ A modular typing (resp. evaluation) environment therefore becomes a tree, where 
 #tresml supports unicode characters e.g. you cannot access each byte of a string but each unicode character of a string.
 Considering that every value of the language is intended to be written in an HTML file in the end, to comply with HTML standards #sym.dash.em which recommends the UTF-8 character encoding #sym.dash.em only UTF-8 encoding is supported.
 
+To write Unicode symbols more easily within TresML code, we allow using #link("https://github.com/typst/codex.git")[the human-friendly notation for Unicode symbols from typst/codex].
+
+#example[
+  You can use `#sym.arrow` to display #sym.arrow or `#emoji.warning` to display #emoji.warning in strings, fstrings, top-level HTML content or HTML content within TresML (surronded by `<[]>` brackets).
+]
+
 #pagebreak()
 
 = TODO/Known Issues
