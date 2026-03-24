@@ -67,10 +67,11 @@
   </p>
   <h2>Codex</h2>
   <p>
-    <{ let myArrow = <[ #sym.arrow.l.wave ]> }>
-    An arrow from tresml codeblock! : <{ "#sym.arrow.r.squiggly" }><br/>
+    <{ let myArrow = <[ #sym.arrow.wave ]> }>
+    An arrow from tresml codeblock! : <{ f"\#sym.arrow = %{let x = 5 in x}%" ++ "#sym.arrow.r.squiggly" }><br/>
     Another directly in the toplevel HTML: #sym.emptyset.arrow.r <br/>
     Another other from HTML block within tresml: <{ myArrow }> 
   </p>
+  En Typst, je peux écrire <code>\#sym.arrow.r</code> pour ...
 </body>
 </html>

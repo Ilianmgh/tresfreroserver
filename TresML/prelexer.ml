@@ -116,6 +116,12 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
         else if s.[i] = '#' && not (0 < i && s.[i - 1] = '\\') then
           let next_i, line_number, sym = read_symbol s (i + 1) n line_number in
           split_string s (List.rev_append sym acc) line_number next_i n
+        else if s.[i] = '#' && (0 < i && s.[i - 1] = '\\') then
+          let acc_without_escape = match acc with
+            | '\\' :: t -> t
+            | _ -> raise (PrelexingError "Unreachable code")
+          in
+          split_string s (s.[i] :: acc_without_escape) line_number (i + 1) n
         else
           split_string s (s.[i] :: acc) line_number (i + 1) n
       end
@@ -138,6 +144,12 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
         else if s.[i] = '#' && not (0 < i && s.[i - 1] = '\\') then
           let next_i, line_number, sym = read_symbol s (i + 1) n line_number in
           split_fstring s (List.rev_append sym fstring_acc) lexed_acc orig_lex line_number next_i n split_html_rec
+        else if s.[i] = '#' && (0 < i && s.[i - 1] = '\\') then
+          let acc_without_escape = match fstring_acc with
+            | '\\' :: t -> t
+            | _ -> raise (PrelexingError "Unreachable code")
+          in
+          split_fstring s (s.[i] :: acc_without_escape) lexed_acc orig_lex line_number (i + 1) n split_html_rec
         else
           split_fstring s (s.[i] :: fstring_acc) lexed_acc orig_lex line_number (i + 1) n split_html_rec
       end
@@ -212,6 +224,12 @@ let prelexer_all (s : string) (i : int) (n : int) : pre_token list =
     end else if s.[i] = '#' && not (0 < i && s.[i - 1] = '\\') then
       let next_i, next_line_number, sym = read_symbol s (i + 1) n line_number in
       split_html s (List.rev_append sym cur_html_acc) prelex_acc next_i n next_line_number
+    else if s.[i] = '#' && (0 < i && s.[i - 1] = '\\') then
+      let acc_without_escape = match cur_html_acc with
+        | '\\' :: t -> t
+        | _ -> raise (PrelexingError "Unreachable code")
+      in
+      split_html s (s.[i] :: acc_without_escape) prelex_acc (i + 1) n line_number
     else
       let next_line_number = if s.[i] = '\n' then line_number + 1 else line_number in
       split_html s (s.[i] :: cur_html_acc) prelex_acc (i + 1) n next_line_number
