@@ -73,5 +73,7 @@
     Another other from HTML block within tresml: <{ myArrow }> 
   </p>
   En Typst, je peux écrire <code>\#sym.arrow.r</code> pour ...
+  #emoji.face
+  #emoji.warning
 </body>
 </html>
