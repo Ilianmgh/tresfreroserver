@@ -1,0 +1,8 @@
+<{
+  let query = String.replace "&apos;" "'" Post.query
+  let target = f"admin.tml?database=%{Post.database}%&queryAsked=true&query=%{query}%"
+}>
+<{ target }>
+<{
+  Http.redirect target
+}>

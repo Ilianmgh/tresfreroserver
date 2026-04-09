@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Admin connection</title>
+  </head>
+  <body>
+    <h1>Connect to admin panel</h1>
+    <p>
+      <form method="POST" action="connection_post.tml">
+        <label>Mot de passe : </label><input id="1" type="password" name="password"></input><br/>
+        <input type="submit" value="Envoyer">
+      </form>
+    </p>
+  </body>
+</html>

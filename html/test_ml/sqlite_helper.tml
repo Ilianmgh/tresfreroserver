@@ -1,0 +1,21 @@
+<{
+  let html_table_of_query = fun db query ->
+    <[
+      <table>
+        <{
+          Sqlite.exec db
+            (fun acc new_line -> <[ <tr> <{new_line}> </tr> ]>)
+            begin fun acc hd content ->
+              <[ <{ acc }> <th> <{ hd }> </th> ]>
+            end query
+        }>
+        <{
+          Sqlite.exec db
+            (fun acc new_line -> <[ <{acc}> <tr> <{new_line}> </tr> ]>)
+            begin fun acc hd content ->
+              <[ <{ acc }> <td> <{content}> </td> ]>
+            end query
+        }>
+      </table>
+    ]>
+}>
