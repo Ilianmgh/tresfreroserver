@@ -138,12 +138,35 @@ and string_of_env ?(escape_html : bool = false) (env : environment) : string = i
 (** Representation to send variable bindings to server *)
 
 (** [repr_of_value v] provides a unique, decodable string for [v] : [repr_of_value (value_of_repr sv) = sv] *)
-let repr_of_value (v1 : value) : string = match v1 with
+let rec repr_of_value (v1 : value) : string = match v1 with
   | VInt n -> Printf.sprintf "int:%d" n
   | VString s -> Printf.sprintf "string:%s" s
-  | _ -> failwith "TODO repr_of_value: Implement repr_of_value for the remaining of the possible values"
+  | VBool true -> Printf.sprintf "bool:t"
+  | VBool false -> Printf.sprintf "bool:f"
+  | VUnit -> "unit:"
+  | VPure s -> Printf.sprintf "pure:%s" s
+  | VContent l -> failwith "TODO implement actual parser for complex type (content & couples)"(*Printf.sprintf "content:%s" (List.fold_left (fun acc v -> Printf.sprintf "%s;%s" acc (repr_of_value v)) "" l)*)
+  | VCouple (v, v') -> failwith "TODO implement actual parser for complex type (content & couples)"(*Printf.sprintf "couple:%s;%s" (repr_of_value v) (repr_of_value v')*)
+  | VLocation loc -> Printf.sprintf "loc:%s" loc
+  | Clos _ | VDb _ -> raise (Invalid_argument (Printf.sprintf "repr_of_value %s: Unsupported representation for closures and databases." (string_of_value v1)))
 (** [value_of_repr sv] decodes the string-encoded value [sv] : [value_of_repr (repr_of_value v) = v] *)
-let value_of_repr (sv : string) : value =
-  let new_str = List.hd (List.rev (String.split_on_char ':' sv)) in
-  Printf.fprintf stderr "\n\n\nvalue_of_repr %s = %s\n\n\n" sv new_str;
-  VString new_str (* TODO actually respect the spec + then generalize *)
+let rec value_of_repr (sv : string) : value =
+  let kind, value = match List.rev (String.split_on_char ':' sv) with
+    | [t; v] -> t, v
+    | _ -> raise (Invalid_argument (Printf.sprintf "value_of_repr %s: is not of the form kind:value_representation" sv))
+  in
+  match kind with
+    | "int" -> VInt (int_of_string value)
+    | "string" -> VString value
+    | "bool" -> if value = "t" then (VBool true) else (VBool false)
+    | "unit" -> VUnit
+    | "pure" -> VPure value
+    | "content" -> failwith "TODO implement actual parser for complex type (content & couples)"
+    | "couple" ->failwith "TODO implement actual parser for complex type (content & couples)"
+    (* begin match (String.split_on_char ';' value) with
+      | [v_repr1; v_repr2] -> VCouple (value_of_repr v_repr1, value_of_repr v_repr2)
+      | _ -> raise (Invalid_argument "value_of_repr %s: Malformed couple representation." sv)
+    end *)
+    | "loc" -> VLocation value
+    | _ -> raise (Invalid_argument (Printf.sprintf "value_of_repr %s: Unrecognized kind of representation." sv))
+  (* Printf.fprintf stderr "\n\n\nvalue_of_repr %s = %s\n\n\n" sv new_str; *)
