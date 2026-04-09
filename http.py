@@ -4,6 +4,7 @@ import config
 import subprocess
 from threading import Lock
 from typing import Any, Callable, Iterable
+from session import Session
 
 debug : bool = False
 
@@ -286,7 +287,7 @@ def make_header(status : int, contenttype : str, language : str | None, contentl
     str_header += (line + "\r\n")
   return str_header
 
-def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], generate_session_id_mut : Lock) -> tuple[bool, bytes] :
+def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], session : Session) -> tuple[bool, str] :
   """ Returns a tuple [(keep_alive, response)] of :
       - a boolean indicating whether to keep the TCP connection alive after answering.
       - the http response to the request [text]. """
@@ -363,11 +364,11 @@ def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], generate_s
     contenttype = config.contenttypeofhtmlfiles
   if 300 <= status < 400 : # A redirection occured
     if not(empty_body) :
-      print("AAAAAAAAAAHHHHHHHHHHHHHHHhh")
-    header : bytes = make_header(status, contenttype, config.contentlanguage, 0, to_send_cookies, location = body).encode()
+      print("The body is empty, shouldn't happen")
+    header : bytes = make_header(status, contenttype, config.contentlanguage, 0, to_send_cookies, location = body)
   else :
-    header : bytes = make_header(status, contenttype, config.contentlanguage, len(body), to_send_cookies).encode()
-  final_message : string
+    header : bytes = make_header(status, contenttype, config.contentlanguage, len(body), to_send_cookies)
+  final_message : str
   if empty_body :
     final_message = header + "\r\n".encode()
   else :

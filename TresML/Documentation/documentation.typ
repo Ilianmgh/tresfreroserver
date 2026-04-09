@@ -234,13 +234,33 @@ Format strings are delimited by: `f"..."`. A formatter can be inserted in a form
 == Types
 
 The only atomic native types represent integers, booleans, strings, unit, html code and databases.
-They can be combined with type constructors #sym.arrow for functions and #sym.times for tuples. #temp[For now, sum types are not implemented, but should be with user-defined types.]
+They can be combined with type constructors #sym.arrow for functions and #sym.ast for tuples. #temp[For now, sum types are not implemented, but should be with user-defined types.]
 
 #grammar[tlit: int | bool | string | unit | html | db]
 
 #grammar[#sym.alpha, #sym.beta, ... ::= #sym.alpha -> #sym.beta | #sym.alpha \* #sym.beta]
 
 == Typing rules
+
+#example[
+  Consider the following webpage:
+  // #set raw() TODO line numbering
+  ```t
+  fun x -> begin
+    let y = 5 in
+    fst x + y
+  end
+  ```
+  At first sight, `x` can be of any type.
+  `y` is known to be of type `int` at initialization.
+  We then add `fst x` and `y`.
+  First, the application of `fst` to `x` tells that `x` is a couple i.e. of type `T1 * T2`, and `fst x` is of type `T1`.
+  Since we add `x` (with the integer addition `+`), `fst x` is of type `int`, thus `T1 = int`.
+  Therefore, `x` is of type `int * T2`, `T2` is left unspecified, and can therefore be any type.
+  Finally, our function has type `int * 'a -> int` where `'a` denotes "any type".
+]
+
+Most of the rules are canonical, there are some subtleties about the `Sqlite` functions, but it will be clearer when we explain their semantics (@sqlite_semantics).
 
 The only lax rule is the typing rule of sequences: if the left handside of the #grammar[;] is not of type unit, it will only raise a warning.
 
@@ -324,13 +344,13 @@ align(center, stack(spacing: 1em,
       prooftree(rule(
         $Gamma tack #grammar[e] : alpha$,
         $Gamma tack #grammar[e'] : beta$,
-        $Gamma tack #grammar[(e, e')] : alpha times beta$
+        $Gamma tack #grammar[(e, e')] : alpha * beta$
       )),
       prooftree(rule(
-        $Gamma tack #grammar[fst] : alpha times beta -> alpha$
+        $Gamma tack #grammar[fst] : alpha * beta -> alpha$
       )),
       prooftree(rule(
-        $Gamma tack #grammar[snd e] : alpha times beta -> beta$
+        $Gamma tack #grammar[snd e] : alpha * beta -> beta$
       )),
       prooftree(rule(
         $Gamma tack #grammar[()] : #grammar[unit]$
@@ -338,15 +358,15 @@ align(center, stack(spacing: 1em,
     ),
     stack(dir:ltr, spacing: 1em,
       prooftree(rule(
-        $Gamma tack #grammar[sqlite_opendb] : #grammar[string -> db]$
+        $Gamma tack #grammar[Sqlite.opendb] : #grammar[string -> db]$
       )),
       prooftree(rule(
-        $Gamma tack #grammar[sqlite_closedb] : #grammar[db -> bool]$
+        $Gamma tack #grammar[Sqlite.closedb] : #grammar[db -> bool]$
       )),
     ),
     stack(dir:ltr, spacing: 1em,
       prooftree(rule(
-        $Gamma tack #grammar[sqlite_exec] : #grammar[db -> (html -> html -> html) -> (html -> string -> string -> html) -> bool]$
+        $Gamma tack #grammar[Sqlite.exec] : #grammar[db -> (html -> html -> html) -> (html -> string -> string -> html) -> bool]$
       )),
     ),
   )
@@ -529,7 +549,7 @@ This will create a module containing all the defined variables.
   `<program> file -stdout -argstr MODULE&x=astring&y=anotherstring` will evaluate `file`, but if `file` uses variable `Module.x` (resp. `Module.y`), it will be globally defined and its value will be `"astring"` (resp. `"anotherstring"`).
 ]
 
-===== Database operations
+===== Database operations <sqlite_semantics>
 
 Three built-in functions are provided to interact with databases using #link("https://sqlite.org/")[SQLite] via the #link("https://mmottl.github.io/sqlite3-ocaml/")[sqlite3 ocaml library].
 

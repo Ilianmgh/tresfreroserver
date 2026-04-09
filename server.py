@@ -3,6 +3,7 @@ from typing import Any
 from socket import socket
 from http import http_response
 import threading
+from session import Session
 
 debug : bool = True
 thread_debug : bool = False
@@ -51,6 +52,7 @@ def get_n_bytes(sock : socket, n : int) -> bytes :
   return data
 
 def manage_connection(sclient : socket, adclient : Any, generate_session_id_mut : threading.Lock) -> None :
+  global session
   if thread_debug :
     print(f"{threading.get_ident()} is starting")
   with pool_sem :
@@ -68,7 +70,7 @@ def manage_connection(sclient : socket, adclient : Any, generate_session_id_mut 
           print(f"thread n°{threading.get_ident()}: QUERY STARTS ON NEXT LINE")
           print(query)
           print(f"thread n°{threading.get_ident()}: QUERY ENDS FROM PREV LINE")
-        keep_alive, response = http_response(query, lambda n : get_n_bytes(sclient, n), generate_session_id_mut)
+        keep_alive, response = http_response(query, lambda n : get_n_bytes(sclient, n), session)
         sclient.send(response)
       else :
         keep_alive = False
@@ -79,9 +81,13 @@ def manage_connection(sclient : socket, adclient : Any, generate_session_id_mut 
     print(f"{threading.get_ident()} now exiting")
 
 thread_pool : list[threading.Thread] = []
+# A semaphor tracking the number of simultaneous threads connected to a client
 pool_sem = threading.Semaphore(value = max(config.max_simultaneous_connections, 0))
+# A condition variable allowing any thread to terminate every connection on fatal error
 server_interrupt = threading.Event()
+# A mutex on the session id generation function (because this generation function is _not_ assumed to be thread-safe)
 generate_session_id_mut = threading.Lock()
+session = Session(config.max_session_size)
 
 server = socket()
 server.bind(('0.0.0.0', 9999))
@@ -90,6 +96,8 @@ server.listen()
 try :
   while True :
     (sclient, adclient) = server.accept()
+    # If max_simultaneous_connections < 0, we allow any number of simultaneous connections,
+    # thus we release before entering the [manage_connection] function every time.
     if config.max_simultaneous_connections < 0 :
       pool_sem.release()
     t = threading.Thread(target=manage_connection, args=(sclient, adclient, generate_session_id_mut))

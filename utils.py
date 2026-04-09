@@ -24,28 +24,6 @@ def extract_content_type(s : str) -> str :
   t = s.split(";")
   return t[0]
 
-def parse_url_dictionary(data : str, d : dict[str, str]) :
-  """ [parse_url_dictionary(data, d)] adds bindings describe by [data] in [d]. """
-  data_split = data.split("&")
-  if data_split[0].lower() == "session" : # I actually think it's generic for any method, except for percent-encoding
-    for binding in data_split[1:] :
-      binding_split = binding.split("=")
-      if len(binding_split) != 2 :
-        raise ValueError(f"parse_url_dictionary: {binding} in {data} not formatted correctly")
-      key, value = binding_split[0], binding_split[1]
-      if key[:8] == "session_" : # len("session_") = 8
-        key = key[8:]
-      d[key] = value
-
-def generate_session_id(generate_session_id_mut : Lock) -> str :
-  """ generates a fresh session id """
-  with generate_session_id_mut :
-    if not hasattr(generate_session_id, 'count') :
-      generate_session_id.count = 0
-    res = str(generate_session_id.count)
-    generate_session_id.count += 1
-    return res
-
 def parse_cookies(data : list[str]) -> dict[str, str] :
   """ parses cookies from a list of the form ["key=value", ...] """
   res : dict[str, str] = {}

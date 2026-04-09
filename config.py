@@ -13,6 +13,10 @@ contenttypeofhtmlfiles = "text/html;charset=utf-8" # TODO Same as for contentlan
 contenttypeofjsscripts = "text/javascript"
 contenttypeofcss = "text/css"
 
+## Session
+
+max_session_size = 1024 # 1KB
+
 ## Status messages
 
 status_message_100 : list[str] = []
