@@ -129,7 +129,7 @@ let rec interpret_tml_page
           end
           session_env ""
       in
-      handle_output (Printf.sprintf "session%s;" session_bindings); (* FIXME will lead to issues if ';' occurs in a session variable *)
+      handle_output (Printf.sprintf "session%s;SEP;" session_bindings); (* FIXME will lead to issues if ';' occurs in a session variable *)
       begin match location with
         | None -> ()
         | Some target -> handle_output (Printf.sprintf "redirect=%s" target)
@@ -139,39 +139,39 @@ let rec interpret_tml_page
     List.iter (fun v -> handle_output (string_of_value v)) values
   with
     | PrelexingError s -> begin
-      if output_first_line then handle_output ";\n";
+      if output_first_line then handle_output ";SEP;\n";
       handle_output (Printf.sprintf "PrelexingError: %s\n" s)
     end
     | LexingError s -> begin
-      if output_first_line then handle_output ";\n";
+      if output_first_line then handle_output ";SEP;\n";
       handle_output (Printf.sprintf "LexingError: %s\n" s)
     end
     | ParsingError s -> begin
-      if output_first_line then handle_output ";\n";
+      if output_first_line then handle_output ";SEP;\n";
       handle_output (Printf.sprintf "ParsingError: %s\n" s)
     end
     | LinkingError s -> begin
-      if output_first_line then handle_output ";\n";
+      if output_first_line then handle_output ";SEP;\n";
       handle_output (Printf.sprintf "LinkingError: %s\n" s)
     end
     | TypingError s -> begin
-      if output_first_line then handle_output ";\n";
+      if output_first_line then handle_output ";SEP;\n";
       handle_output (Printf.sprintf "TypingError: %s\n" s)
     end
     | UnificationError (alpha, beta, Recursive) -> begin
-      if output_first_line then handle_output ";\n";
-      handle_output (Printf.sprintf ";\nUnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
+      if output_first_line then handle_output ";SEP;\n";
+      handle_output (Printf.sprintf ";SEP;\nUnificationError: %s and %s recursive.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
     end
     | UnificationError (alpha, beta, Incompatible) -> begin
       if output_first_line then handle_output ";\n";
-      handle_output (Printf.sprintf ";\nUnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
+      handle_output (Printf.sprintf ";SEP;\nUnificationError: %s and %s incompatible.\n" (string_of_ml_type alpha) (string_of_ml_type beta))
     end
     | InterpreterError s -> begin
-      if output_first_line then handle_output ";\n";
+      if output_first_line then handle_output ";SEP;\n";
       handle_output (Printf.sprintf "InterpreterError: %s\n" s)
     end
     | UnsupportedError s -> begin
-      if output_first_line then handle_output ";\n";
+      if output_first_line then handle_output ";SEP;\n";
       handle_output (Printf.sprintf "UnsupportedError: %s\n" s)
     end
 

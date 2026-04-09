@@ -37,8 +37,8 @@ let value_of_query (db : Sqlite3.db) (combine_lines_into_table : value -> value 
   in
   let exec_code = Sqlite3.exec db ~cb:(value_of_query_res value_acc combine_cells_into_line) query in
   match exec_code with
-    | OK -> !value_acc
-    | _ ->  raise (InterpreterError (Printf.sprintf "SQL query \"%s\" failed: %s" query (Sqlite3.Rc.to_string exec_code)))
+    | OK | DONE -> !value_acc
+    | _ -> raise (InterpreterError (Printf.sprintf "SQL query \"%s\" failed with error: %s" query (Sqlite3.Rc.to_string exec_code)))
 
 (** [eval_expr env e1 = v] where [v] is the evaluation of expression [e] following the program semantics (cf documentation). FIXME TO IMPLEMENT SESSION/COOKIES VARIABLES, BUT BETTER, maybe return the environment to retrieve sessions (and at some point, cookies) variables. maybe return only the interesting environment e.g. the sub environment Session and Cookie, not all the local variables. *)
 let rec eval_expr (orig_env : environment) (env : environment) (e1 : expr) : (string option) * value = match e1 with
@@ -175,7 +175,7 @@ let rec eval_expr (orig_env : environment) (env : environment) (e1 : expr) : (st
   | String s -> None, VString s
   | Fstring lst -> None, VString begin
     List.fold_left begin fun acc -> function
-      | FstrExpr e -> Printf.sprintf "%s%s" acc (string_of_value (snd (eval_expr orig_env env e)))
+      | FstrExpr e -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:false (snd (eval_expr orig_env env e)))
       | FstrString s -> Printf.sprintf "%s%s" acc s
     end "" lst
   end

@@ -110,7 +110,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VDb db -> "adatabase" (* TODO !!!! *)
   | VInt n -> Printf.sprintf "%d" n
   | VBool b -> if b then "true" else "false"
-  | VString f -> web_of_string f
+  | VString s -> if escape_html then web_of_string s else s
   | VLocation s -> Printf.sprintf "to:%s" (web_of_string s)
   | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `output_page` *)
   | VContent l -> List.fold_left (fun acc v -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:escape_html v)) "" l
@@ -123,14 +123,14 @@ and string_of_env ?(escape_html : bool = false) (env : environment) : string = i
     let string_of_one_env_binding (prefix : string list) (x : variable) (v : value) (acc : string) : string = (* FIXME never prints prefixes *)
       if acc = "" then
         if List.is_empty prefix then
-          Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:true v)
+          Printf.sprintf "%s ↦ %s" x (string_of_value ~escape_html:escape_html v)
         else
-          Printf.sprintf "%s.%s ↦ %s" (String.concat "." (List.rev prefix)) x (string_of_value ~escape_html:true v)
+          Printf.sprintf "%s.%s ↦ %s" (String.concat "." (List.rev prefix)) x (string_of_value ~escape_html:escape_html v)
       else
         if List.is_empty prefix then
-          Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:true v) acc
+          Printf.sprintf "%s ↦ %s, %s" x (string_of_value ~escape_html:escape_html v) acc
         else
-          Printf.sprintf "%s.%s ↦ %s, %s" (String.concat "." (List.rev prefix)) x (string_of_value ~escape_html:true v) acc
+          Printf.sprintf "%s.%s ↦ %s, %s" (String.concat "." (List.rev prefix)) x (string_of_value ~escape_html:escape_html v) acc
     in
     Environment.fold string_of_one_env_binding env ""
   end
