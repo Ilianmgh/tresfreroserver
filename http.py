@@ -31,10 +31,8 @@ def bytes_of_path(path : str) -> bytes :
     res = f.read()
   return res
 
-def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | str = None, session_id : None | str = None) -> tuple[str, str | bytes] :
+def get_webpage(path : str, session : Session, arguments : None | str = None, session_id : None | str = None) -> tuple[str, str | bytes] :
   """ Returns as bytes the content of the file given by [path]. Also returns a session id if one was assigned when evaluating the page, the empty string otherwise. """
-  if not hasattr(get_webpage, 'session') :
-    get_webpage.session : dict[str, dict[str, str]] = {}
   path_split = path.split(".")
   potential_new_session_id : str = ""
   extension : str = path_split[-1]
@@ -45,9 +43,9 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
     if arguments is not None :
       produce_page_command_line.append("-argstr")
       produce_page_command_line.append(f"{arguments}")
-    if session_id is not None and session_id in get_webpage.session :
+    if session_id is not None and session.is_active_session(session_id) :
       produce_page_command_line.append("-argrepr")
-      produce_page_command_line.append(f"{utils.url_encoding("SESSION", get_webpage.session[session_id])}")
+      produce_page_command_line.append(session.url_encode(session_id))
     produce_page_command_line.append("--root")
     produce_page_command_line.append(config.to_send_content_folder)
     print("Executing...", produce_page_command_line)
@@ -63,25 +61,22 @@ def get_webpage(path : str, generate_session_id_mut : Lock, arguments : None | s
     first_line : str = split_evald_output[0].strip("\n\t\r")
     evald_page = split_evald_output[1].encode()
     if session_id is None :
-      session_id = utils.generate_session_id(generate_session_id_mut)
+      session_id = session.generate_id()
       potential_new_session_id = session_id
-    # assert session id is string (?)
-    if session_id not in get_webpage.session :
-      get_webpage.session[session_id] = {}
     # Extracting useful information from first line
-    split_first_line = first_line.split(';')
+    split_first_line = first_line.split(';SEP;')
     print("FIRST LINE OF OUTPUT HTML:", split_first_line)
     if len(split_first_line) >= 2 :
       raw_session_variables = split_first_line[0]
       raw_location = split_first_line[1]
+      # If a location is provided, redirecting to said location
       location_prefix = "redirect="
       location_prefix_len = 9 # len("redirect=")
       if raw_location[:9] == location_prefix :
         location = raw_location[9:]
-      utils.parse_url_dictionary(raw_session_variables, get_webpage.session[session_id]) # TODO add TTL to session-recorded values
+      session.url_decode(raw_session_variables, session_id)
       if debug :
         print(f"data received from ML page: {first_line}")
-        print(f"current session: {get_webpage.session[session_id]}")
   else :
     with open(path, mode = "rb") as f :
       evald_page = f.read()
@@ -209,19 +204,18 @@ def is_accepted(contenttype : str, contentaccepted : Iterable[str]) -> bool :
           return True
   return False
 
-def make_body(status : int, generate_session_id_mut : Lock, path : str = "", additional_data : str | None = None, additional_message : str | None = None, session_id : str | None = None) -> tuple[int, tuple[str, bytes | str]] :
+def make_body(status : int, session : Session, path : str = "", additional_data : str | None = None, additional_message : str | None = None, session_id : str | None = None) -> tuple[int, tuple[str, bytes | str]] :
   """ If [status] is a supported error, fetches the appropriate error page.
       If [status] is 200, tries to fetch the page from the [config.to_send_content_folder] folder.
       Returns the updated status and the body e.g. 404 instead of 200 if the page is not in the folder.
-      If [status] is 3XX, then instead of bytes representing the body, it returns the location of the redirection """
+      If [status] is 3XX, then instead of bytes representing the body, it returns the location of the redirection as a string """
   if status == 200 :
     try :
-      session_id : str
       payload : bytes | str
       if additional_data is not None :
-        session_id, payload = get_webpage(path, generate_session_id_mut, additional_data, session_id=session_id)
+        session_id, payload = get_webpage(path, session, additional_data, session_id=session_id)
       else :
-        session_id, payload = get_webpage(path, generate_session_id_mut, session_id=session_id)
+        session_id, payload = get_webpage(path, session, session_id=session_id)
       if isinstance(payload, str) : # If a redirection occured
         print("REDIRECTION")
         return (303, (session_id, payload))
@@ -237,8 +231,8 @@ def make_body(status : int, generate_session_id_mut : Lock, path : str = "", add
       arguments = f"SERVER&status={status}&text={config.get_status_message(status)}&additional={additional_message}"
     else :
       arguments = f"SERVER&status={status}&text={config.get_status_message(status)}&additional=" # FIXME Ugly fix for now, change when able to check for defined variables in ML
-    return (status, get_webpage(f"./error.tml", generate_session_id_mut, arguments))
-  return (500, get_webpage(f"./error.tml", generate_session_id_mut, f"SERVER&status={status}&text=bonjour&additional={additional_message}"))
+    return (status, get_webpage(f"./error.tml", session, arguments))
+  return (500, get_webpage(f"./error.tml", session, f"SERVER&status={status}&text=bonjour&additional={additional_message}"))
 
 def make_header(status : int, contenttype : str, language : str | None, contentlength : int, cookies : dict[str, tuple[str, dict[str, str]]], location : str | None = None) -> str :
   """ Produces the HTTP header according to the informations passed as argument.
@@ -287,7 +281,7 @@ def make_header(status : int, contenttype : str, language : str | None, contentl
     str_header += (line + "\r\n")
   return str_header
 
-def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], session : Session) -> tuple[bool, str] :
+def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], session : Session) -> tuple[bool, bytes] :
   """ Returns a tuple [(keep_alive, response)] of :
       - a boolean indicating whether to keep the TCP connection alive after answering.
       - the http response to the request [text]. """
@@ -296,7 +290,7 @@ def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], session : 
   errcode, info = parse_http(text)
   path : str
   status : int
-  body : bytes
+  body : str | bytes
   contenttype : str
   cur_session_id : str | None = None
   to_send_cookies : dict[str, tuple[str, dict[str, str]]] = {}
@@ -356,21 +350,24 @@ def http_response(text : str, fetch_n_bytes : Callable[[int], bytes], session : 
       print("END OF DEBUG")
     path = ""
     status = 400
-  status, (new_session_id, body) = make_body(status, generate_session_id_mut, path, additional_data, session_id=cur_session_id)
-  empty_body : bool = isinstance(body, str)
+  status, (new_session_id, body) = make_body(status, session, path, additional_data, session_id=cur_session_id)
+  is_redirection : bool = isinstance(body, str)
   if new_session_id != "" :
-    to_send_cookies["sessionId"] = (new_session_id, {"SameSite": "Strict"})
+    to_send_cookies["sessionId"] = (new_session_id, {"SameSite": "Strict"}) # TODO add possibility to parametrize sessions
   if status in config.displayable_errors :
     contenttype = config.contenttypeofhtmlfiles
+  header : str
   if 300 <= status < 400 : # A redirection occured
-    if not(empty_body) :
-      print("The body is empty, shouldn't happen")
-    header : bytes = make_header(status, contenttype, config.contentlanguage, 0, to_send_cookies, location = body)
+    if not(is_redirection) :
+      print("No location parsed with redirection status code, shouldn't happen")
+    assert(isinstance(body, str))
+    header = make_header(status, contenttype, config.contentlanguage, 0, to_send_cookies, location = body)
   else :
-    header : bytes = make_header(status, contenttype, config.contentlanguage, len(body), to_send_cookies)
-  final_message : str
-  if empty_body :
-    final_message = header + "\r\n".encode()
+    header = make_header(status, contenttype, config.contentlanguage, len(body), to_send_cookies)
+  final_message : bytes
+  if is_redirection :
+    final_message = header.encode() + "\r\n".encode()
   else :
-    final_message = header + "\r\n".encode() + body + "\r\n\r\n".encode()
+    assert(isinstance(body, bytes))
+    final_message = header.encode() + "\r\n".encode() + body + "\r\n\r\n".encode()
   return (keep_alive, final_message)

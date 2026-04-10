@@ -51,8 +51,7 @@ def get_n_bytes(sock : socket, n : int) -> bytes :
     data += bytes
   return data
 
-def manage_connection(sclient : socket, adclient : Any, generate_session_id_mut : threading.Lock) -> None :
-  global session
+def manage_connection(sclient : socket, adclient : Any, session : Session) -> None :
   if thread_debug :
     print(f"{threading.get_ident()} is starting")
   with pool_sem :
@@ -85,8 +84,8 @@ thread_pool : list[threading.Thread] = []
 pool_sem = threading.Semaphore(value = max(config.max_simultaneous_connections, 0))
 # A condition variable allowing any thread to terminate every connection on fatal error
 server_interrupt = threading.Event()
-# A mutex on the session id generation function (because this generation function is _not_ assumed to be thread-safe)
-generate_session_id_mut = threading.Lock()
+# # A mutex on the session id generation function (because this generation function is _not_ assumed to be thread-safe)
+# generate_session_id_mut = threading.Lock()
 session = Session(config.max_session_size)
 
 server = socket()
@@ -100,7 +99,7 @@ try :
     # thus we release before entering the [manage_connection] function every time.
     if config.max_simultaneous_connections < 0 :
       pool_sem.release()
-    t = threading.Thread(target=manage_connection, args=(sclient, adclient, generate_session_id_mut))
+    t = threading.Thread(target=manage_connection, args=(sclient, adclient, session))
     t.start()
 except KeyboardInterrupt :
   server_interrupt.set()

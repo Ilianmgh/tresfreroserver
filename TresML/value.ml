@@ -151,7 +151,7 @@ let rec repr_of_value (v1 : value) : string = match v1 with
   | Clos _ | VDb _ -> raise (Invalid_argument (Printf.sprintf "repr_of_value %s: Unsupported representation for closures and databases." (string_of_value v1)))
 (** [value_of_repr sv] decodes the string-encoded value [sv] : [value_of_repr (repr_of_value v) = v] *)
 let rec value_of_repr (sv : string) : value =
-  let kind, value = match List.rev (String.split_on_char ':' sv) with
+  let kind, value = match String.split_on_char ':' sv with
     | [t; v] -> t, v
     | _ -> raise (Invalid_argument (Printf.sprintf "value_of_repr %s: is not of the form kind:value_representation" sv))
   in

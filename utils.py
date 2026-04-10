@@ -33,7 +33,7 @@ def parse_cookies(data : list[str]) -> dict[str, str] :
       res[binding_split[0]] = binding_split[1]
   return res
 
-def url_encoding(namespace : str, d : dict[str, str]) -> str :
+def url_encoding(namespace : str, d : dict[str, str]) -> str : # TODO see if it's still useful after Session class is operational
   res = namespace
   for key in d :
     res += f"&{key}={d[key]}"
