@@ -36,4 +36,4 @@ The interpreter of TresML is compiled with an [OCaml compiler](https://ocaml.org
 
 # Known issues
 
-global declaration followed by import in the same tml block removes declaration, but not if the declaration follows the import.
+global declaration followed by import in the same tml block removes declaration, but not if the declaration follows the import. (The issue comes from typechecking, but may also be present in the interpreter)
