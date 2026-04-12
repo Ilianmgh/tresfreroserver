@@ -63,7 +63,7 @@ let displayed = ["raw"; "lexed"; "parsed"; "typed"; "eval'd"]
   [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...).
   [os_type] is the OS's name, as given by [Sys.os_type] *)
 let rec interpret_tml_page
-  (arguments : environment)
+  ((arguments, arguments_types) : environment * modular_typing_environment)
   (root_dir : string)
   (source : in_channel)
   (handle_output : string -> unit)
@@ -109,7 +109,7 @@ let rec interpret_tml_page
     let lexed = lexer code in
     let parsed = parser lexed in
     let linked = linker root_dir parsed in
-    let typ_env = Environment.disjoint_union (Environment.map (fun _ -> TypeString) arguments) pre_included_typing_env in
+    let typ_env = Environment.disjoint_union arguments_types pre_included_typing_env in
     let eval_env = Environment.disjoint_union arguments pre_included_environment in
     let _ = type_inferer typ_env linked in
     let final_env, location, values = eval eval_env linked in
@@ -122,8 +122,10 @@ let rec interpret_tml_page
           begin
             fun prefixes x v acc ->
               if List.is_empty prefixes then begin (* for now, only top-level within module Session, could change for further needs *)
-                (if debug then Printf.fprintf stderr "trying to repr: %s" (string_of_value v));
-                Printf.sprintf "%s&%s=%s" acc x (repr_of_value v)
+                (if debug then Printf.fprintf stderr "trying to repr: [[[%s]]]..." (string_of_value v));
+                let repr_of_v = repr_of_value v in
+                (if debug then Printf.fprintf stderr "... as : [[[%s]]]\n" repr_of_v);
+                Printf.sprintf "%s&%s=%s" acc x repr_of_v
               end else
                 acc
           end
@@ -180,8 +182,8 @@ let rec interpret_tml_page
   [init_env] is the initial evaluation environment /!\ TODO for now, can only contain string values.
   [output_first_line] is a boolean indicating whether to indicate information destined to the server in the first (e.g. session variables, redirection, ...).
   [os_type] is the OS's name, as given by [Sys.os_type] *)
-let rec output_page (arguments : environment) (root_dir : string) (source : in_channel) (dest : out_channel) (output_first_line : bool) (os_type : string) : unit =
-  interpret_tml_page arguments root_dir source (fun s -> Printf.fprintf dest "%s" s) output_first_line os_type
+let rec output_page ((arguments, arguments_types) : environment * modular_typing_environment) (root_dir : string) (source : in_channel) (dest : out_channel) (output_first_line : bool) (os_type : string) : unit =
+  interpret_tml_page (arguments, arguments_types) root_dir source (fun s -> Printf.fprintf dest "%s" s) output_first_line os_type
 
 exception MalformedCommandLine of string
 
@@ -191,6 +193,7 @@ type command_line_args = {
   ; source : in_channel (* The source code *)
   ; target : out_channel (* Where to output the resulting webpage *)
   ; initial_environment : environment (* The environment initially obtained directly from the command line *)
+  ; initial_typing_environment : modular_typing_environment (* The typing for values from [initial_environment] *)
   ; output_first_line : bool (* Whether or not to output the first line, indicating information to the server e.g. session variables. *)
 }
 
@@ -215,40 +218,44 @@ let parse_command_line (command_line : string array) : command_line_args =
     in
     let rec parse_options
       (command_line : string array) (i : int)
-      (env_acc : environment) (output_first_line_acc : bool) (root_dir : string option) : environment * bool * string option =
+      (env_acc : environment) (typ_env_acc : modular_typing_environment)
+      (output_first_line_acc : bool) (root_dir : string option) : (environment * modular_typing_environment) * bool * string option =
       if i < n then
         match String.lowercase_ascii command_line.(i) with
           | "-argrepr" -> begin if i + 1 >= n then (* The remaining of the command line is supposed to be of the form `<argoption> <arguments> ...` *)
               raise (MalformedCommandLine "Argument expected after option -argrepr.")
             else
-              parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary value_of_repr command_line.(i + 1) env_acc) output_first_line_acc root_dir
+              let new_env, new_typenv = Parse_url_dictionary.parse_url_dictionary value_of_repr command_line.(i + 1) env_acc typ_env_acc in
+              parse_options command_line (i + 2) new_env new_typenv output_first_line_acc root_dir
           end
           | "-argstr" -> begin if i + 1 >= n then (* The remaining of the command line is supposed to be of the form `<argoption> <arguments> ...` *)
               raise (MalformedCommandLine "Argument expected after option -argstr.")
             else
-              parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) command_line.(i + 1) env_acc) output_first_line_acc root_dir
+              let new_env, new_typenv = Parse_url_dictionary.parse_url_dictionary (fun s -> (VString s, TypeString)) command_line.(i + 1) env_acc typ_env_acc in
+              parse_options command_line (i + 2) new_env new_typenv output_first_line_acc root_dir
           end
           | "--root" -> begin if i + 1 >= n then (* The remaining of the command line is supposed to be of the form `<argoption> <arguments> ...` *)
               raise (MalformedCommandLine "Argument expected after option --root.")
             else
-              parse_options command_line (i + 2) (Parse_url_dictionary.parse_url_dictionary (fun s -> VString s) command_line.(i + 1) env_acc) output_first_line_acc (Some command_line.(i + 1))
+              let new_env, new_typenv = Parse_url_dictionary.parse_url_dictionary (fun s -> (VString s, TypeString)) command_line.(i + 1) env_acc typ_env_acc in
+              parse_options command_line (i + 2) new_env new_typenv output_first_line_acc (Some command_line.(i + 1))
           end
-          | "-noserverdata" -> parse_options command_line (i + 1) env_acc false root_dir
+          | "-noserverdata" -> parse_options command_line (i + 1) env_acc typ_env_acc false root_dir
           | unknown_option -> raise (MalformedCommandLine (Printf.sprintf "%s: Unknown options." unknown_option))
       else
-        env_acc, output_first_line_acc, root_dir
+        (env_acc, typ_env_acc), output_first_line_acc, root_dir
     in
-    let initial_env, output_first_line, root_dir = parse_options command_line 3 Environment.empty true root_dir in
+    let (initial_env, initial_typenv), output_first_line, root_dir = parse_options command_line 3 Environment.empty Environment.empty true root_dir in
     match root_dir with
       | None -> raise (MalformedCommandLine "Root directory unspecified. Maybe you set the input to stdin and did not add option --root <rootDirectory> ?")
-      | Some root_dir_path -> { root_dir = root_dir_path ; source =  source_fd ; target = dest_fd ; initial_environment = initial_env ; output_first_line = output_first_line }
+      | Some root_dir_path -> { root_dir = root_dir_path ; source =  source_fd ; target = dest_fd ; initial_environment = initial_env ; initial_typing_environment = initial_typenv ; output_first_line = output_first_line }
   else
     raise (MalformedCommandLine "Not enough arguments: need at least input and output.")
 
 let () =
   try
     let cl_args = parse_command_line Sys.argv in
-    output_page cl_args.initial_environment cl_args.root_dir cl_args.source cl_args.target cl_args.output_first_line Sys.os_type;
+    output_page (cl_args.initial_environment, cl_args.initial_typing_environment) cl_args.root_dir cl_args.source cl_args.target cl_args.output_first_line Sys.os_type;
     close_in cl_args.source;
     close_out cl_args.target
   with

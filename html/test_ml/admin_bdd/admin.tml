@@ -9,24 +9,27 @@
     <h2>Query a database</h2>
     <p>
       <form method="POST" action="admin_post.tml">
-        <label>Database : </label><input id="1", type="text" name="database"></input><br/>
-        <label>Query : </label><textarea id="2" type="textbox" name="query" style="height: 200px; width: 1100px;"></textarea><br/>
+        <label>Query : </label><textarea id="1" type="textbox" name="query" style="height: 200px; width: 1100px;"></textarea><br/>
+        <label>Display result ? </label><input id="2" type="checkbox" name="display"></input><br/>
         <input type="submit" value="Envoyer">
       </form>
     </p>
     <p>
-    <{ if Get.queryAsked = "true" then (* TODO evaluation fails with when single quotes appear *)
+    <{ if Session.displayQuery then (* TODO evaluation fails with when single quotes appear *)
       <[
         <{
           import "test_ml/sqlite_helper.tml" as SqliteTools
-          let db = Sqlite.opendb "./test.db"
+          let db = Sqlite.opendb Session.db_path
         }>
         <h2>Query result</h2>
         <p>
-          <{ SqliteTools.html_table_of_query db Get.query }>
+          <{ SqliteTools.html_table_of_query db Session.query }>
         </p>
       ]>
       else <[]>
+    }>
+    <{
+      Session.let displayQuery = false (* re-establish to false so refreshing doesn't execute twice the query *)
     }>
   </body>
 </html>

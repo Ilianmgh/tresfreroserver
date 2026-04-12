@@ -6,8 +6,22 @@
   </head>
   <body>
     <{
-      if Post.password = "monsupermotdepasse" then
-        Http.redirect f"admin.tml?queryAsked=false&query=&database="
+      Session.let displayQuery = false
+      Session.let query = ""
+      Session.let db_path = Post.database
+    }>
+    <{
+      if Post.password = "monsupermotdepasse" then begin
+        <[
+          <{
+            let _ = Http.redirect "admin.tml"
+          }>
+        ]>
+      end else <[
+        <{
+          let _ = Http.redirect "connect.tml?connect=failed"
+        }>
+      ]>
     }>
     coucou
   </body>

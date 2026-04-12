@@ -1,5 +1,6 @@
 open Utils
 open Syntax
+open TypeSyntax
 
 (** For genericity, extern function can accept any value. But a function expecting a int has to match said value with a VInt, and in other cases, raises this error. *)
 exception InvalidMlArgument of string
@@ -140,33 +141,31 @@ and string_of_env ?(escape_html : bool = false) (env : environment) : string = i
 (** [repr_of_value v] provides a unique, decodable string for [v] : [repr_of_value (value_of_repr sv) = sv] *)
 let rec repr_of_value (v1 : value) : string = match v1 with
   | VInt n -> Printf.sprintf "int:%d" n
-  | VString s -> Printf.sprintf "string:%s" s
+  | VString s -> Printf.sprintf "string:%s" (String.escaped s)
   | VBool true -> Printf.sprintf "bool:t"
   | VBool false -> Printf.sprintf "bool:f"
   | VUnit -> "unit:"
   | VPure s -> Printf.sprintf "pure:%s" s
   | VContent l -> failwith "TODO implement actual parser for complex type (content & couples)"(*Printf.sprintf "content:%s" (List.fold_left (fun acc v -> Printf.sprintf "%s;%s" acc (repr_of_value v)) "" l)*)
   | VCouple (v, v') -> failwith "TODO implement actual parser for complex type (content & couples)"(*Printf.sprintf "couple:%s;%s" (repr_of_value v) (repr_of_value v')*)
-  | VLocation loc -> Printf.sprintf "loc:%s" loc
-  | Clos _ | VDb _ -> raise (Invalid_argument (Printf.sprintf "repr_of_value %s: Unsupported representation for closures and databases." (string_of_value v1)))
+  | Clos _ | VDb _ | VLocation _ -> raise (Invalid_argument (Printf.sprintf "repr_of_value %s: Unsupported representation for closures and databases." (string_of_value v1)))
 (** [value_of_repr sv] decodes the string-encoded value [sv] : [value_of_repr (repr_of_value v) = v] *)
-let rec value_of_repr (sv : string) : value =
+let rec value_of_repr (sv : string) : value * ml_type =
   let kind, value = match String.split_on_char ':' sv with
     | [t; v] -> t, v
     | _ -> raise (Invalid_argument (Printf.sprintf "value_of_repr %s: is not of the form kind:value_representation" sv))
   in
   match kind with
-    | "int" -> VInt (int_of_string value)
-    | "string" -> VString value
-    | "bool" -> if value = "t" then (VBool true) else (VBool false)
-    | "unit" -> VUnit
-    | "pure" -> VPure value
+    | "int" -> VInt (int_of_string value), TypeInt
+    | "string" -> VString (Scanf.unescaped value), TypeString
+    | "bool" -> if value = "t" then (VBool true, TypeBool) else (VBool false, TypeBool)
+    | "unit" -> (VUnit, TypeUnit)
+    | "pure" -> (VPure value, TypeHtml)
     | "content" -> failwith "TODO implement actual parser for complex type (content & couples)"
     | "couple" ->failwith "TODO implement actual parser for complex type (content & couples)"
     (* begin match (String.split_on_char ';' value) with
       | [v_repr1; v_repr2] -> VCouple (value_of_repr v_repr1, value_of_repr v_repr2)
       | _ -> raise (Invalid_argument "value_of_repr %s: Malformed couple representation." sv)
     end *)
-    | "loc" -> VLocation value
     | _ -> raise (Invalid_argument (Printf.sprintf "value_of_repr %s: Unrecognized kind of representation." sv))
   (* Printf.fprintf stderr "\n\n\nvalue_of_repr %s = %s\n\n\n" sv new_str; *)

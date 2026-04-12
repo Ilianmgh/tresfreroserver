@@ -741,6 +741,14 @@ To write Unicode symbols more easily within TresML code, we allow using #link("h
 
 #sym.ballot Add t-uples
 
+#sym.ballot Escape back-quotes in `escape_web` like it's already done for single quotes etc.
+
+#sym.ballot Maybe allow Session.let to have effect even withing a tml-block within a content-block.
+
+#sym.ballot Implement a is_defined predicate (useful with session/get/post variables) or alternatively, let undefined symbols go through typing when in submodule `Get`, `Post`, etc.
+
+#sym.ballot Implement generic type for `Sqlite.exec`
+
 #sym.ballot Add pattern-matching
 
 #sym.ballot.check Add superglobal variables
