@@ -10,14 +10,16 @@ open Interpreter
 (** Defining extern functions *)
 
 let ml_type_of_sqlite_exec =
-  Arr (
-    TypeDb,
+  TypeForall ("'acclines",
     Arr (
-      Arr (TypeHtml, Arr (TypeHtml, TypeHtml)),
+      TypeDb,
       Arr (
-        Arr (TypeHtml, Arr (TypeString, Arr (TypeString, TypeHtml))),
-        Arr (TypeString,
-          TypeHtml
+        Arr (TypeVar "'acclines", Arr (TypeVar "'acccells", TypeVar "'acclines")),
+        Arr (
+          Arr (TypeVar "'acccells", Arr (TypeString, Arr (TypeString, TypeVar "'acccells"))),
+          Arr (TypeString,
+            TypeVar "'acclines"
+          )
         )
       )
     )

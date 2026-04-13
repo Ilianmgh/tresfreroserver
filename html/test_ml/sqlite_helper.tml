@@ -18,4 +18,16 @@
         }>
       </table>
     ]>
+
+  let html_table_of_table = fun db table_name -> html_table_of_query db f"SELECT * FROM %{table_name}%"
+
+  let closedb_with_alert = fun db ->
+    if not (Sqlite.closedb db) then
+      <[
+        <script type="text/javascript">
+          alert("Error while closing database");
+        </script>
+      ]>
+    else
+      <[]>
 }>

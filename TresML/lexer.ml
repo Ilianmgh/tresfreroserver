@@ -22,13 +22,12 @@ let eat_letter_lex_identifier (st : unit lexing_state) (c : char) : unit lexing_
   | _, _ -> assert false (* undefined state *)
 
 (* lexing literals *)
-type literals_kind = Fstring | String | Int
+type literals_kind = String | Int
 
 let rec eat_letter_lex_literal (st : literals_kind lexing_state) (c : char) : literals_kind lexing_state = match st, c with
   | CouldBe (_, []), c ->
     if is_char_num c then Is (Int, [c])
     else if c = '"' then CouldBe ([String], ['\"'])
-    else if c = 'f' then CouldBe ([Fstring], ['f'])
     else CouldBe ([], [c])
   | Is (Int, s'), c -> if is_character_of_num c then Is (Int, c :: s') else CouldBe ([], c :: s')
   | CouldBe ([String], '\\' :: s'), '\"' -> CouldBe ([String], '\"' :: s')
@@ -43,25 +42,12 @@ let rec eat_letter_lex_literal (st : literals_kind lexing_state) (c : char) : li
   | CouldBe ([String], s'), c -> CouldBe ([String], c :: s')
   | Is (String, s'), c -> CouldBe ([], c :: s')
   | CouldBe ([], s'), c -> CouldBe ([], c :: s')
-  | CouldBe ([Fstring], ['f']), '"' -> CouldBe ([Fstring], ['"'; 'f'])
-  | CouldBe ([Fstring], ['f']), _ -> CouldBe ([], [c; 'f'])
-  (* escape characters *)
-  | CouldBe ([Fstring], '\\' :: s'), '\"' -> CouldBe ([Fstring], '\"' :: s')
-  | CouldBe ([Fstring], '\\' :: s'), '\'' -> CouldBe ([Fstring], '\'' :: s')
-  | CouldBe ([Fstring], '\\' :: s'), 'n' -> CouldBe ([Fstring], '\n' :: s')
-  | CouldBe ([Fstring], '\\' :: s'), 'r' -> CouldBe ([Fstring], '\r' :: s')
-  | CouldBe ([Fstring], '\\' :: s'), 't' -> CouldBe ([Fstring], '\t' :: s')
-  | CouldBe ([Fstring], '\\' :: s'), '0' -> CouldBe ([Fstring], (char_of_int 0) :: s')
-  | CouldBe ([Fstring], '\\' :: s'), c' -> raise (LexingError (Printf.sprintf "\\%c: undefined espace character." c'))
-  (* start/end of fstring*)
-  | CouldBe ([Fstring], c1 :: c2 :: fstr), '\"' -> Is (Fstring, '\"' :: c1 :: c2 :: fstr) (* we need at least two characters to open a fstring: f and a quote *)
-  | CouldBe ([Fstring], c1 :: c2 :: fstr), c -> CouldBe ([Fstring], c :: c1 :: c2 :: fstr)
-  | Is (Fstring, s'), c -> CouldBe ([], c :: s')
   | CouldBe (_, s), c' -> Printf.fprintf stderr "%s -- %c\n%!" (string_of_char_list s) c'; assert false (* undefined state *)
 
 (** Lexer *)
 
-let token_of_ml_pretoken (i_line : int) (s : string) : raw_token = match StringMap.find_opt s keywords_map with
+let token_of_ml_pretoken (i_line : int) (s : string) : raw_token =
+  match StringMap.find_opt s keywords_map with
   | Some raw_tok -> raw_tok
   | None -> (* Then it's either a number, string literal or an identifier *)
     let initial_Id_state : unit lexing_state = (CouldBe ([], [])) in
@@ -69,21 +55,27 @@ let token_of_ml_pretoken (i_line : int) (s : string) : raw_token = match StringM
     let initial_lit_state : literals_kind lexing_state = (CouldBe ([], [])) in
     let final_states : unit lexing_state * unit lexing_state * literals_kind lexing_state =
       String.fold_left
-        (fun (_Id_state, id_state, lit_state) c -> (eat_letter_lex_Identifier _Id_state c, eat_letter_lex_identifier id_state c, eat_letter_lex_literal lit_state c))
+        begin fun (_Id_state, id_state, lit_state) c ->
+          (eat_letter_lex_Identifier _Id_state c,
+           eat_letter_lex_identifier id_state c,
+           eat_letter_lex_literal lit_state c)
+        end
         (initial_Id_state, initial_id_state, initial_lit_state) s
-    in match final_states with
+    in
+    match final_states with
       | Is ((), l), _, _ -> let s_after_lex = string_of_char_list (List.rev l) in MId s_after_lex
       | _, Is ((), l), _ -> let s_after_lex = string_of_char_list (List.rev l) in Id s_after_lex
       | _, _, Is (Int, l) -> let s_after_lex = string_of_char_list (List.rev l) in Lit (TokInt (int_of_string s_after_lex))
       | _, _, Is (String, l) -> let s_after_lex = string_of_char_list (List.rev l) in Lit (TokStr (String.sub s_after_lex 1 (String.length s_after_lex - 2)))
-      | _, _, Is (Fstring, l) -> let s_after_lex = string_of_char_list (List.rev l) in Lit (TokFstr (String.sub s_after_lex 2 (String.length s_after_lex - 3)))
       | _, _, _ -> raise (LexingError (Printf.sprintf "line %d: %s unrecognized token." i_line s))
 
 let pre_token_lexer (pretok : pre_token) : token = match pretok with
   | PretokHtml (i_line, s) -> (i_line, TokHtml s)
   | PretokMl (i_line, s) -> (i_line, token_of_ml_pretoken i_line s)
-  | PretokFstr (i_line, s) -> (i_line, Lit (TokFstr s))
+  | PretokFstr (i_line, s) -> (i_line, Lit (TokFstr (Scanf.unescaped s)))
 
-let pre_tokens_lexer (l : pre_token list) : token list = List.map pre_token_lexer l
+let pre_tokens_lexer (l : pre_token list) : token list = 
+  List.map pre_token_lexer l
 
-let lexer (s : string) : token list = pre_tokens_lexer (prelexer_all s 0 (String.length s))
+let lexer (s : string) : token list =
+  pre_tokens_lexer (prelexer_all s 0 (String.length s))

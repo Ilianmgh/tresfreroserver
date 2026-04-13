@@ -9,7 +9,7 @@ open TypeSyntax
 open Typechecker
 open Interpreter
 
-let displayed = ["lexed"; "parsed"; "linked"; "typed"; "eval'd"]
+let displayed = ["prelexed"; "lexed"; "parsed"; "linked"; "typed"; "eval'd"]
 
 let test (i, code : int * string) : unit =
   begin if i < 0 then

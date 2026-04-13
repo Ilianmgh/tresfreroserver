@@ -749,6 +749,8 @@ To write Unicode symbols more easily within TresML code, we allow using #link("h
 
 #sym.ballot Implement generic type for `Sqlite.exec`
 
+#sym.ballot Allow to interpret properly types of contents of databases
+
 #sym.ballot Add pattern-matching
 
 #sym.ballot.check Add superglobal variables

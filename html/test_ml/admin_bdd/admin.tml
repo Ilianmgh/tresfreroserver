@@ -10,17 +10,17 @@
     <p>
       <form method="POST" action="admin_post.tml">
         <label>Query : </label><textarea id="1" type="textbox" name="query" style="height: 200px; width: 1100px;"></textarea><br/>
-        <label>Display result ? </label><input id="2" type="checkbox" name="display"></input><br/>
+        <label>Display result ? </label><input id="2" type="textbox" name="display"></input><br/>
         <input type="submit" value="Envoyer">
       </form>
     </p>
     <p>
+    <{
+      import "test_ml/sqlite_helper.tml" as SqliteTools
+      let db = Sqlite.opendb Session.db_path
+    }>
     <{ if Session.displayQuery then (* TODO evaluation fails with when single quotes appear *)
       <[
-        <{
-          import "test_ml/sqlite_helper.tml" as SqliteTools
-          let db = Sqlite.opendb Session.db_path
-        }>
         <h2>Query result</h2>
         <p>
           <{ SqliteTools.html_table_of_query db Session.query }>
@@ -29,7 +29,20 @@
       else <[]>
     }>
     <{
+      Sqlite.exec db
+        (fun lines_acc new_line -> <[ <{ lines_acc }> <p> <{new_line}> </p> ]>)
+        begin fun cells_acc hd content -> (* SqliteTools.html_table_of_table TODO: won't work until exec does not depend on expr_of_value anymore *) content
+        end "SELECT name FROM sqlite_schema"
+    }>
+    <{ SqliteTools.closedb_with_alert db }>
+    <{
       Session.let displayQuery = false (* re-establish to false so refreshing doesn't execute twice the query *)
+    }>
+    <{
+      "couBACKSLASHNTOCOME\nBACKSLASHNJUSTCAMEcou"
+    }>
+    <{
+      f"couBACKSLASHNTOCOME\nBACKSLASHNJUSTCAMEcou"
     }>
   </body>
 </html>
