@@ -255,8 +255,21 @@ and eval_page (orig_env : environment) (env : environment) (page : dynml_webpage
 and extern_sqlite_exec_with_reset_env = fun (orig_env : environment) db fold_lines fold_cells str_query -> match db, fold_lines, fold_cells, str_query with
   | VDb db, Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline)), Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content)), VString query ->
     (value_of_query db
-      (fun v1 v2 -> snd (eval_expr (Environment.empty) captured_combine_lines (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2))))
-      (fun line_acc hd content -> snd (eval_expr orig_env captured_combine_cells (App (App ((App ((Fun (acc, body_function_of_hs_and_content)), expr_of_value line_acc)), String hd), String content))))
+      begin fun v1 v2 -> snd (
+          eval_expr
+            Environment.empty
+            captured_combine_lines
+            (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2))
+        )
+      end
+      begin
+        fun line_acc hd content -> snd (
+          eval_expr
+            (Environment.add acc line_acc orig_env)
+            captured_combine_cells
+            (App (App (body_function_of_hs_and_content, String hd), String content))
+          )
+      end
       query)
   | _, _, _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s, %s, %s: Expected a database, a line folding function, a cell folding function and a SQL query (as a string)." (string_of_value db) (string_of_value fold_lines) (string_of_value fold_cells) (string_of_value str_query))) (* TODO maybe refine this bit *)
 
