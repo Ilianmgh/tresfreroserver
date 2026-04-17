@@ -64,6 +64,7 @@ let web_of_string (s : string) : string =
       | '>' ->  web_of_string_acc s (i+1) n (';' :: 't' :: 'g' :: '&' :: acc)
       | '"' ->  web_of_string_acc s (i+1) n (';' :: 't' :: 'o' :: 'u' :: 'q' :: '&' :: acc)
       | '\'' -> web_of_string_acc s (i+1) n (';' :: 's' :: 'o' :: 'p' :: 'a' :: '&' :: acc)
+      | '`' -> web_of_string_acc s (i+1) n (';' :: 'e' :: 'v' :: 'a' :: 'r' :: 'g' :: '&' :: acc)
       | c -> web_of_string_acc s (i+1) n (c :: acc)
     end else
       acc

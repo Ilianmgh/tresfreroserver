@@ -75,5 +75,16 @@
   En Typst, je peux écrire <code>\#sym.arrow.r</code> pour ...
   #emoji.face
   #emoji.warning
+  <script type="text/javascript">
+    <{
+      let truc2 = "cou\");ou" in
+      <[
+        alert("<{truc2}>");
+        </script>
+        <{
+          truc2
+        }>
+      ]>
+    }>
 </body>
 </html>
