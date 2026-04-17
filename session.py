@@ -59,3 +59,5 @@ class Session :
         if key[:8] == "session_" : # len("session_") = 8
           key = key[8:]
         self.add_entry(session_id, key, value)
+  def __contains__(self, session_id : str) -> bool :
+    return (session_id in self.data)

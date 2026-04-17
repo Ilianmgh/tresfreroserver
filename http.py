@@ -46,6 +46,9 @@ def get_webpage(path : str, session : Session, arguments : None | str = None, se
     if session_id is not None and session.is_active_session(session_id) :
       produce_page_command_line.append("-argrepr")
       produce_page_command_line.append(session.url_encode(session_id))
+    else :
+      produce_page_command_line.append("-argrepr")
+      produce_page_command_line.append("SESSION") # Just to let an empty Session module, in case the evald page wants to add a variable to current session
     produce_page_command_line.append("--root")
     produce_page_command_line.append(config.to_send_content_folder)
     print("Executing...", produce_page_command_line)
@@ -63,6 +66,7 @@ def get_webpage(path : str, session : Session, arguments : None | str = None, se
     if session_id is None :
       session_id = session.generate_id()
       potential_new_session_id = session_id
+    # assert (session_id in session)
     # Extracting useful information from first line
     split_first_line = first_line.split(';SEP;')
     print("FIRST LINE OF OUTPUT HTML:", split_first_line)
