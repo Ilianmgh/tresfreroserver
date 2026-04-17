@@ -77,9 +77,9 @@
   #emoji.warning
   <script type="text/javascript">
     <{
-      let truc2 = "cou\");ou" in
+      let truc2 = "cou`);ou" in
       <[
-        alert("<{truc2}>");
+        alert(`<{truc2}>`);
         </script>
         <{
           truc2

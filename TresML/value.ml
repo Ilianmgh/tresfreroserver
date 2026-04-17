@@ -114,7 +114,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | VBool b -> if b then "true" else "false"
   | VString s -> if escape_html then web_of_string s else s
   | VLocation s -> Printf.sprintf "to:%s" (web_of_string s)
-  | VPure h -> if escape_html then web_of_string h else h (* FIXME not sure if useful since bypassed in `output_page` *)
+  | VPure h -> h
   | VContent l -> List.fold_left (fun acc v -> Printf.sprintf "%s%s" acc (string_of_value ~escape_html:escape_html v)) "" l
   | VCouple (v, v') -> Printf.sprintf "(%s, %s)" (string_of_value ~escape_html:escape_html v) (string_of_value ~escape_html:escape_html v')
   | VUnit -> "()"

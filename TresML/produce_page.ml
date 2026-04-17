@@ -140,7 +140,7 @@ let rec interpret_tml_page
       end;
       handle_output "\n"
     end;
-    List.iter (fun v -> handle_output (string_of_value v)) values
+    List.iter (fun v -> handle_output (string_of_value ~escape_html:true v)) values
   with
     | PrelexingError s -> begin
       if output_first_line then handle_output ";SEP;\n";
