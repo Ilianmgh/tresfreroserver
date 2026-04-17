@@ -86,7 +86,7 @@ pool_sem = threading.Semaphore(value = max(config.max_simultaneous_connections, 
 server_interrupt = threading.Event()
 # # A mutex on the session id generation function (because this generation function is _not_ assumed to be thread-safe)
 # generate_session_id_mut = threading.Lock()
-session = Session(config.max_session_size)
+session = Session(config.max_session_size, config.max_session_duration)
 
 server = socket()
 server.bind(('0.0.0.0', 9999))

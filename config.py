@@ -15,7 +15,10 @@ contenttypeofcss = "text/css"
 
 ## Session
 
-max_session_size = 1024 # 1KB
+# In bytes
+max_session_size = 1024 * 1024 # 1MB
+# In seconds
+max_session_duration = 30 * 60 # 30 minutes
 
 ## Status messages
 

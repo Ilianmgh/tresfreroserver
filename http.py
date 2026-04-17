@@ -63,10 +63,12 @@ def get_webpage(path : str, session : Session, arguments : None | str = None, se
     split_evald_output = utils.get_first_line_and_rest(page_evaluation_res.stdout)
     first_line : str = split_evald_output[0].strip("\n\t\r")
     evald_page = split_evald_output[1].encode()
-    if session_id is None :
+    is_valid_session_id = session_id in session
+    if session_id is None or not(is_valid_session_id) :
+      if debug and not(is_valid_session_id) :
+        print("Invalid session id received")
       session_id = session.generate_id()
       potential_new_session_id = session_id
-    # assert (session_id in session)
     # Extracting useful information from first line
     split_first_line = first_line.split(';SEP;')
     print("FIRST LINE OF OUTPUT HTML:", split_first_line)
