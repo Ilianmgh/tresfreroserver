@@ -11,6 +11,7 @@ type ml_type =
   | TypeHtml
   | TypeForall of type_variable * ml_type
   | TypeVar of type_variable
+  | TypeUndefined
 
 type typing_environment = ml_type StringMap.t
 
@@ -47,6 +48,7 @@ let rec string_of_ml_type (t : ml_type) : string = match t with
   | TypeDb -> "db"
   | TypeVar s -> s
   | TypeForall (x, tau) -> Printf.sprintf "Λ%s.%s" x (string_of_ml_type tau)
+  | TypeUndefined -> "undefined"
 
 let string_of_typing_env ?(prefix : string = "") (gamma : typing_environment) : string =
   let non_empty_prefix = prefix = "" in

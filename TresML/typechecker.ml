@@ -38,6 +38,7 @@ and apply_substitution (alpha : ml_type) (theta : type_substitution) : ml_type =
     | TypeDb -> TypeDb
     | TypeUnit -> TypeUnit
     | TypeHtml -> TypeHtml
+    | TypeUndefined -> TypeUndefined
     | TypeForall (x, alpha') -> apply_substitution alpha' (erase_bound_variable x theta)
     | TypeVar s -> begin match StringMap.find_opt s theta with
       | Some tau -> tau
@@ -49,7 +50,7 @@ and apply_substitution (alpha : ml_type) (theta : type_substitution) : ml_type =
 let rec occurs (var : type_variable) (tau : ml_type) (theta : type_substitution) : bool =
   let rec occurs_no_substitution (var : type_variable) (tau : ml_type) : bool = match tau with
     | Arr (alpha, beta) | Prod (alpha, beta) -> occurs_no_substitution var alpha || occurs_no_substitution var beta
-    | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml | TypeDb -> false
+    | TypeInt | TypeBool | TypeString | TypeUnit | TypeHtml | TypeDb | TypeUndefined -> false
     | TypeForall (x, tau') -> if x = var then false else occurs_no_substitution var tau' (* TODO maybe these precautions neutralizes the need of bound variables to be fresh. *)
     | TypeVar s -> (s = var)
   in occurs_no_substitution var (apply_substitution tau theta)
@@ -96,17 +97,17 @@ let rec type_inferer_one_expr (orig_gamma : modular_typing_environment) (gamma :
   | Empty -> assert false
   | Let (x, e, e') ->
     let gamma', alpha = type_inferer_one_expr orig_gamma gamma e in
-    type_inferer_one_expr orig_gamma (Environment.add x alpha gamma') e'
+    type_inferer_no_undefined orig_gamma (Environment.add x alpha gamma') e'
   | Fun (x, e) ->
     let x_type_variable = fresh () in
-    let gamma', beta = type_inferer_one_expr orig_gamma (Environment.add x (TypeVar x_type_variable) gamma) e in
+    let gamma', beta = type_inferer_no_undefined orig_gamma (Environment.add x (TypeVar x_type_variable) gamma) e in
     (gamma', TypeForall (x_type_variable, Arr (Environment.find x gamma', beta)))
   | Fix (f, x, e) ->
     let vartype_x = fresh () in
     let vartype_ret = fresh () in
     let gamma_x = Environment.add x (TypeVar vartype_x) gamma in
     let gamma_x_f =  Environment.add f (Arr (TypeVar vartype_x, TypeVar vartype_ret)) gamma_x in
-    let final_gamma, beta = type_inferer_one_expr orig_gamma gamma_x_f e in
+    let final_gamma, beta = type_inferer_no_undefined orig_gamma gamma_x_f e in
     (final_gamma, Arr (Environment.find x final_gamma, beta))
   | App (e, e') ->
     let gamma', func_type = type_inferer_one_expr orig_gamma gamma e in
@@ -128,7 +129,7 @@ let rec type_inferer_one_expr (orig_gamma : modular_typing_environment) (gamma :
       (update_typing_env gamma''' theta', apply_substitution t_type theta')
   end
   | Seq (e, e') -> begin
-    let gamma', tau = type_inferer_one_expr orig_gamma gamma e in
+    let gamma', tau = type_inferer_no_undefined orig_gamma gamma e in
     try
       let theta = unify TypeUnit tau in
       type_inferer_one_expr orig_gamma (update_typing_env gamma' theta) e'
@@ -138,11 +139,11 @@ let rec type_inferer_one_expr (orig_gamma : modular_typing_environment) (gamma :
   | Html h -> (* just to not have a warning at compilation: *)(fun _ -> ()) (type_inferer_page orig_gamma gamma h); (gamma, TypeHtml)
   | Var x -> begin match Environment.find_opt x gamma with
     | Some t -> gamma, t
-    | None -> raise (TypingError (Printf.sprintf "%s: undefined variable." (string_of_expr (Var x)))) (* TODO actually, shouldn't be a _typing_ error per se *)
+    | None -> gamma, TypeUndefined
   end 
   | Couple (e, e') ->
-    let gamma', alpha = type_inferer_one_expr orig_gamma gamma e in
-    let gamma'', beta = type_inferer_one_expr orig_gamma gamma' e' in
+    let gamma', alpha = type_inferer_no_undefined orig_gamma gamma e in
+    let gamma'', beta = type_inferer_no_undefined orig_gamma gamma' e' in
     (gamma'', Prod (alpha, beta))
   | Neg e -> begin
     let gamma', alpha = type_inferer_one_expr orig_gamma gamma e in
@@ -193,7 +194,7 @@ let rec type_inferer_one_expr (orig_gamma : modular_typing_environment) (gamma :
   end
   | String _ -> gamma, TypeString
   | Fstring lst -> List.fold_left begin fun cur_gamma -> function
-      | FstrExpr e -> fst (type_inferer_one_expr orig_gamma cur_gamma e)
+      | FstrExpr e -> fst (type_inferer_no_undefined orig_gamma cur_gamma e)
       | FstrString s -> cur_gamma
     end gamma lst, TypeString
   | Unit -> gamma, TypeUnit
@@ -209,6 +210,11 @@ let rec type_inferer_one_expr (orig_gamma : modular_typing_environment) (gamma :
     end
   end
 
+(** [type_inferer_no_undefined oΓ Γ e] is the same as [type_inferer_one_expr] except it raises an error if the resulting type is [TypeUndefined]. *) 
+and type_inferer_no_undefined (orig_gamma : modular_typing_environment) (gamma : modular_typing_environment) (e : expr) : modular_typing_environment * ml_type = match type_inferer_one_expr orig_gamma gamma e with
+  | (_, TypeUndefined) -> raise (TypingError (Printf.sprintf "%s: undefined expression." (string_of_expr e))) (* TODO actually, shouldn't be a _typing_ error per se *)
+  | (res_gamma, t) -> (res_gamma, t)
+
 (** [type_infere gamma [elt1; ...; eltn] = [(gamma1, tau1); ...; (gamman, taun) ; sth]] where when evaluating the dynamic webpage [[elt1; ...; eltn]] with initial typing environment [gamma] we infered each element [elti] had type [taui] with resulting typing environment [gammai].
   [sth] is an irrelevant value. *)
 and type_inferer_page (orig_gamma : modular_typing_environment) (gamma : modular_typing_environment) (page : dynml_webpage) : (modular_typing_environment * modular_typing_environment * ml_type) list =
@@ -218,13 +224,13 @@ and type_inferer_page (orig_gamma : modular_typing_environment) (gamma : modular
   List.fold_left begin fun already_typed element -> begin match already_typed with
       | [] -> assert false
       | (cur_gamma, gamma_after_typed, tau) :: already_typed' -> begin match element with
-        | Script e -> let gamma_e, tau_e = type_inferer_one_expr orig_gamma cur_gamma e in (cur_gamma, gamma_e, tau_e) :: (cur_gamma, gamma_after_typed, tau) :: already_typed'
+        | Script e -> let gamma_e, tau_e = type_inferer_no_undefined orig_gamma cur_gamma e in (cur_gamma, gamma_e, tau_e) :: (cur_gamma, gamma_after_typed, tau) :: already_typed'
         | Pure s -> (cur_gamma, gamma, TypeHtml) :: (cur_gamma, gamma_after_typed, tau) :: already_typed'
-        | Decl (ExprDecl (x, e)) -> let gamma_e, tau_e = type_inferer_one_expr orig_gamma cur_gamma e in
+        | Decl (ExprDecl (x, e)) -> let gamma_e, tau_e = type_inferer_no_undefined orig_gamma cur_gamma e in
           (Environment.add x tau_e cur_gamma, gamma_e, (* this type is not relevant, a declaration has no type *)tau_e) ::
           (cur_gamma, gamma_after_typed, tau) ::
           already_typed'
-        | Decl (ModuleExprDecl (modu, x, e)) -> let gamma_e, tau_e = type_inferer_one_expr orig_gamma cur_gamma e in
+        | Decl (ModuleExprDecl (modu, x, e)) -> let gamma_e, tau_e = type_inferer_no_undefined orig_gamma cur_gamma e in
           (Environment.add_to_sub [modu] x tau_e cur_gamma, gamma_e, (* this type is not relevant, a declaration has no type *)tau_e) ::
           (cur_gamma, gamma_after_typed, tau) ::
           already_typed'

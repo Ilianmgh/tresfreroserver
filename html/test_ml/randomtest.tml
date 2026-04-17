@@ -86,5 +86,12 @@
         }>
       ]>
     }>
+    <{
+      is_defined x
+    }>
+    <{
+      let x = "coucou" in
+      is_defined x
+    }>
 </body>
 </html>

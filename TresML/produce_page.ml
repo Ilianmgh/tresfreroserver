@@ -77,6 +77,7 @@ let rec interpret_tml_page
   let ml_type_fst = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'fst"))) in
   let ml_type_snd = TypeForall ("'fst", TypeForall ("'snd", Arr (Prod (TypeVar "'fst", TypeVar "'snd"), TypeVar "'snd"))) in
   let ml_type_str_replace = Arr (TypeString, Arr (TypeString, Arr (TypeString, TypeString))) in
+  let ml_type_is_defined = TypeForall ("'a", Arr (TypeVar "'a", TypeBool)) in
   let predefined_symbols : extern_symbol list = [
         {namespaces = [sqlite_module_name] ; name = "exec"    ; v = Args4 extern_sqlite_exec_with_reset_env ; tau = ml_type_of_sqlite_exec}
       ; {namespaces = [sqlite_module_name] ; name = "opendb"  ; v = Args1 full_extern_sqlite_open_db ; tau = Arr (TypeString, TypeDb)}
@@ -89,6 +90,7 @@ let rec interpret_tml_page
       ; {namespaces = ["String"] ; name = "get" ; v = Args2 (straightforward_fun_dropping_reset_env ml_string_get) ; tau = Arr (TypeString, Arr (TypeInt, TypeString))}
       (* FIXME give actual types to locations ? *)
       ; {namespaces = ["Http"] ; name = "redirect" ; v = Args1 (straightforward_fun_dropping_reset_env ml_redirect) ; tau = Arr (TypeString, TypeUnit)}
+      ; {namespaces = [] ; name = "is_defined" ; v = Args1 (straightforward_fun_dropping_reset_env ml_is_defined) ; tau = ml_type_is_defined}
     ]
   in
   let pre_included_environment : environment =

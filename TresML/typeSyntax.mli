@@ -11,6 +11,7 @@ type ml_type =
   | TypeHtml
   | TypeForall of type_variable * ml_type
   | TypeVar of type_variable
+  | TypeUndefined
 
 type typing_environment = ml_type StringMap.t
 

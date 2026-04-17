@@ -20,6 +20,7 @@ and value =
   | VContent of value list
   | VCouple of value * value
   | VLocation of string
+  | VUndefinedVariable
 and environment = value Environment.t
 (** A pre-defined function is a function from values to value with 1, 2, 3 or 4 arguments.
   The first argument is an reset environment: for instance if the evaluation of the function

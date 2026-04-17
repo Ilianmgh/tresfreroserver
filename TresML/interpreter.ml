@@ -82,7 +82,7 @@ let rec eval_expr (orig_env : environment) (env : environment) (e1 : expr) : (st
   | Html lst_e -> let env, location, v = eval_page orig_env env lst_e in location, VContent v (* FIXME change here too cf comment in [eval] *)
   | Var x -> begin match Environment.find_opt x env with
     | Some v -> None, v
-    | None -> raise (InterpreterError (Printf.sprintf "%s: Undefined variable" x))
+    | None -> None, VUndefinedVariable
   end
   | Couple (e, e') ->
     let location, v = eval_expr orig_env env e in
@@ -323,6 +323,10 @@ let ml_not (v : value) : value = match v with
   | VBool true -> VBool false
   | VBool false -> VBool true
   | _ -> raise (InterpreterError (Printf.sprintf "%s: expected a boolean." (string_of_value v)))
+
+let ml_is_defined (v : value) : value = match v with
+  | VUndefinedVariable -> VBool false
+  | _ -> VBool true
 
 (** [eval env page = (env', location, res)] where [res] is the evaluation of [page] following the program semantics (cf. documentation). [env'] is the resulting environment ([env] + declared globals, etc) and [session_vars] is the list of globally-declared session variable (at top-level only). *)
 let eval (env : environment) (page : dynml_webpage) : environment * string option * value list = eval_page env env page
