@@ -36,7 +36,7 @@ and extern_function =
 (** [eval_expr anyEnv (expr_of_value v) = v].
   [expr_of_value v] tries to be as simple as possible for a lightweight re-evaluation. *)
 let rec expr_of_value (v1 : value) : expr = match v1 with
-  | VDb db -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
+  | VDb db -> raise (UnsupportedError "1 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
   | VInt n -> Int n
   | VBool b -> Bool b
   | VString s -> String s
@@ -45,9 +45,10 @@ let rec expr_of_value (v1 : value) : expr = match v1 with
   | VCouple (v, v') -> Couple (expr_of_value v, expr_of_value v')
   (* I'm not sure we really want the following cases to work. At least for [value_of_query], I can't think of a useful use case *)
   | Clos (_, VExternFunction (name, _)) -> raise (UnsupportedError "Trying to get expr of value of an external function. _TODO: ADD VARIABLES IN VALUES_")
-  | Clos (env, VFun (x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
-  | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
-  | _ -> raise (UnsupportedError "TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
+  | Clos (env, VFun (x, e)) -> raise (UnsupportedError "2 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
+  | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "3 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
+  | VUndefinedVariable -> raise (UnsupportedError "4 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
+  | _ -> raise (UnsupportedError "5 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
 
 (** If [f] is a function, [straightforward_fun_dropping_reset_env f] is the function that takes the same argument + a reset environment
   and makes no use of this environment, otherwise has the same semantic as [f].
@@ -99,6 +100,7 @@ let rec fprintf_value (out : out_channel) ?(escape_html : bool = false) (v1 : va
     fprintf_env out ~escape_html:escape_html env;
     Printf.fprintf out ", fixfun %s %s -&gt; %s⟩" f x (string_of_expr e); (* FIXME maybe write fpritnf_expr *)
   end
+  | VUndefinedVariable -> raise (InvalidMlArgument "Cannot print undefined variable")
 and fprintf_env (out : out_channel) ?(escape_html : bool = false) (env : environment) : unit =
   if Environment.is_empty env then Printf.fprintf out "∅" else begin
     let fprintf_one_env_binding (prefix : string list) (x : variable) (v : value) : unit =
@@ -122,6 +124,7 @@ let rec string_of_value ?(escape_html : bool = false) (v1 : value) : string = ma
   | Clos (_, VExternFunction (name, _)) -> name
   | Clos (env, VFun (x, e)) -> Printf.sprintf "⟨%s, fun %s -> %s⟩" (string_of_env ~escape_html:escape_html env) x (string_of_expr e)
   | Clos (env, VFix (f, x, e)) -> Printf.sprintf "⟨%s, fixfun %s %s -> %s⟩" (string_of_env ~escape_html:escape_html env) f x (string_of_expr e)
+  | VUndefinedVariable -> raise (InvalidMlArgument "Cannot make a string out of an undefined variable")
 and string_of_env ?(escape_html : bool = false) (env : environment) : string = if Environment.is_empty env then "∅" else begin
     let string_of_one_env_binding (prefix : string list) (x : variable) (v : value) (acc : string) : string = (* FIXME never prints prefixes *)
       if acc = "" then
@@ -151,6 +154,7 @@ let rec repr_of_value (v1 : value) : string = match v1 with
   | VContent l -> failwith "TODO implement actual parser for complex type (content & couples)"(*Printf.sprintf "content:%s" (List.fold_left (fun acc v -> Printf.sprintf "%s;%s" acc (repr_of_value v)) "" l)*)
   | VCouple (v, v') -> failwith "TODO implement actual parser for complex type (content & couples)"(*Printf.sprintf "couple:%s;%s" (repr_of_value v) (repr_of_value v')*)
   | Clos _ | VDb _ | VLocation _ -> raise (Invalid_argument (Printf.sprintf "repr_of_value %s: Unsupported representation for closures and databases." (string_of_value v1)))
+  | VUndefinedVariable -> raise (InvalidMlArgument "Cannot repr undefined variable")
 (** [value_of_repr sv] decodes the string-encoded value [sv] : [value_of_repr (repr_of_value v) = v] *)
 let rec value_of_repr (sv : string) : value * ml_type =
   let kind, value = match String.split_on_char ':' sv with

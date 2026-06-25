@@ -255,12 +255,20 @@ and eval_page (orig_env : environment) (env : environment) (page : dynml_webpage
 and extern_sqlite_exec_with_reset_env = fun (orig_env : environment) db fold_lines fold_cells str_query -> match db, fold_lines, fold_cells, str_query with
   | VDb db, Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline)), Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content)), VString query ->
     (value_of_query db
-      begin fun v1 v2 -> snd (
+      begin fun v1 v2 ->
+        (* failwith "TODO" *)
+        let env = Environment.add prev_lines_acc v1 captured_combine_lines in
+        match eval_expr orig_env env body_of_newline with (* evaluating [(fun prev_lines_acc -> body_of_newline) v1]*)
+          | location, Clos (env', VFun (x, e_f)) ->
+            snd (eval_expr orig_env (Environment.add x v2 env') e_f)
+          | _ -> failwith "TODO EXTERN_SQLITE BLABLA"
+        
+        (* snd (
           eval_expr
             Environment.empty
-            captured_combine_lines
+            (Environment.add prev_lines_acc v1 captured_combine_lines)
             (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2))
-        )
+        ) *)
       end
       begin
         fun line_acc hd content -> snd (
