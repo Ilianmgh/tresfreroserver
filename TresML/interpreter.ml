@@ -40,36 +40,51 @@ let value_of_query (db : Sqlite3.db) (combine_lines_into_table : value -> value 
     | OK | DONE -> !value_acc
     | _ -> raise (InterpreterError (Printf.sprintf "SQL query \"%s\" failed with error: %s" query (Sqlite3.Rc.to_string exec_code)))
 
+(** [eval_value_applied_to_expr orig_env env v_fun v_arg] evaluates the application [v_fun v_arg] in environment [env] and original environment [orig_env].
+  This function is separated from [eval_expr] for the same reason as [eval_value_applied_to_expr]. *)
+let rec eval_value_applied_to_value (orig_env : environment) (env : environment) (v_fun : value) (v_arg : value) : (string option) * value = match v_fun with
+    | Clos (_, VExternFunction (_, Args1 f)) ->
+      let applied_extern_f = f orig_env v_arg in
+      begin match applied_extern_f with
+        | VLocation location -> Some location, applied_extern_f (* If a function returns a location, we indicate to redirect to the pointed page. *)
+        | v -> (None, v)
+      end
+    | Clos (_, VExternFunction (name, Args2 f)) ->
+      None, Clos (Environment.empty, VExternFunction (name, Args1 (straightforward_fun_dropping_reset_env (f orig_env v_arg))))
+    | Clos (_, VExternFunction (name, Args3 f)) ->
+      None, Clos (Environment.empty, VExternFunction (name, Args2 (straightforward_fun_dropping_reset_env (f orig_env v_arg))))
+    | Clos (_, VExternFunction (name, Args4 f)) ->
+      None, Clos (Environment.empty, VExternFunction (name, Args3 (straightforward_fun_dropping_reset_env (f orig_env v_arg))))
+    | Clos (env', VFun (x, e_f)) -> eval_expr orig_env (Environment.add x v_arg env') e_f
+    | Clos (env', VFix (f, x, e_f)) ->
+      let env'_x = Environment.add x v_arg env' in
+      let env'_f_x = Environment.add f (Clos (env', VFix (f, x, e_f))) env'_x in
+      eval_expr orig_env env'_f_x e_f
+    | _ -> raise (InterpreterError (Printf.sprintf "%s: this is not a function, it cannot be applied." (string_of_value v_fun)))
+
+(** [eval_value_applied_to_expr orig_env env e v_arg] evaluates the application [e v_arg] in environment [env] and original environment [orig_env].
+  This function is separated from [eval_expr] because it is sometimes used outside of [eval_expr] e.g. in [extern_sqlite_exec_with_reset_env].
+  The fact that it takes the argument directly in the form of a value allows to evaluate an application when the argument is available only as such.
+  Whereas we can always evaluate an application of two expressions by calling [eval_expr] directly.
+*)
+and eval_value_applied_to_expr (orig_env : environment) (env : environment) (e : expr) (v_arg : value) : (string option) * value =
+  let location, v_fun = eval_expr orig_env env e in
+  match eval_value_applied_to_value orig_env env v_fun v_arg with
+    | None, v_final -> location, v_final
+    | Some location', v_final -> Some location', v_final
+
 (** [eval_expr env e1 = v] where [v] is the evaluation of expression [e] following the program semantics (cf documentation). FIXME TO IMPLEMENT SESSION/COOKIES VARIABLES, BUT BETTER, maybe return the environment to retrieve sessions (and at some point, cookies) variables. maybe return only the interesting environment e.g. the sub environment Session and Cookie, not all the local variables. *)
-let rec eval_expr (orig_env : environment) (env : environment) (e1 : expr) : (string option) * value = match e1 with
+and eval_expr (orig_env : environment) (env : environment) (e1 : expr) : (string option) * value = match e1 with
   | Empty -> assert false
   | Let (x, e, e') -> let location, v = eval_expr orig_env env e in eval_expr orig_env (Environment.add x v env) e'
   | Fun (x, e) -> None, Clos (env, VFun (x, e))
   | Fix (f, x, e) -> None, Clos (env, VFix (f, x, e))
-  | App (e, e') -> begin match eval_expr orig_env env e with
-    | location, Clos (_, VExternFunction (_, Args1 f)) ->
-      let location', v_arg1 = eval_expr orig_env env e' in
-      let applied_extern_f = f orig_env v_arg1 in
-      begin match applied_extern_f with
-        | VLocation path -> Some path, applied_extern_f (* If a function returns a location, we indicate to redirect to the pointed page. *)
-        | v -> (location', v)
-      end
-    | location, Clos (_, VExternFunction (name, Args2 f)) ->
-      let location', v_arg1 = eval_expr orig_env env e' in
-      location', Clos (Environment.empty, VExternFunction (name, Args1 (straightforward_fun_dropping_reset_env (f orig_env v_arg1))))
-    | location, Clos (_, VExternFunction (name, Args3 f)) ->
-      let location', v_arg1 = eval_expr orig_env env e' in
-      location', Clos (Environment.empty, VExternFunction (name, Args2 (straightforward_fun_dropping_reset_env (f orig_env v_arg1))))
-    | location, Clos (_, VExternFunction (name, Args4 f)) ->
-      let location', v_arg1 = eval_expr orig_env env e' in
-      location', Clos (Environment.empty, VExternFunction (name, Args3 (straightforward_fun_dropping_reset_env (f orig_env v_arg1))))
-    | location, Clos (env', VFun (x, e_f)) -> let location', v = eval_expr orig_env env e' in eval_expr orig_env (Environment.add x v env') e_f
-    | location, Clos (env', VFix (f, x, e_f)) -> let location', v = eval_expr orig_env env e' in
-      let env'_x = Environment.add x v env' in
-      let env'_f_x = Environment.add f (Clos (env', VFix (f, x, e_f))) env'_x in
-      eval_expr orig_env env'_f_x e_f
-    | _, _ -> raise (InterpreterError (Printf.sprintf "%s: it is not a function, it cannot be applied." (string_of_expr e)))
-  end
+  | App (e, e') ->
+    let location', v_arg = eval_expr orig_env env e' in
+    begin match eval_value_applied_to_expr orig_env env e v_arg with
+      | None, v -> location', v
+      | Some location, v -> Some location, v
+    end
   | If (c, t, e) -> begin match eval_expr orig_env env c with
     | location, VBool b -> if b then eval_expr orig_env env t else eval_expr orig_env env e
     | _, _ -> raise (InterpreterError (Printf.sprintf "%s: boolean expected" (string_of_expr c)))
@@ -251,32 +266,27 @@ and eval_page (orig_env : environment) (env : environment) (page : dynml_webpage
     | [] -> env
   in
   (final_env, final_location, List.map snd values_and_env)
-
 and extern_sqlite_exec_with_reset_env = fun (orig_env : environment) db fold_lines fold_cells str_query -> match db, fold_lines, fold_cells, str_query with
-  | VDb db, Clos (captured_combine_lines, VFun (prev_lines_acc, body_of_newline)), Clos (captured_combine_cells, VFun (acc, body_function_of_hs_and_content)), VString query ->
+  | VDb db, fun_folding_lines, fun_folding_cells, VString query ->
     (value_of_query db
-      begin fun v1 v2 ->
-        (* failwith "TODO" *)
-        let env = Environment.add prev_lines_acc v1 captured_combine_lines in
-        match eval_expr orig_env env body_of_newline with (* evaluating [(fun prev_lines_acc -> body_of_newline) v1]*)
-          | location, Clos (env', VFun (x, e_f)) ->
-            snd (eval_expr orig_env (Environment.add x v2 env') e_f)
-          | _ -> failwith "TODO EXTERN_SQLITE BLABLA"
-        
-        (* snd (
-          eval_expr
-            Environment.empty
-            (Environment.add prev_lines_acc v1 captured_combine_lines)
-            (App (App (Fun (prev_lines_acc, body_of_newline), expr_of_value v1), expr_of_value v2))
-        ) *)
+      begin
+        fun v1 v2 ->
+          snd begin
+            eval_value_applied_to_value orig_env Environment.empty
+            (snd (eval_value_applied_to_value Environment.empty Environment.empty (fun_folding_lines) v1))
+            v2
+          end
       end
       begin
-        fun line_acc hd content -> snd (
-          eval_expr
-            (Environment.add acc line_acc orig_env)
-            captured_combine_cells
-            (App (App (body_function_of_hs_and_content, String hd), String content))
-          )
+        fun line_acc hd content ->
+          snd begin
+            eval_value_applied_to_value orig_env Environment.empty
+            begin snd begin eval_value_applied_to_value orig_env Environment.empty
+              (snd (eval_value_applied_to_value orig_env Environment.empty fun_folding_cells line_acc))
+              (VString hd)
+            end end
+            (VString content)
+          end
       end
       query)
   | _, _, _, _ -> raise (InterpreterError (Printf.sprintf "%s, %s, %s, %s: Expected a database, a line folding function, a cell folding function and a SQL query (as a string)." (string_of_value db) (string_of_value fold_lines) (string_of_value fold_cells) (string_of_value str_query))) (* TODO maybe refine this bit *)
