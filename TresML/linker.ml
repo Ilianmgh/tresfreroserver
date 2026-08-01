@@ -33,7 +33,7 @@ let rec link_dynpage (root_path : string) (page : dynml_webpage) : dynml_webpage
           let loaded_lexed = lexer loaded_raw_page in
           let loaded_parsed = parser loaded_lexed in
           if is_valid_module_name file_module_name then
-            Decl (Inserted ({module_name = file_module_name ; reset_environment = true ; final_env_available = true ; content_available = true}, link_dynpage root_path loaded_parsed))
+            Decl (Inserted ({module_name = file_module_name ; reset_environment = false ; final_env_available = true ; content_available = true}, link_dynpage root_path loaded_parsed))
           else
             raise (LinkingError "Invalid file name: should always start with an uppercase or lowercase ASCII letter and otherwise match identifier's lexic.")
         end

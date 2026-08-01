@@ -236,6 +236,7 @@ and type_inferer_page (orig_gamma : modular_typing_environment) (gamma : modular
           already_typed'
         | Decl (ImportModule _) -> failwith "Trying to type an unlinked page (here link in compilation, not link as in the Web)."
         | Decl (Inserted (mode, insd_page)) -> begin
+          Printf.fprintf stderr "env before inserted %s: %s\n" mode.module_name (string_of_modular_typing_environment cur_gamma);
           let inserted_page_typed = if mode.reset_environment then
               type_inferer_page orig_gamma orig_gamma insd_page
             else
@@ -256,7 +257,8 @@ and type_inferer_page (orig_gamma : modular_typing_environment) (gamma : modular
                     (fun x -> x)
                 end env_after_typd
               in
-              let next_env = Environment.add_sub mode.module_name final_env_from_insd gamma in
+              let next_env = Environment.add_sub mode.module_name final_env_from_insd cur_gamma in
+              Printf.fprintf stderr "env after inserted %s: %s\n" mode.module_name (string_of_modular_typing_environment next_env);
               (next_env, resulting_env, last_type(* the type is irrelevant (globals) *)) :: (cur_gamma, gamma_after_typed, tau) :: already_typed'
         end
         | Decl (OpenModule modu) -> begin match Environment.submap_opt modu gamma with

@@ -20,7 +20,7 @@ let fold_lefti_file_line (f : int -> 'acc -> string -> 'acc) (acc : 'acc) (fd : 
   fold_lefti_file_line_cnt_lines f acc 1 fd
 
 let preprocess_codex_syms (s : string) : string =
-  Str.global_replace (Str.regexp {|\\vs{([[a-f][A-F][0-9]]*)}|}) "\u{\1}" (* Won't work, maybe switch to HTML encoding of unicode characters *)
+  Str.global_replace (Str.regexp {|\\vs{([[a-f][A-F][0-9]]*)}|}) "\\u{\\1}" (* Won't work, maybe switch to HTML encoding of unicode characters *)
     (Str.global_replace (Str.regexp {|\\vs{text}$|}) "\u{FE0E}"
       (Str.global_replace (Str.regexp {|\\vs{emoji}$|}) "\u{FE0F}" s))
 

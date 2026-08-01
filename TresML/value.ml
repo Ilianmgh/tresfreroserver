@@ -32,24 +32,7 @@ and extern_function =
   | Args2 of (environment -> value -> value -> value)
   | Args3 of (environment -> value -> value -> value -> value)
   | Args4 of (environment -> value -> value -> value -> value -> value)
-(* TODO see if we can remove it altogether
-(** [eval_expr anyEnv (expr_of_value v) = v].
-  [expr_of_value v] tries to be as simple as possible for a lightweight re-evaluation. *)
-let rec expr_of_value (v1 : value) : expr = match v1 with
-  | VDb db -> raise (UnsupportedError "1 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
-  | VInt n -> Int n
-  | VBool b -> Bool b
-  | VString s -> String s
-  | VPure h -> Html [Pure h]
-  | VContent l -> Html (List.map (fun v -> Script (expr_of_value v)) l)
-  | VCouple (v, v') -> Couple (expr_of_value v, expr_of_value v')
-  (* I'm not sure we really want the following cases to work. At least for [value_of_query], I can't think of a useful use case *)
-  | Clos (_, VExternFunction (name, _)) -> raise (UnsupportedError "Trying to get expr of value of an external function. _TODO: ADD VARIABLES IN VALUES_")
-  | Clos (env, VFun (x, e)) -> raise (UnsupportedError "2 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
-  | Clos (env, VFix (f, x, e)) -> raise (UnsupportedError "3 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
-  | VUndefinedVariable -> raise (UnsupportedError "4 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)")
-  | _ -> raise (UnsupportedError "5 TODO not sure it's supposed to work here (reminder, it's designed for value_of_query)") *)
-
+  
 (** If [f] is a function, [straightforward_fun_dropping_reset_env f] is the function that takes the same argument + a reset environment
   and makes no use of this environment, otherwise has the same semantic as [f].
   Is used to construct extern_function that does not require a reset environment e.g. first-order function. *)

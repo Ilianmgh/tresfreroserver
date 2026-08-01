@@ -38,11 +38,10 @@
     <{
       Session.let displayQuery = false (* re-establish to false so refreshing doesn't execute twice the query *)
     }>
-    <{
+  </body>
+</html>    <{
       "couBACKSLASHNTOCOME\nBACKSLASHNJUSTCAMEcou"
     }>
     <{
       f"couBACKSLASHNTOCOME\nBACKSLASHNJUSTCAMEcou"
     }>
-  </body>
-</html>
