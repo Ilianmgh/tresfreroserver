@@ -3,7 +3,7 @@
   let pseudo = String.replace "'" "''" Session.pseudo
   let content = String.replace "'" "''" Post.contenue
   let _ = Sqlite.exec db (fun acc -> fun new_line -> <[]>) (fun acc -> fun hd -> fun content -> <[]>)
-    ("INSERT INTO Message(pseudo, data) VALUES ('" ++ pseudo ++ "', '" ++ content ++ "')")
+    (f"INSERT INTO Message(pseudo, data) VALUES ('%{pseudo}%', '%{content}%')")
   let _ = Sqlite.closedb db
   let _ = Http.redirect "/test_ml/messages/messagerie.tml"
 }>

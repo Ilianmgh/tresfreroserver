@@ -1,0 +1,6 @@
+<{
+  if userIsConnected () then
+    include "truc.html"
+  else
+    <[]>
+}>
